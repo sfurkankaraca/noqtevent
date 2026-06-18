@@ -3,7 +3,6 @@ import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
 import FeaturedExperiences from "@/components/home/FeaturedExperiences";
 import HowItWorks from "@/components/home/HowItWorks";
-import ConceptLibrary from "@/components/home/ConceptLibrary";
 import Artists from "@/components/home/Artists";
 import Testimonials from "@/components/home/Testimonials";
 import BrandFeed from "@/components/home/BrandFeed";
@@ -18,7 +17,7 @@ export default async function Home() {
   const [{ data: djs }, { data: partners }, { data: concepts }] = await Promise.all([
     supabase
       .from("dj_profiles")
-      .select("id, name, bio, photo_url, concept_tags")
+      .select("id, name, bio, photo_url, photos, focal_points, concept_tags")
       .eq("is_active", true)
       .order("created_at", { ascending: true })
       .limit(4),
@@ -52,7 +51,6 @@ export default async function Home() {
         <Hero />
         <FeaturedExperiences concepts={concepts ?? []} />
         <HowItWorks />
-        <ConceptLibrary />
         <Testimonials />
         <BrandFeed />
         <Artists djs={djs ?? []} />

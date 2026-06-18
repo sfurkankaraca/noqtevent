@@ -10,6 +10,8 @@ type Dj = {
   name: string;
   bio: string | null;
   photo_url: string | null;
+  photos: string[] | null;
+  focal_points: Record<string, { x: number; y: number }> | null;
   concept_tags: string[];
 };
 
@@ -80,7 +82,19 @@ export default function Artists({ djs }: { djs: Dj[] }) {
                     <div className="bg-card rounded-2xl overflow-hidden border border-border hover:border-foreground/20 transition-all duration-300 group-hover:shadow-lg">
                       <div className={`${bgColor} h-48 relative flex items-center justify-center`}>
                         {dj.photo_url ? (
-                          <Image src={dj.photo_url} alt={dj.name} fill className="object-cover" unoptimized />
+                          <Image
+                            src={dj.photo_url}
+                            alt={dj.name}
+                            fill
+                            className="object-cover"
+                            style={{
+                              objectPosition: (() => {
+                                const fp = dj.focal_points?.[dj.photo_url];
+                                return fp ? `${fp.x}% ${fp.y}%` : "center";
+                              })(),
+                            }}
+                            unoptimized
+                          />
                         ) : (
                           <span
                             className="text-4xl font-light text-foreground/40"
