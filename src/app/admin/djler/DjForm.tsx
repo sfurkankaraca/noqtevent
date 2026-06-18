@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { upsertDj } from "./actions";
@@ -34,6 +35,7 @@ interface PhotoEntry {
 }
 
 export default function DjForm({ dj }: { dj?: Dj }) {
+  const router = useRouter();
   // Build initial photos list from photos[] or fall back to single photo_url
   const initPhotos: PhotoEntry[] = (
     dj?.photos?.length ? dj.photos : dj?.photo_url ? [dj.photo_url] : []
@@ -125,9 +127,8 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     setError(null);
     try {
       await upsertDj(fd);
+      router.push("/admin/djler");
     } catch (err: unknown) {
-      // Re-throw Next.js redirect/notFound — don't treat them as errors
-      if (err && typeof err === "object" && "digest" in err) throw err;
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
       setPending(false);
     }

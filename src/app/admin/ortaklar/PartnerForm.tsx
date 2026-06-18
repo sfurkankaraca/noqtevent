@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { upsertPartner } from "./actions";
@@ -34,6 +35,7 @@ interface PhotoEntry {
 }
 
 export default function PartnerForm({ partner }: { partner?: Partner }) {
+  const router = useRouter();
   const [logoPreview, setLogoPreview] = useState<string | null>(partner?.logo_url ?? null);
 
   const initPhotos: PhotoEntry[] = (partner?.portfolio_images ?? []).map((url) => ({
@@ -112,8 +114,8 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
     setError(null);
     try {
       await upsertPartner(fd);
+      router.push("/admin/ortaklar");
     } catch (err: unknown) {
-      if (err && typeof err === "object" && "digest" in err) throw err;
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
       setPending(false);
     }

@@ -2,7 +2,6 @@
 
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type { FocalPoint } from "@/components/admin/FocalPointPicker";
 
 export async function upsertPartner(formData: FormData) {
@@ -117,7 +116,6 @@ export async function upsertPartner(formData: FormData) {
   }
 
   revalidatePath("/admin/ortaklar");
-  redirect("/admin/ortaklar");
 }
 
 export async function deletePartner(formData: FormData) {

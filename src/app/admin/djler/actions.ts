@@ -2,7 +2,6 @@
 
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type { FocalPoint } from "@/components/admin/FocalPointPicker";
 
 export async function upsertDj(formData: FormData) {
@@ -114,7 +113,6 @@ export async function upsertDj(formData: FormData) {
   }
 
   revalidatePath("/admin/djler");
-  redirect("/admin/djler");
 }
 
 export async function deleteDj(formData: FormData) {
