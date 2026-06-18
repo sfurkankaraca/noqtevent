@@ -10,20 +10,28 @@ export default async function AdminDashboard() {
     { count: djCount },
     { count: partnerCount },
     { count: assetCount },
+    { count: journalCount },
+    { count: messageCount },
+    { count: newInquiryCount },
   ] = await Promise.all([
     supabase.from("songs").select("*", { count: "exact", head: true }),
     supabase.from("inquiries").select("*", { count: "exact", head: true }),
     supabase.from("dj_profiles").select("*", { count: "exact", head: true }),
     supabase.from("partner_profiles").select("*", { count: "exact", head: true }),
     supabase.from("site_assets").select("*", { count: "exact", head: true }),
+    supabase.from("journal_posts").select("*", { count: "exact", head: true }).eq("is_published", true),
+    supabase.from("contact_messages").select("*", { count: "exact", head: true }),
+    supabase.from("inquiries").select("*", { count: "exact", head: true }).eq("status", "new"),
   ]);
 
   const stats = [
-    { label: "Şarkı", value: songCount ?? 0, href: "/admin/songs", icon: "♪" },
-    { label: "DJ", value: djCount ?? 0, href: "/admin/djler", icon: "🎧" },
-    { label: "Ortak", value: partnerCount ?? 0, href: "/admin/ortaklar", icon: "🤝" },
-    { label: "Görsel", value: assetCount ?? 0, href: "/admin/gorseller", icon: "🖼" },
-    { label: "Talep", value: inquiryCount ?? 0, href: "/admin/inquiries", icon: "📋" },
+    { label: "Talep", value: inquiryCount ?? 0, href: "/admin/inquiries", icon: "📋", badge: newInquiryCount ?? 0 },
+    { label: "Mesaj", value: messageCount ?? 0, href: "/admin/mesajlar", icon: "💬", badge: 0 },
+    { label: "DJ", value: djCount ?? 0, href: "/admin/djler", icon: "🎧", badge: 0 },
+    { label: "Ortak", value: partnerCount ?? 0, href: "/admin/ortaklar", icon: "🤝", badge: 0 },
+    { label: "Journal", value: journalCount ?? 0, href: "/admin/journal", icon: "✍", badge: 0 },
+    { label: "Şarkı", value: songCount ?? 0, href: "/admin/songs", icon: "♪", badge: 0 },
+    { label: "Görsel", value: assetCount ?? 0, href: "/admin/gorseller", icon: "🖼", badge: 0 },
   ];
 
   // Recent inquiries
@@ -47,13 +55,18 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
           <Link
             key={s.href}
             href={s.href}
-            className="bg-white rounded-2xl border border-border p-5 hover:border-foreground/20 transition-colors"
+            className="bg-white rounded-2xl border border-border p-5 hover:border-foreground/20 transition-colors relative"
           >
+            {s.badge > 0 && (
+              <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                {s.badge}
+              </span>
+            )}
             <p className="text-2xl mb-2">{s.icon}</p>
             <p className="text-3xl font-semibold text-foreground">{s.value}</p>
             <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
@@ -67,9 +80,10 @@ export default async function AdminDashboard() {
           <h2 className="font-semibold text-foreground mb-4">Hızlı Erişim</h2>
           <div className="space-y-2">
             {[
-              { href: "/admin/songs/new", label: "+ Yeni Şarkı" },
               { href: "/admin/djler/new", label: "+ Yeni DJ" },
               { href: "/admin/ortaklar/new", label: "+ Yeni Ortak" },
+              { href: "/admin/journal/new", label: "+ Yeni Yazı" },
+              { href: "/admin/konseptler/new", label: "+ Yeni Konsept" },
               { href: "/admin/gorseller", label: "Görsel Yükle" },
             ].map((item) => (
               <Link
