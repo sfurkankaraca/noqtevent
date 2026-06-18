@@ -5,7 +5,7 @@ import FeaturedExperiences from "@/components/home/FeaturedExperiences";
 import HowItWorks from "@/components/home/HowItWorks";
 import ConceptLibrary from "@/components/home/ConceptLibrary";
 import Artists from "@/components/home/Artists";
-import RealEvents from "@/components/home/RealEvents";
+import Testimonials from "@/components/home/Testimonials";
 import BrandFeed from "@/components/home/BrandFeed";
 import MemoryDrive from "@/components/home/MemoryDrive";
 import PartnerEcosystem from "@/components/home/PartnerEcosystem";
@@ -15,7 +15,7 @@ import { createServiceClient } from "@/lib/supabase";
 export default async function Home() {
   const supabase = createServiceClient();
 
-  const [{ data: djs }, { data: partners }] = await Promise.all([
+  const [{ data: djs }, { data: partners }, { data: concepts }] = await Promise.all([
     supabase
       .from("dj_profiles")
       .select("id, name, bio, photo_url, concept_tags")
@@ -26,6 +26,13 @@ export default async function Home() {
       .from("partner_profiles")
       .select("service_category")
       .eq("is_active", true),
+    supabase
+      .from("concepts")
+      .select("id, slug, name, emoji, description, cover_image_url, color, is_dark, atmosphere, is_signature, energy_level")
+      .eq("is_active", true)
+      .order("is_signature", { ascending: false })
+      .order("sort_order", { ascending: true })
+      .limit(6),
   ]);
 
   // Group partner counts by category
@@ -43,10 +50,10 @@ export default async function Home() {
       <Navigation />
       <main>
         <Hero />
-        <FeaturedExperiences />
+        <FeaturedExperiences concepts={concepts ?? []} />
         <HowItWorks />
         <ConceptLibrary />
-        <RealEvents />
+        <Testimonials />
         <BrandFeed />
         <Artists djs={djs ?? []} />
         <MemoryDrive />
