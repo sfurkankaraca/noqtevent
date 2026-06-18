@@ -2,6 +2,7 @@
 
 import { createServiceClient } from "@/lib/supabase";
 import { type PlannerData } from "@/components/planner/PlannerStore";
+import { sendInquiryNotification } from "@/lib/email";
 
 export async function submitInquiry(
   data: PlannerData
@@ -40,6 +41,16 @@ export async function submitInquiry(
       availabilityWarning = allBusy;
     }
   }
+
+  await sendInquiryNotification({
+    name: data.name,
+    surname: data.surname,
+    email: data.email,
+    phone: data.phone,
+    eventType: data.eventType,
+    eventDate: data.eventDate || undefined,
+    services: data.services,
+  });
 
   return { availabilityWarning };
 }

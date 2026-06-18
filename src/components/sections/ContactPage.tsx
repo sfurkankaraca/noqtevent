@@ -1,36 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { Mail } from "lucide-react";
-
-type FormState = {
-  name: string;
-  email: string;
-  eventType: string;
-  message: string;
-};
+import { submitContactMessage } from "@/app/iletisim/actions";
 
 export default function ContactPage() {
-  const [form, setForm] = useState<FormState>({
-    name: "",
-    email: "",
-    eventType: "",
-    message: "",
-  });
   const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const update = (k: keyof FormState, v: string) =>
-    setForm((f) => ({ ...f, [k]: v }));
-
-  const submit = async (e: React.FormEvent) => {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setLoading(false);
-    setSent(true);
-  };
+    const fd = new FormData(e.currentTarget);
+    startTransition(async () => {
+      await submitContactMessage(fd);
+      setSent(true);
+    });
+  }
+
+  const inputCls =
+    "w-full px-4 py-3.5 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:border-foreground/40 transition-colors";
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16 lg:py-24">
@@ -52,10 +41,7 @@ export default function ContactPage() {
           </p>
 
           <div className="mt-12 space-y-5">
-            <a
-              href="mailto:merhaba@noqt.co"
-              className="flex items-center gap-4 group"
-            >
+            <a href="mailto:merhaba@noqt.co" className="flex items-center gap-4 group">
               <div className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center group-hover:bg-foreground transition-colors">
                 <Mail size={16} className="text-muted-foreground group-hover:text-background transition-colors" />
               </div>
@@ -84,12 +70,9 @@ export default function ContactPage() {
           </div>
 
           <div className="mt-12 p-6 bg-[oklch(0.975_0.006_80)] rounded-2xl">
-            <p className="text-sm font-medium text-foreground mb-2">
-              Hızlı başlamak ister misin?
-            </p>
+            <p className="text-sm font-medium text-foreground mb-2">Hızlı başlamak ister misin?</p>
             <p className="text-xs text-muted-foreground mb-4">
-              Deneyim planlayıcısını kullan. 10 soruda etkinliğini tasarla,
-              kişiselleştirilmiş teklif al.
+              Deneyim planlayıcısını kullan. 10 soruda etkinliğini tasarla, kişiselleştirilmiş teklif al.
             </p>
             <a
               href="/planla"
@@ -120,44 +103,20 @@ export default function ContactPage() {
               </p>
             </motion.div>
           ) : (
-            <form onSubmit={submit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground tracking-wide">
-                  Adın Soyadın
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => update("name", e.target.value)}
-                  placeholder="Ayşe Yılmaz"
-                  className="w-full px-4 py-3.5 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:border-foreground/40 transition-colors"
-                />
+                <label className="text-xs text-muted-foreground tracking-wide">Adın Soyadın</label>
+                <input name="name" type="text" required placeholder="Ayşe Yılmaz" className={inputCls} />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground tracking-wide">
-                  E-posta
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={form.email}
-                  onChange={(e) => update("email", e.target.value)}
-                  placeholder="ayse@example.com"
-                  className="w-full px-4 py-3.5 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:border-foreground/40 transition-colors"
-                />
+                <label className="text-xs text-muted-foreground tracking-wide">E-posta</label>
+                <input name="email" type="email" required placeholder="ayse@example.com" className={inputCls} />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground tracking-wide">
-                  Etkinlik Türü
-                </label>
-                <select
-                  value={form.eventType}
-                  onChange={(e) => update("eventType", e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:border-foreground/40 transition-colors appearance-none"
-                >
+                <label className="text-xs text-muted-foreground tracking-wide">Etkinlik Türü</label>
+                <select name="eventType" className={inputCls + " appearance-none"}>
                   <option value="">Seçiniz</option>
                   <option value="wedding">Düğün</option>
                   <option value="corporate">Kurumsal Etkinlik</option>
@@ -169,25 +128,22 @@ export default function ContactPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground tracking-wide">
-                  Mesajın
-                </label>
+                <label className="text-xs text-muted-foreground tracking-wide">Mesajın</label>
                 <textarea
+                  name="message"
                   required
                   rows={5}
-                  value={form.message}
-                  onChange={(e) => update("message", e.target.value)}
                   placeholder="Etkinliğin hakkında birkaç cümle yaz..."
-                  className="w-full px-4 py-3.5 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:border-foreground/40 transition-colors resize-none"
+                  className={inputCls + " resize-none"}
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full py-4 bg-foreground text-background rounded-full text-sm font-medium tracking-wide hover:opacity-90 transition-opacity disabled:opacity-60"
+                disabled={isPending}
+                className="w-full py-4 bg-foreground text-background rounded-full text-sm font-medium tracking-wide hover:opacity-90 transition-opacity disabled:opacity-60 cursor-pointer"
               >
-                {loading ? "Gönderiliyor..." : "Gönder"}
+                {isPending ? "Gönderiliyor..." : "Gönder"}
               </button>
             </form>
           )}
