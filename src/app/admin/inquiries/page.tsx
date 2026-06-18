@@ -1,6 +1,16 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 
+const STATUS_STYLES: Record<string, string> = {
+  new: "bg-blue-50 text-blue-700 border-blue-200",
+  contacted: "bg-amber-50 text-amber-700 border-amber-200",
+  confirmed: "bg-green-50 text-green-700 border-green-200",
+  cancelled: "bg-red-50 text-red-700 border-red-200",
+};
+const STATUS_LABELS: Record<string, string> = {
+  new: "Yeni", contacted: "İletişime Geçildi", confirmed: "Onaylandı", cancelled: "İptal",
+};
+
 export default async function InquiriesPage() {
   const supabase = createServiceClient();
   const { data: inquiries, error } = await supabase
@@ -52,6 +62,7 @@ export default async function InquiriesPage() {
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">TARİH</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">İLETİŞİM</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">GELİŞ</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">DURUM</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -77,6 +88,16 @@ export default async function InquiriesPage() {
                   </td>
                   <td className="px-4 py-3.5 text-xs text-muted-foreground">
                     {new Date(inq.created_at).toLocaleDateString("tr-TR")}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    {(() => {
+                      const s = inq.status ?? "new";
+                      return (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_STYLES[s] ?? STATUS_STYLES.new}`}>
+                          {STATUS_LABELS[s] ?? s}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3.5">
                     <Link href={`/admin/inquiries/${inq.id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
