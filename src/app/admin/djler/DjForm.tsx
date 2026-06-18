@@ -29,17 +29,30 @@ type Dj = {
 };
 
 interface PhotoEntry {
-  url: string;       // blob: for new, https: for existing
-  isNew: boolean;
-  file?: File;
+  url: string;        // always a real https:// URL
+  uploading?: boolean;
+  error?: string;
+}
+
+async function uploadFile(file: File, folder: string): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("folder", folder);
+  const res = await fetch("/api/upload", { method: "POST", body: fd });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? "Upload başarısız");
+  }
+  const { url } = await res.json();
+  return url;
 }
 
 export default function DjForm({ dj }: { dj?: Dj }) {
   const router = useRouter();
-  // Build initial photos list from photos[] or fall back to single photo_url
+
   const initPhotos: PhotoEntry[] = (
     dj?.photos?.length ? dj.photos : dj?.photo_url ? [dj.photo_url] : []
-  ).map((url) => ({ url, isNew: false }));
+  ).map((url) => ({ url }));
 
   const [photos, setPhotos] = useState<PhotoEntry[]>(initPhotos);
   const [focalPoints, setFocalPoints] = useState<Record<string, FocalPoint>>(
@@ -51,8 +64,9 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   const [busyDateInput, setBusyDateInput] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isUploading = photos.some((p) => p.uploading);
 
   const addBusyDate = (date: string) => {
     if (date && !busyDates.includes(date)) setBusyDates((p) => [...p, date].sort());
@@ -66,16 +80,37 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   };
   const removeConcept = (tag: string) => setConcepts((p) => p.filter((c) => c !== tag));
 
-  const handlePhotoFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const newEntries: PhotoEntry[] = files.map((f) => ({
-      url: URL.createObjectURL(f),
-      isNew: true,
-      file: f,
-    }));
-    setPhotos((p) => [...p, ...newEntries]);
-    // reset input so same file can be re-added
+    if (!files.length) return;
     if (fileInputRef.current) fileInputRef.current.value = "";
+
+    // Add placeholder entries with uploading state
+    const placeholders: PhotoEntry[] = files.map(() => ({
+      url: "",
+      uploading: true,
+    }));
+    setPhotos((p) => [...p, ...placeholders]);
+
+    // Upload each file individually
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const url = await uploadFile(files[i], "dj");
+        setPhotos((prev) => {
+          const next = [...prev];
+          const idx = next.findIndex((p) => p.uploading && p.url === "");
+          if (idx !== -1) next[idx] = { url };
+          return next;
+        });
+      } catch (err) {
+        setPhotos((prev) => {
+          const next = [...prev];
+          const idx = next.findIndex((p) => p.uploading && p.url === "");
+          if (idx !== -1) next[idx] = { url: "", error: err instanceof Error ? err.message : "Hata" };
+          return next;
+        });
+      }
+    }
   };
 
   const removePhoto = (url: string) => {
@@ -87,9 +122,12 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     });
   };
 
-  const setFocalPoint = (url: string, fp: FocalPoint) => {
-    setFocalPoints((prev) => ({ ...prev, [url]: fp }));
+  const removeErrorPhoto = (idx: number) => {
+    setPhotos((p) => p.filter((_, i) => i !== idx));
   };
+
+  const setFocalPoint = (url: string, fp: FocalPoint) =>
+    setFocalPoints((prev) => ({ ...prev, [url]: fp }));
 
   const getFocalPoint = (url: string): FocalPoint =>
     focalPoints[url] ?? { x: 50, y: 50 };
@@ -98,30 +136,14 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     fd.set("concept_tags", concepts.join(","));
     fd.set("busy_dates", busyDates.join(","));
 
-    // Append new photo files
-    const newPhotos = photos.filter((p) => p.isNew && p.file);
-    newPhotos.forEach((p) => fd.append("photo_files", p.file!));
+    const readyPhotos = photos.filter((p) => p.url && !p.uploading && !p.error);
+    fd.set("photos_json", JSON.stringify(readyPhotos.map((p) => p.url)));
 
-    // Existing photo URLs (already uploaded)
-    const existingUrls = photos.filter((p) => !p.isNew).map((p) => p.url);
-    fd.set("existing_photos", JSON.stringify(existingUrls));
-
-    // Focal points — map blob: URLs to their index for new photos
-    // We'll pass focal points keyed by index for new and by url for existing
     const fpPayload: Record<string, FocalPoint> = {};
-    photos.forEach((ph, i) => {
-      const fp = getFocalPoint(ph.url);
-      if (ph.isNew) {
-        fpPayload[`new:${i}`] = fp;
-      } else {
-        fpPayload[ph.url] = fp;
-      }
+    readyPhotos.forEach((ph) => {
+      fpPayload[ph.url] = getFocalPoint(ph.url);
     });
     fd.set("focal_points_json", JSON.stringify(fpPayload));
-
-    // New photo order (existing first, then new)
-    const order = photos.map((ph, i) => (ph.isNew ? `new:${i}` : ph.url));
-    fd.set("photo_order", JSON.stringify(order));
 
     setPending(true);
     setError(null);
@@ -135,10 +157,8 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   };
 
   return (
-    <form ref={formRef} action={handleAction} className="space-y-6 max-w-2xl">
+    <form action={handleAction} className="space-y-6 max-w-2xl">
       {dj?.id && <input type="hidden" name="id" value={dj.id} />}
-      <input type="hidden" name="concept_tags" value={concepts.join(",")} />
-      <input type="hidden" name="busy_dates" value={busyDates.join(",")} />
 
       {error && (
         <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
@@ -165,7 +185,6 @@ export default function DjForm({ dj }: { dj?: Dj }) {
           />
         </div>
 
-        {/* Active toggle */}
         <div className="flex items-center gap-3">
           <label className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Aktif</label>
           <select
@@ -182,56 +201,73 @@ export default function DjForm({ dj }: { dj?: Dj }) {
       <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
         <div>
           <h2 className="font-medium text-foreground">Fotoğraflar</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">İlk fotoğraf kapak olarak kullanılır. Her fotoğraf için odak noktası ayarlayabilirsin.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">İlk fotoğraf kapak olarak kullanılır. Yükleme seçince otomatik başlar.</p>
         </div>
 
         {photos.length > 0 && (
           <div className="grid grid-cols-2 gap-4">
-            {photos.map((ph, i) => (
-              <div key={ph.url} className="space-y-3 p-4 rounded-xl border border-border bg-secondary/20">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {i === 0 ? "⭐ Kapak" : `Fotoğraf ${i + 1}`}
-                  </span>
-                  <button
-                    type="button" onClick={() => removePhoto(ph.url)}
-                    className="text-xs text-red-500 hover:text-red-700 transition-colors"
-                  >
-                    Kaldır
-                  </button>
-                </div>
-
-                <div className="flex gap-4">
-                  {/* Full preview */}
-                  <div className="relative rounded-xl overflow-hidden border border-border bg-secondary/30 flex-shrink-0"
-                    style={{ width: 100, aspectRatio: "3/4" }}>
-                    <Image
-                      src={ph.url} alt="" fill className="object-cover" unoptimized
-                      style={{ objectPosition: `${getFocalPoint(ph.url).x}% ${getFocalPoint(ph.url).y}%` }}
-                    />
+            {photos.map((ph, i) => {
+              if (ph.uploading) {
+                return (
+                  <div key={i} className="p-4 rounded-xl border border-border bg-secondary/20 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-secondary animate-pulse" />
+                    <span className="text-xs text-muted-foreground">Yükleniyor…</span>
+                  </div>
+                );
+              }
+              if (ph.error) {
+                return (
+                  <div key={i} className="p-4 rounded-xl border border-red-200 bg-red-50 flex items-center justify-between gap-3">
+                    <span className="text-xs text-red-600">{ph.error}</span>
+                    <button type="button" onClick={() => removeErrorPhoto(i)} className="text-xs text-red-500 hover:text-red-700">Kaldır</button>
+                  </div>
+                );
+              }
+              return (
+                <div key={ph.url} className="space-y-3 p-4 rounded-xl border border-border bg-secondary/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {i === 0 ? "⭐ Kapak" : `Fotoğraf ${i + 1}`}
+                    </span>
+                    <button
+                      type="button" onClick={() => removePhoto(ph.url)}
+                      className="text-xs text-red-500 hover:text-red-700 transition-colors"
+                    >
+                      Kaldır
+                    </button>
                   </div>
 
-                  {/* Focal point picker */}
-                  <FocalPointPicker
-                    src={ph.url}
-                    value={getFocalPoint(ph.url)}
-                    onChange={(fp) => setFocalPoint(ph.url, fp)}
-                    aspectRatio="3/4"
-                  />
+                  <div className="flex gap-4">
+                    <div className="relative rounded-xl overflow-hidden border border-border bg-secondary/30 flex-shrink-0"
+                      style={{ width: 100, aspectRatio: "3/4" }}>
+                      <Image
+                        src={ph.url} alt="" fill className="object-cover" unoptimized
+                        style={{ objectPosition: `${getFocalPoint(ph.url).x}% ${getFocalPoint(ph.url).y}%` }}
+                      />
+                    </div>
+                    <FocalPointPicker
+                      src={ph.url}
+                      value={getFocalPoint(ph.url)}
+                      onChange={(fp) => setFocalPoint(ph.url, fp)}
+                      aspectRatio="3/4"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         <div>
           <input
             ref={fileInputRef}
-            type="file" name="photo_files_input" accept="image/*" multiple
+            type="file" accept="image/*" multiple
             onChange={handlePhotoFiles}
             className="block text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-foreground file:text-background hover:file:opacity-80 cursor-pointer"
           />
-          <p className="text-xs text-muted-foreground mt-1">Birden fazla fotoğraf seçebilirsin</p>
+          {isUploading && (
+            <p className="text-xs text-muted-foreground mt-1 animate-pulse">Fotoğraflar yükleniyor, lütfen bekleyin…</p>
+          )}
         </div>
       </div>
 
@@ -323,9 +359,9 @@ export default function DjForm({ dj }: { dj?: Dj }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pending}
+        <button type="submit" disabled={pending || isUploading}
           className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
-          {pending ? "Kaydediliyor…" : dj?.id ? "Güncelle" : "DJ Ekle"}
+          {isUploading ? "Fotoğraf yükleniyor…" : pending ? "Kaydediliyor…" : dj?.id ? "Güncelle" : "DJ Ekle"}
         </button>
         <Link href="/admin/djler" className="text-sm text-muted-foreground hover:text-foreground transition-colors">İptal</Link>
       </div>

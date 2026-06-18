@@ -30,18 +30,29 @@ type Partner = {
 
 interface PhotoEntry {
   url: string;
-  isNew: boolean;
-  file?: File;
+  uploading?: boolean;
+  error?: string;
+}
+
+async function uploadFile(file: File, folder: string): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("folder", folder);
+  const res = await fetch("/api/upload", { method: "POST", body: fd });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? "Upload başarısız");
+  }
+  const { url } = await res.json();
+  return url;
 }
 
 export default function PartnerForm({ partner }: { partner?: Partner }) {
   const router = useRouter();
-  const [logoPreview, setLogoPreview] = useState<string | null>(partner?.logo_url ?? null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(partner?.logo_url ?? null);
+  const [logoUploading, setLogoUploading] = useState(false);
 
-  const initPhotos: PhotoEntry[] = (partner?.portfolio_images ?? []).map((url) => ({
-    url,
-    isNew: false,
-  }));
+  const initPhotos: PhotoEntry[] = (partner?.portfolio_images ?? []).map((url) => ({ url }));
   const [photos, setPhotos] = useState<PhotoEntry[]>(initPhotos);
   const [focalPoints, setFocalPoints] = useState<Record<string, FocalPoint>>(
     partner?.focal_points ?? {}
@@ -51,8 +62,9 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
   const [serviceInput, setServiceInput] = useState({ name: "", price_range: "" });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isUploading = logoUploading || photos.some((p) => p.uploading);
 
   const addService = () => {
     if (!serviceInput.name) return;
@@ -61,54 +73,69 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
   };
   const removeService = (i: number) => setServices((p) => p.filter((_, idx) => idx !== i));
 
-  const handlePortfolioFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const url = await uploadFile(file, "partners/logo");
+      setLogoUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Logo yükleme hatası");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handlePortfolioFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const newEntries: PhotoEntry[] = files.map((f) => ({
-      url: URL.createObjectURL(f),
-      isNew: true,
-      file: f,
-    }));
-    setPhotos((p) => [...p, ...newEntries]);
+    if (!files.length) return;
     if (fileInputRef.current) fileInputRef.current.value = "";
+
+    const placeholders: PhotoEntry[] = files.map(() => ({ url: "", uploading: true }));
+    setPhotos((p) => [...p, ...placeholders]);
+
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const url = await uploadFile(files[i], "partners/portfolio");
+        setPhotos((prev) => {
+          const next = [...prev];
+          const idx = next.findIndex((p) => p.uploading && p.url === "");
+          if (idx !== -1) next[idx] = { url };
+          return next;
+        });
+      } catch (err) {
+        setPhotos((prev) => {
+          const next = [...prev];
+          const idx = next.findIndex((p) => p.uploading && p.url === "");
+          if (idx !== -1) next[idx] = { url: "", error: err instanceof Error ? err.message : "Hata" };
+          return next;
+        });
+      }
+    }
   };
 
   const removePhoto = (url: string) => {
     setPhotos((p) => p.filter((ph) => ph.url !== url));
-    setFocalPoints((prev) => {
-      const next = { ...prev };
-      delete next[url];
-      return next;
-    });
+    setFocalPoints((prev) => { const n = { ...prev }; delete n[url]; return n; });
   };
 
-  const getFocalPoint = (url: string): FocalPoint =>
-    focalPoints[url] ?? { x: 50, y: 50 };
+  const removeErrorPhoto = (idx: number) => setPhotos((p) => p.filter((_, i) => i !== idx));
 
+  const getFocalPoint = (url: string): FocalPoint => focalPoints[url] ?? { x: 50, y: 50 };
   const setFocalPoint = (url: string, fp: FocalPoint) =>
     setFocalPoints((prev) => ({ ...prev, [url]: fp }));
 
   const handleAction = async (fd: FormData) => {
     fd.set("services_json", JSON.stringify(services));
+    if (logoUrl) fd.set("logo_url", logoUrl);
 
-    const existingUrls = photos.filter((p) => !p.isNew).map((p) => p.url);
-    fd.set("existing_portfolio", JSON.stringify(existingUrls));
+    const readyPhotos = photos.filter((p) => p.url && !p.uploading && !p.error);
+    fd.set("portfolio_json", JSON.stringify(readyPhotos.map((p) => p.url)));
 
-    photos.filter((p) => p.isNew && p.file).forEach((p) => fd.append("portfolio_files", p.file!));
-
-    // Focal points: "new:N" for new photos, url for existing
     const fpPayload: Record<string, FocalPoint> = {};
-    photos.forEach((ph, i) => {
-      const fp = getFocalPoint(ph.url);
-      if (ph.isNew) {
-        fpPayload[`new:${i}`] = fp;
-      } else {
-        fpPayload[ph.url] = fp;
-      }
-    });
+    readyPhotos.forEach((ph) => { fpPayload[ph.url] = getFocalPoint(ph.url); });
     fd.set("focal_points_json", JSON.stringify(fpPayload));
-
-    const order = photos.map((ph, i) => (ph.isNew ? `new:${i}` : ph.url));
-    fd.set("photo_order", JSON.stringify(order));
 
     setPending(true);
     setError(null);
@@ -122,11 +149,8 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
   };
 
   return (
-    <form ref={formRef} action={handleAction} className="space-y-6 max-w-2xl">
+    <form action={handleAction} className="space-y-6 max-w-2xl">
       {partner?.id && <input type="hidden" name="id" value={partner.id} />}
-      {partner?.logo_url && <input type="hidden" name="existing_logo_url" value={partner.logo_url} />}
-      <input type="hidden" name="services_json" value={JSON.stringify(services)} />
-      <input type="hidden" name="existing_portfolio" value={JSON.stringify(photos.filter((p) => !p.isNew).map((p) => p.url))} />
 
       {error && (
         <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
@@ -185,13 +209,13 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
         <div>
           <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Logo</label>
           <div className="flex items-center gap-4">
-            {logoPreview && (
+            {logoUrl && (
               <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-border bg-secondary/30 flex-shrink-0">
-                <Image src={logoPreview} alt="Logo" fill className="object-contain p-2" unoptimized />
+                <Image src={logoUrl} alt="Logo" fill className="object-contain p-2" unoptimized />
               </div>
             )}
-            <input type="file" name="logo_file" accept="image/*"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) setLogoPreview(URL.createObjectURL(f)); }}
+            {logoUploading && <span className="text-xs text-muted-foreground animate-pulse">Yükleniyor…</span>}
+            <input type="file" accept="image/*" onChange={handleLogoFile}
               className="block text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-foreground file:text-background hover:file:opacity-80 cursor-pointer" />
           </div>
         </div>
@@ -230,55 +254,65 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
       <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
         <div>
           <h2 className="font-medium text-foreground">Portföy Görselleri</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Her görsel için odak noktası ayarlayabilirsin.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Yükleme seçince otomatik başlar. Her görsel için odak noktası ayarlayabilirsin.</p>
         </div>
 
         {photos.length > 0 && (
           <div className="grid grid-cols-2 gap-4">
-            {photos.map((ph, i) => (
-              <div key={ph.url} className="space-y-3 p-4 rounded-xl border border-border bg-secondary/20">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {i === 0 ? "⭐ Kapak" : `Görsel ${i + 1}`}
-                  </span>
-                  <button type="button" onClick={() => removePhoto(ph.url)}
-                    className="text-xs text-red-500 hover:text-red-700 transition-colors">
-                    Kaldır
-                  </button>
-                </div>
-                <div className="flex gap-4">
-                  <div className="relative rounded-xl overflow-hidden border border-border bg-secondary/30 flex-shrink-0"
-                    style={{ width: 100, aspectRatio: "16/9" }}>
-                    <Image src={ph.url} alt="" fill className="object-cover" unoptimized
-                      style={{ objectPosition: `${getFocalPoint(ph.url).x}% ${getFocalPoint(ph.url).y}%` }} />
+            {photos.map((ph, i) => {
+              if (ph.uploading) {
+                return (
+                  <div key={i} className="p-4 rounded-xl border border-border bg-secondary/20 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-secondary animate-pulse" />
+                    <span className="text-xs text-muted-foreground">Yükleniyor…</span>
                   </div>
-                  <FocalPointPicker
-                    src={ph.url}
-                    value={getFocalPoint(ph.url)}
-                    onChange={(fp) => setFocalPoint(ph.url, fp)}
-                    aspectRatio="16/9"
-                  />
+                );
+              }
+              if (ph.error) {
+                return (
+                  <div key={i} className="p-4 rounded-xl border border-red-200 bg-red-50 flex items-center justify-between gap-3">
+                    <span className="text-xs text-red-600">{ph.error}</span>
+                    <button type="button" onClick={() => removeErrorPhoto(i)} className="text-xs text-red-500 hover:text-red-700">Kaldır</button>
+                  </div>
+                );
+              }
+              return (
+                <div key={ph.url} className="space-y-3 p-4 rounded-xl border border-border bg-secondary/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {i === 0 ? "⭐ Kapak" : `Görsel ${i + 1}`}
+                    </span>
+                    <button type="button" onClick={() => removePhoto(ph.url)}
+                      className="text-xs text-red-500 hover:text-red-700 transition-colors">Kaldır</button>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="relative rounded-xl overflow-hidden border border-border bg-secondary/30 flex-shrink-0"
+                      style={{ width: 100, aspectRatio: "16/9" }}>
+                      <Image src={ph.url} alt="" fill className="object-cover" unoptimized
+                        style={{ objectPosition: `${getFocalPoint(ph.url).x}% ${getFocalPoint(ph.url).y}%` }} />
+                    </div>
+                    <FocalPointPicker src={ph.url} value={getFocalPoint(ph.url)}
+                      onChange={(fp) => setFocalPoint(ph.url, fp)} aspectRatio="16/9" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         <div>
-          <input
-            ref={fileInputRef}
-            type="file" name="portfolio_files" accept="image/*" multiple
-            onChange={handlePortfolioFiles}
-            className="block text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-foreground file:text-background hover:file:opacity-80 cursor-pointer"
-          />
-          <p className="text-xs text-muted-foreground mt-1">Birden fazla görsel seçebilirsin</p>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePortfolioFiles}
+            className="block text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-foreground file:text-background hover:file:opacity-80 cursor-pointer" />
+          {photos.some((p) => p.uploading) && (
+            <p className="text-xs text-muted-foreground mt-1 animate-pulse">Görseller yükleniyor…</p>
+          )}
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pending}
+        <button type="submit" disabled={pending || isUploading}
           className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
-          {pending ? "Kaydediliyor…" : partner?.id ? "Güncelle" : "Ortak Ekle"}
+          {isUploading ? "Görseller yükleniyor…" : pending ? "Kaydediliyor…" : partner?.id ? "Güncelle" : "Ortak Ekle"}
         </button>
         <Link href="/admin/ortaklar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">İptal</Link>
       </div>
