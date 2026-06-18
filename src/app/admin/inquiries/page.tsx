@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 
 export default async function InquiriesPage() {
@@ -51,15 +52,18 @@ export default async function InquiriesPage() {
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">TARİH</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">İLETİŞİM</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">GELİŞ</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {inquiries.map((inq) => (
-                <tr key={inq.id} className="hover:bg-secondary/20 transition-colors">
+                <tr key={inq.id} className="hover:bg-secondary/20 transition-colors cursor-pointer">
                   <td className="px-5 py-3.5">
-                    <p className="font-medium text-foreground">
-                      {inq.contact?.name} {inq.contact?.surname}
-                    </p>
+                    <Link href={`/admin/inquiries/${inq.id}`} className="block">
+                      <p className="font-medium text-foreground">
+                        {inq.contact?.name} {inq.contact?.surname}
+                      </p>
+                    </Link>
                   </td>
                   <td className="px-4 py-3.5 text-muted-foreground text-xs">
                     {EVENT_LABELS[inq.event_type] ?? inq.event_type}
@@ -73,6 +77,11 @@ export default async function InquiriesPage() {
                   </td>
                   <td className="px-4 py-3.5 text-xs text-muted-foreground">
                     {new Date(inq.created_at).toLocaleDateString("tr-TR")}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <Link href={`/admin/inquiries/${inq.id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      Detay →
+                    </Link>
                   </td>
                 </tr>
               ))}
