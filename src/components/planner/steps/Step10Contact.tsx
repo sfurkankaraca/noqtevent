@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { type PlannerData } from "../PlannerStore";
+import { submitInquiry } from "@/app/planla/actions";
 
 type Props = {
   data: PlannerData;
   update: (p: Partial<PlannerData>) => void;
-  onSubmit: () => void;
+  onSubmit: (availabilityWarning?: boolean) => void;
 };
 
 export default function Step10Contact({ data, update, onSubmit }: Props) {
@@ -15,12 +16,20 @@ export default function Step10Contact({ data, update, onSubmit }: Props) {
   const valid =
     data.name && data.surname && data.email && data.phone;
 
+  const [error, setError] = useState<string | null>(null);
+
   const submit = async () => {
     if (!valid) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    onSubmit();
+    setError(null);
+    try {
+      const result = await submitInquiry(data);
+      onSubmit(result.availabilityWarning);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu, tekrar dene.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -87,6 +96,12 @@ export default function Step10Contact({ data, update, onSubmit }: Props) {
           className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:border-foreground/40 transition-colors"
         />
       </div>
+
+      {error && (
+        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+          {error}
+        </p>
+      )}
 
       <button
         onClick={submit}

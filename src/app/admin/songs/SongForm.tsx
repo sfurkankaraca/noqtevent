@@ -77,7 +77,6 @@ export default function SongForm({
         setPending(false);
       }}
       className="space-y-6"
-      encType="multipart/form-data"
     >
       {song?.id && <input type="hidden" name="id" value={song.id} />}
       <input type="hidden" name="category" value={autoCategory} />

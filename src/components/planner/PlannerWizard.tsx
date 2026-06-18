@@ -33,6 +33,7 @@ export default function PlannerWizard() {
   const [data, setData] = useState<PlannerData>(initialData);
   const [direction, setDirection] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [availabilityWarning, setAvailabilityWarning] = useState(false);
 
   const update = (partial: Partial<PlannerData>) =>
     setData((d) => ({ ...d, ...partial }));
@@ -74,7 +75,12 @@ export default function PlannerWizard() {
             Deneyim taslağın oluşturuldu. En kısa sürede seninle iletişime
             geçeceğiz, {data.name}.
           </p>
-          <p className="text-sm text-muted-foreground mt-2">
+          {availabilityWarning && (
+            <div className="mt-5 bg-[oklch(0.94_0.03_60)] border border-[oklch(0.85_0.06_60)] rounded-2xl px-5 py-4 text-sm text-[oklch(0.4_0.05_60)] leading-relaxed">
+              Belirttiğin tarihte müsaitliğimiz sınırlı görünüyor. Sana en kısa sürede ulaşıp alternatif seçenekleri birlikte değerlendireceğiz.
+            </div>
+          )}
+          <p className="text-sm text-muted-foreground mt-4">
             {data.email} adresine bir özet gönderdik.
           </p>
         </motion.div>
@@ -172,7 +178,10 @@ export default function PlannerWizard() {
               <Step8Contact
                 data={data}
                 update={update}
-                onSubmit={() => setSubmitted(true)}
+                onSubmit={(warning?: boolean) => {
+                  if (warning) setAvailabilityWarning(true);
+                  setSubmitted(true);
+                }}
               />
             )}
           </motion.div>

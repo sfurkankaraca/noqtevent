@@ -46,7 +46,7 @@ create table if not exists dj_profiles (
   mixcloud_url    text,
   youtube_url     text,
   concept_tags    text[] default '{}',
-  available_dates date[] default '{}',
+  busy_dates      date[] default '{}',   -- admin-only; dates when this DJ is booked
   is_active       boolean default true
 );
 
@@ -66,9 +66,31 @@ create table if not exists partner_profiles (
   is_active        boolean default true
 );
 
--- ── STORAGE BUCKET ─────────────────────────────────────────────
--- Supabase Dashboard > Storage > New Bucket > "audio"
--- Public bucket: true
+-- ── SITE ASSETS ───────────────────────────────────────────────
+create table if not exists site_assets (
+  id          uuid primary key default gen_random_uuid(),
+  created_at  timestamptz default now(),
+  category    text not null,   -- hero | events | artists | brands | journal | other
+  label       text not null,
+  file_path   text not null,   -- storage path inside "images" bucket
+  public_url  text not null,
+  is_active   boolean default true
+);
+
+alter table site_assets enable row level security;
+
+-- Public read
+create policy "Site assets public read" on site_assets
+  for select using (is_active = true);
+
+-- Service role full access
+create policy "Service role full access site_assets" on site_assets
+  using (true) with check (true);
+
+-- ── STORAGE BUCKETS ────────────────────────────────────────────
+-- Supabase Dashboard > Storage > New Bucket
+--   "audio"  — Public: true
+--   "images" — Public: true
 -- (Bu SQL ile yapılamaz, dashboard'dan manuel oluştur)
 
 -- ── ROW LEVEL SECURITY ─────────────────────────────────────────
