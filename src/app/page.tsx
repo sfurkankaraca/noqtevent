@@ -14,7 +14,7 @@ import { createServiceClient } from "@/lib/supabase";
 export default async function Home() {
   const supabase = createServiceClient();
 
-  const [{ data: djs }, { data: partners }, { data: concepts }] = await Promise.all([
+  const [djRes, partnerRes, conceptRes] = await Promise.all([
     supabase
       .from("dj_profiles")
       .select("id, name, bio, photo_url, photos, focal_points, concept_tags")
@@ -33,6 +33,20 @@ export default async function Home() {
       .order("sort_order", { ascending: true })
       .limit(6),
   ]);
+
+  // photos/focal_points columns may not exist yet — fall back gracefully
+  const djs = djRes.error
+    ? (await supabase
+        .from("dj_profiles")
+        .select("id, name, bio, photo_url, concept_tags")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(4)
+      ).data
+    : djRes.data;
+
+  const partners = partnerRes.data;
+  const concepts = conceptRes.data;
 
   // Group partner counts by category
   const categoryCounts: Record<string, number> = {};

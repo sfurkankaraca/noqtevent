@@ -10,8 +10,8 @@ type Dj = {
   name: string;
   bio: string | null;
   photo_url: string | null;
-  photos: string[] | null;
-  focal_points: Record<string, { x: number; y: number }> | null;
+  photos?: string[] | null;
+  focal_points?: Record<string, { x: number; y: number }> | null;
   concept_tags: string[];
 };
 
