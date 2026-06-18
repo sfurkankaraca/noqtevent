@@ -4,18 +4,9 @@ import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import Link from "next/link";
 
-const categories = [
-  { label: "Mekanlar", count: 12, href: "/ortaklar?kategori=mekan" },
-  { label: "Oteller", count: 8, href: "/ortaklar?kategori=otel" },
-  { label: "Catering", count: 10, href: "/ortaklar?kategori=catering" },
-  { label: "Fotoğraf", count: 15, href: "/ortaklar?kategori=fotograf" },
-  { label: "Video", count: 9, href: "/ortaklar?kategori=video" },
-  { label: "Çiçek Tasarım", count: 7, href: "/ortaklar?kategori=cicek" },
-  { label: "Saç & Makyaj", count: 11, href: "/ortaklar?kategori=sac-makyaj" },
-  { label: "Ulaşım", count: 5, href: "/ortaklar?kategori=ulasim" },
-];
+type CategoryCount = { label: string; count: number };
 
-export default function PartnerEcosystem() {
+export default function PartnerEcosystem({ categories }: { categories: CategoryCount[] }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
@@ -36,8 +27,7 @@ export default function PartnerEcosystem() {
               className="text-4xl lg:text-5xl mt-4 text-foreground leading-tight"
               style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
             >
-              Ortak{" "}
-              <em className="italic">Ağımız</em>
+              Ortak <em className="italic">Ağımız</em>
             </h2>
             <p className="text-muted-foreground mt-6 leading-relaxed">
               Her etkinlik için özenle seçilmiş partnerlerle çalışıyoruz.
@@ -52,7 +42,7 @@ export default function PartnerEcosystem() {
             </Link>
           </motion.div>
 
-          {/* Right - category grid */}
+          {/* Right — category grid */}
           <motion.div
             initial={{ opacity: 0, y: 32 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
@@ -67,7 +57,7 @@ export default function PartnerEcosystem() {
                 transition={{ delay: 0.2 + i * 0.06 }}
               >
                 <Link
-                  href={cat.href}
+                  href="/ortaklar"
                   className="flex items-center justify-between p-4 rounded-xl border border-border hover:border-foreground/20 hover:bg-accent transition-all group"
                 >
                   <span className="text-sm text-foreground font-medium">{cat.label}</span>
