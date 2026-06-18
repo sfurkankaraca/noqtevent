@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { upsertPartner } from "./actions";
+import FocalPointPicker, { type FocalPoint } from "@/components/admin/FocalPointPicker";
 
 const SERVICE_CATEGORIES = [
   "Mekan", "Müzik & Teknik", "Görsel & Video", "Stil & Güzellik",
@@ -22,39 +23,91 @@ type Partner = {
   service_category?: string;
   services?: Service[];
   portfolio_images?: string[];
+  focal_points?: Record<string, FocalPoint>;
   is_active?: boolean;
 };
 
+interface PhotoEntry {
+  url: string;
+  isNew: boolean;
+  file?: File;
+}
+
 export default function PartnerForm({ partner }: { partner?: Partner }) {
   const [logoPreview, setLogoPreview] = useState<string | null>(partner?.logo_url ?? null);
-  const [portfolioPreviews, setPortfolioPreviews] = useState<string[]>(partner?.portfolio_images ?? []);
+
+  const initPhotos: PhotoEntry[] = (partner?.portfolio_images ?? []).map((url) => ({
+    url,
+    isNew: false,
+  }));
+  const [photos, setPhotos] = useState<PhotoEntry[]>(initPhotos);
+  const [focalPoints, setFocalPoints] = useState<Record<string, FocalPoint>>(
+    partner?.focal_points ?? {}
+  );
+
   const [services, setServices] = useState<Service[]>(partner?.services ?? []);
   const [serviceInput, setServiceInput] = useState({ name: "", price_range: "" });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addService = () => {
     if (!serviceInput.name) return;
     setServices((p) => [...p, { ...serviceInput }]);
     setServiceInput({ name: "", price_range: "" });
   };
-
   const removeService = (i: number) => setServices((p) => p.filter((_, idx) => idx !== i));
 
   const handlePortfolioFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const urls = files.map((f) => URL.createObjectURL(f));
-    setPortfolioPreviews((p) => [...p, ...urls]);
+    const newEntries: PhotoEntry[] = files.map((f) => ({
+      url: URL.createObjectURL(f),
+      isNew: true,
+      file: f,
+    }));
+    setPhotos((p) => [...p, ...newEntries]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const removePortfolioPreview = (url: string) =>
-    setPortfolioPreviews((p) => p.filter((u) => u !== url));
+  const removePhoto = (url: string) => {
+    setPhotos((p) => p.filter((ph) => ph.url !== url));
+    setFocalPoints((prev) => {
+      const next = { ...prev };
+      delete next[url];
+      return next;
+    });
+  };
+
+  const getFocalPoint = (url: string): FocalPoint =>
+    focalPoints[url] ?? { x: 50, y: 50 };
+
+  const setFocalPoint = (url: string, fp: FocalPoint) =>
+    setFocalPoints((prev) => ({ ...prev, [url]: fp }));
 
   const handleAction = async (fd: FormData) => {
     fd.set("services_json", JSON.stringify(services));
-    const existingImages = portfolioPreviews.filter((u) => !u.startsWith("blob:"));
-    fd.set("existing_portfolio", JSON.stringify(existingImages));
+
+    const existingUrls = photos.filter((p) => !p.isNew).map((p) => p.url);
+    fd.set("existing_portfolio", JSON.stringify(existingUrls));
+
+    photos.filter((p) => p.isNew && p.file).forEach((p) => fd.append("portfolio_files", p.file!));
+
+    // Focal points: "new:N" for new photos, url for existing
+    const fpPayload: Record<string, FocalPoint> = {};
+    photos.forEach((ph, i) => {
+      const fp = getFocalPoint(ph.url);
+      if (ph.isNew) {
+        fpPayload[`new:${i}`] = fp;
+      } else {
+        fpPayload[ph.url] = fp;
+      }
+    });
+    fd.set("focal_points_json", JSON.stringify(fpPayload));
+
+    const order = photos.map((ph, i) => (ph.isNew ? `new:${i}` : ph.url));
+    fd.set("photo_order", JSON.stringify(order));
+
     setPending(true);
     setError(null);
     try {
@@ -70,7 +123,7 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
       {partner?.id && <input type="hidden" name="id" value={partner.id} />}
       {partner?.logo_url && <input type="hidden" name="existing_logo_url" value={partner.logo_url} />}
       <input type="hidden" name="services_json" value={JSON.stringify(services)} />
-      <input type="hidden" name="existing_portfolio" value={JSON.stringify(portfolioPreviews.filter((u) => !u.startsWith("blob:")))} />
+      <input type="hidden" name="existing_portfolio" value={JSON.stringify(photos.filter((p) => !p.isNew).map((p) => p.url))} />
 
       {error && (
         <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
@@ -102,7 +155,6 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
               {SERVICE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-
           <div>
             <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Aktif</label>
             <select name="is_active" defaultValue={partner?.is_active !== false ? "true" : "false"}
@@ -116,14 +168,12 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">E-posta</label>
-            <input type="email" name="contact_email" defaultValue={partner?.contact_email ?? ""}
-              placeholder="firma@example.com"
+            <input type="email" name="contact_email" defaultValue={partner?.contact_email ?? ""} placeholder="firma@example.com"
               className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Telefon</label>
-            <input type="tel" name="contact_phone" defaultValue={partner?.contact_phone ?? ""}
-              placeholder="+90 5xx xxx xx xx"
+            <input type="tel" name="contact_phone" defaultValue={partner?.contact_phone ?? ""} placeholder="+90 5xx xxx xx xx"
               className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
           </div>
         </div>
@@ -147,7 +197,6 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
       {/* Services */}
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
         <h2 className="font-medium text-foreground">Hizmetler</h2>
-
         {services.length > 0 && (
           <div className="space-y-2">
             {services.map((s, i) => (
@@ -155,21 +204,18 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
                 <span className="font-medium text-foreground">{s.name}</span>
                 <div className="flex items-center gap-3">
                   {s.price_range && <span className="text-xs text-muted-foreground">{s.price_range}</span>}
-                  <button type="button" onClick={() => removeService(i)}
-                    className="text-xs text-red-500 hover:text-red-700 transition-colors">Kaldır</button>
+                  <button type="button" onClick={() => removeService(i)} className="text-xs text-red-500 hover:text-red-700 transition-colors">Kaldır</button>
                 </div>
               </div>
             ))}
           </div>
         )}
-
         <div className="flex gap-2">
           <input type="text" value={serviceInput.name} onChange={(e) => setServiceInput((p) => ({ ...p, name: e.target.value }))}
             placeholder="Hizmet adı (ör. DJ Set)"
             className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
           <input type="text" value={serviceInput.price_range} onChange={(e) => setServiceInput((p) => ({ ...p, price_range: e.target.value }))}
-            placeholder="Fiyat aralığı"
-            className="w-36 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
+            placeholder="Fiyat aralığı" className="w-36 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
           <button type="button" onClick={addService} disabled={!serviceInput.name}
             className="px-4 py-2.5 rounded-xl border border-border text-sm text-foreground hover:bg-secondary transition-colors disabled:opacity-40">
             Ekle
@@ -178,26 +224,52 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
       </div>
 
       {/* Portfolio */}
-      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
-        <h2 className="font-medium text-foreground">Portföy Görselleri</h2>
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+        <div>
+          <h2 className="font-medium text-foreground">Portföy Görselleri</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Her görsel için odak noktası ayarlayabilirsin.</p>
+        </div>
 
-        {portfolioPreviews.length > 0 && (
-          <div className="grid grid-cols-3 gap-3">
-            {portfolioPreviews.map((url) => (
-              <div key={url} className="relative group aspect-video rounded-xl overflow-hidden border border-border bg-secondary/30">
-                <Image src={url} alt="" fill className="object-cover" unoptimized />
-                <button type="button" onClick={() => removePortfolioPreview(url)}
-                  className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-500 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  ×
-                </button>
+        {photos.length > 0 && (
+          <div className="grid grid-cols-2 gap-4">
+            {photos.map((ph, i) => (
+              <div key={ph.url} className="space-y-3 p-4 rounded-xl border border-border bg-secondary/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {i === 0 ? "⭐ Kapak" : `Görsel ${i + 1}`}
+                  </span>
+                  <button type="button" onClick={() => removePhoto(ph.url)}
+                    className="text-xs text-red-500 hover:text-red-700 transition-colors">
+                    Kaldır
+                  </button>
+                </div>
+                <div className="flex gap-4">
+                  <div className="relative rounded-xl overflow-hidden border border-border bg-secondary/30 flex-shrink-0"
+                    style={{ width: 100, aspectRatio: "16/9" }}>
+                    <Image src={ph.url} alt="" fill className="object-cover" unoptimized
+                      style={{ objectPosition: `${getFocalPoint(ph.url).x}% ${getFocalPoint(ph.url).y}%` }} />
+                  </div>
+                  <FocalPointPicker
+                    src={ph.url}
+                    value={getFocalPoint(ph.url)}
+                    onChange={(fp) => setFocalPoint(ph.url, fp)}
+                    aspectRatio="16/9"
+                  />
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        <input type="file" name="portfolio_files" accept="image/*" multiple onChange={handlePortfolioFiles}
-          className="block text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-foreground file:text-background hover:file:opacity-80 cursor-pointer" />
-        <p className="text-xs text-muted-foreground">Birden fazla görsel seçebilirsin</p>
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file" name="portfolio_files" accept="image/*" multiple
+            onChange={handlePortfolioFiles}
+            className="block text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-foreground file:text-background hover:file:opacity-80 cursor-pointer"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Birden fazla görsel seçebilirsin</p>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -205,9 +277,7 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
           className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
           {pending ? "Kaydediliyor…" : partner?.id ? "Güncelle" : "Ortak Ekle"}
         </button>
-        <Link href="/admin/ortaklar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          İptal
-        </Link>
+        <Link href="/admin/ortaklar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">İptal</Link>
       </div>
     </form>
   );

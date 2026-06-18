@@ -44,6 +44,19 @@ export default async function DjDetailPage({ params }: Props) {
     { url: dj.youtube_url, label: "YouTube" },
   ].filter((l) => l.url);
 
+  // photos array (new) or fall back to single photo_url
+  const photos: string[] =
+    Array.isArray(dj.photos) && dj.photos.length > 0
+      ? dj.photos
+      : dj.photo_url
+      ? [dj.photo_url]
+      : [];
+
+  const focalPoints: Record<string, { x: number; y: number }> = dj.focal_points ?? {};
+  const coverPhoto = photos[0] ?? null;
+  const coverFp = coverPhoto ? (focalPoints[coverPhoto] ?? { x: 50, y: 50 }) : { x: 50, y: 50 };
+  const galleryPhotos = photos.slice(1);
+
   return (
     <>
       <Navigation />
@@ -57,11 +70,19 @@ export default async function DjDetailPage({ params }: Props) {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start">
-            {/* Left: Photo */}
-            <div className="lg:col-span-2">
+            {/* Left: Photos */}
+            <div className="lg:col-span-2 space-y-3">
+              {/* Cover photo */}
               <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-[oklch(0.92_0.02_320)] relative">
-                {dj.photo_url ? (
-                  <Image src={dj.photo_url} alt={dj.name} fill className="object-cover" unoptimized />
+                {coverPhoto ? (
+                  <Image
+                    src={coverPhoto}
+                    alt={dj.name}
+                    fill
+                    className="object-cover"
+                    style={{ objectPosition: `${coverFp.x}% ${coverFp.y}%` }}
+                    unoptimized
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span
@@ -73,6 +94,27 @@ export default async function DjDetailPage({ params }: Props) {
                   </div>
                 )}
               </div>
+
+              {/* Gallery strip */}
+              {galleryPhotos.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {galleryPhotos.map((url, i) => {
+                    const fp = focalPoints[url] ?? { x: 50, y: 50 };
+                    return (
+                      <div key={url} className="aspect-square rounded-xl overflow-hidden relative">
+                        <Image
+                          src={url}
+                          alt={`${dj.name} ${i + 2}`}
+                          fill
+                          className="object-cover"
+                          style={{ objectPosition: `${fp.x}% ${fp.y}%` }}
+                          unoptimized
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Right: Info */}
@@ -100,9 +142,7 @@ export default async function DjDetailPage({ params }: Props) {
               )}
 
               {dj.bio && (
-                <p className="text-muted-foreground leading-relaxed text-base">
-                  {dj.bio}
-                </p>
+                <p className="text-muted-foreground leading-relaxed text-base">{dj.bio}</p>
               )}
 
               {musicLinks.length > 0 && (
@@ -111,10 +151,7 @@ export default async function DjDetailPage({ params }: Props) {
                   <div className="flex flex-wrap gap-3">
                     {musicLinks.map((l) => (
                       <a
-                        key={l.label}
-                        href={l.url!}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        key={l.label} href={l.url!} target="_blank" rel="noopener noreferrer"
                         className="text-sm px-5 py-2.5 border border-border rounded-full text-foreground hover:bg-foreground hover:text-background transition-all"
                       >
                         {l.label} ↗

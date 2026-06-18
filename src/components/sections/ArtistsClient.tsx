@@ -10,6 +10,8 @@ type Dj = {
   name: string;
   bio: string | null;
   photo_url: string | null;
+  photos?: string[];
+  focal_points?: Record<string, { x: number; y: number }>;
   concept_tags: string[];
   soundcloud_url: string | null;
   mixcloud_url: string | null;
@@ -122,6 +124,13 @@ export default function ArtistsClient({ djs }: { djs: Dj[] }) {
                         alt={dj.name}
                         fill
                         className="object-cover"
+                        style={{
+                          objectPosition: (() => {
+                            const cover = dj.photos?.[0] ?? dj.photo_url;
+                            const fp = cover ? (dj.focal_points?.[cover] ?? { x: 50, y: 50 }) : { x: 50, y: 50 };
+                            return `${fp.x}% ${fp.y}%`;
+                          })(),
+                        }}
                         unoptimized
                       />
                     ) : (

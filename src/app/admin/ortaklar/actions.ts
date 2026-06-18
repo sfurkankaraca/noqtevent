@@ -3,10 +3,10 @@
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { FocalPoint } from "@/components/admin/FocalPointPicker";
 
 export async function upsertPartner(formData: FormData) {
   const supabase = createServiceClient();
-
   const id = formData.get("id") as string | null;
 
   // Upload logo
@@ -23,9 +23,13 @@ export async function upsertPartner(formData: FormData) {
     logo_url = supabase.storage.from("images").getPublicUrl(up.path).data.publicUrl;
   }
 
-  // Upload portfolio images (multiple)
+  // Existing portfolio URLs
+  const existingPortfolio: string[] = JSON.parse(
+    (formData.get("existing_portfolio") as string) || "[]"
+  );
+
+  // Upload new portfolio files
   const portfolioFiles = formData.getAll("portfolio_files") as File[];
-  const existingPortfolio = JSON.parse((formData.get("existing_portfolio") as string) || "[]") as string[];
   const newUrls: string[] = [];
   for (const file of portfolioFiles) {
     if (!file || file.size === 0) continue;
@@ -39,7 +43,34 @@ export async function upsertPartner(formData: FormData) {
     newUrls.push(supabase.storage.from("images").getPublicUrl(up.path).data.publicUrl);
   }
 
-  // Parse services JSON
+  // Reconstruct ordered list
+  const order: string[] = JSON.parse((formData.get("photo_order") as string) || "[]");
+  const portfolio_images: string[] = order.length
+    ? order.map((key) => {
+        if (key.startsWith("new:")) {
+          const pos = parseInt(key.split(":")[1]);
+          return newUrls[pos - existingPortfolio.length] ?? "";
+        }
+        return key;
+      }).filter(Boolean)
+    : [...existingPortfolio, ...newUrls];
+
+  // Remap focal points
+  const fpRaw: Record<string, FocalPoint> = JSON.parse(
+    (formData.get("focal_points_json") as string) || "{}"
+  );
+  const focal_points: Record<string, FocalPoint> = {};
+  for (const [key, fp] of Object.entries(fpRaw)) {
+    if (key.startsWith("new:")) {
+      const pos = parseInt(key.split(":")[1]);
+      const url = newUrls[pos - existingPortfolio.length];
+      if (url) focal_points[url] = fp;
+    } else {
+      focal_points[key] = fp;
+    }
+  }
+
+  // Parse services
   let services: { name: string; price_range: string }[] = [];
   try {
     services = JSON.parse((formData.get("services_json") as string) || "[]");
@@ -52,7 +83,8 @@ export async function upsertPartner(formData: FormData) {
     contact_phone: (formData.get("contact_phone") as string) || null,
     service_category: formData.get("service_category") as string,
     services,
-    portfolio_images: [...existingPortfolio, ...newUrls],
+    portfolio_images,
+    focal_points,
     is_active: formData.get("is_active") === "true",
     ...(logo_url ? { logo_url } : {}),
   };
@@ -81,11 +113,16 @@ export async function removePortfolioImage(partnerId: string, url: string) {
   const supabase = createServiceClient();
   const { data: partner } = await supabase
     .from("partner_profiles")
-    .select("portfolio_images")
+    .select("portfolio_images, focal_points")
     .eq("id", partnerId)
     .single();
   if (!partner) return;
   const updated = (partner.portfolio_images as string[]).filter((u: string) => u !== url);
-  await supabase.from("partner_profiles").update({ portfolio_images: updated }).eq("id", partnerId);
+  const fp = { ...(partner.focal_points as Record<string, FocalPoint> ?? {}) };
+  delete fp[url];
+  await supabase
+    .from("partner_profiles")
+    .update({ portfolio_images: updated, focal_points: fp })
+    .eq("id", partnerId);
   revalidatePath("/admin/ortaklar");
 }

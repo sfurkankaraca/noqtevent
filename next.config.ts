@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // serverActions.bodySizeLimit type missing in NextConfig but supported at runtime
-  ...(({ serverActions: { bodySizeLimit: "10mb" } }) as object),
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
 };
 
 export default nextConfig;

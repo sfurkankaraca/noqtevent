@@ -34,6 +34,7 @@ export default async function PartnerDetailPage({ params }: Props) {
   type Service = { name: string; price_range: string };
   const services: Service[] = partner.services ?? [];
   const portfolio: string[] = partner.portfolio_images ?? [];
+  const focalPoints: Record<string, { x: number; y: number }> = partner.focal_points ?? {};
 
   return (
     <>
@@ -80,11 +81,21 @@ export default async function PartnerDetailPage({ params }: Props) {
                 <div className="space-y-3">
                   <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Portfolyo</p>
                   <div className={`grid gap-3 ${portfolio.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-                    {portfolio.slice(0, 4).map((url, i) => (
-                      <div key={i} className={`relative rounded-xl overflow-hidden bg-secondary ${i === 0 && portfolio.length >= 3 ? "col-span-2 aspect-[16/7]" : "aspect-[4/3]"}`}>
-                        <Image src={url} alt={`${partner.company_name} ${i + 1}`} fill className="object-cover" unoptimized />
-                      </div>
-                    ))}
+                    {portfolio.slice(0, 6).map((url, i) => {
+                      const fp = focalPoints[url] ?? { x: 50, y: 50 };
+                      return (
+                        <div key={i} className={`relative rounded-xl overflow-hidden bg-secondary ${i === 0 && portfolio.length >= 3 ? "col-span-2 aspect-[16/7]" : "aspect-[4/3]"}`}>
+                          <Image
+                            src={url}
+                            alt={`${partner.company_name} ${i + 1}`}
+                            fill
+                            className="object-cover"
+                            style={{ objectPosition: `${fp.x}% ${fp.y}%` }}
+                            unoptimized
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
