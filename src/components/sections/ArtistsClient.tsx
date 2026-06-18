@@ -177,12 +177,18 @@ export default function ArtistsClient({ djs }: { djs: Dj[] }) {
                       </div>
                     )}
 
-                    <div className="mt-4 pt-4 border-t border-border flex justify-end">
+                    <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
                       <Link
-                        href="/planla"
+                        href={`/sanatcilar/${dj.id}`}
                         className="text-xs font-medium text-foreground hover:text-muted-foreground transition-colors"
                       >
-                        Planla →
+                        Profil →
+                      </Link>
+                      <Link
+                        href="/planla"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Planla
                       </Link>
                     </div>
                   </div>

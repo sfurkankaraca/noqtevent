@@ -153,6 +153,15 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
                         )}
                       </div>
                     )}
+
+                    <div className="mt-4 pt-3 border-t border-border">
+                      <Link
+                        href={`/ortaklar/${partner.id}`}
+                        className="text-xs font-medium text-foreground hover:text-muted-foreground transition-colors"
+                      >
+                        Detay →
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </motion.div>
