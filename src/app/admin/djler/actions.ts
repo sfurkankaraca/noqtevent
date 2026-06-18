@@ -89,9 +89,28 @@ export async function upsertDj(formData: FormData) {
   };
 
   if (id) {
-    await supabase.from("dj_profiles").update(payload).eq("id", id);
+    const { error: updateError } = await supabase.from("dj_profiles").update(payload).eq("id", id);
+    if (updateError) {
+      // photos/focal_points columns may not exist yet — retry without them
+      if (updateError.message.includes("photos") || updateError.message.includes("focal_points")) {
+        const { photos: _p, focal_points: _fp, ...safePayload } = payload;
+        const { error: retryError } = await supabase.from("dj_profiles").update(safePayload).eq("id", id);
+        if (retryError) throw new Error(retryError.message);
+      } else {
+        throw new Error(updateError.message);
+      }
+    }
   } else {
-    await supabase.from("dj_profiles").insert({ ...payload, clerk_id: `admin-${Date.now()}` });
+    const { error: insertError } = await supabase.from("dj_profiles").insert({ ...payload, clerk_id: `admin-${Date.now()}` });
+    if (insertError) {
+      if (insertError.message.includes("photos") || insertError.message.includes("focal_points")) {
+        const { photos: _p, focal_points: _fp, ...safePayload } = payload;
+        const { error: retryError } = await supabase.from("dj_profiles").insert({ ...safePayload, clerk_id: `admin-${Date.now()}` });
+        if (retryError) throw new Error(retryError.message);
+      } else {
+        throw new Error(insertError.message);
+      }
+    }
   }
 
   revalidatePath("/admin/djler");

@@ -112,7 +112,8 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
     setError(null);
     try {
       await upsertPartner(fd);
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "digest" in err) throw err;
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
       setPending(false);
     }

@@ -125,7 +125,9 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     setError(null);
     try {
       await upsertDj(fd);
-    } catch (err) {
+    } catch (err: unknown) {
+      // Re-throw Next.js redirect/notFound — don't treat them as errors
+      if (err && typeof err === "object" && "digest" in err) throw err;
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
       setPending(false);
     }

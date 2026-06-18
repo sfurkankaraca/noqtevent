@@ -90,12 +90,30 @@ export async function upsertPartner(formData: FormData) {
   };
 
   if (id) {
-    await supabase.from("partner_profiles").update(payload).eq("id", id);
+    const { error: updateError } = await supabase.from("partner_profiles").update(payload).eq("id", id);
+    if (updateError) {
+      if (updateError.message.includes("focal_points")) {
+        const { focal_points: _fp, ...safePayload } = payload;
+        const { error: retryError } = await supabase.from("partner_profiles").update(safePayload).eq("id", id);
+        if (retryError) throw new Error(retryError.message);
+      } else {
+        throw new Error(updateError.message);
+      }
+    }
   } else {
-    await supabase.from("partner_profiles").insert({
+    const { error: insertError } = await supabase.from("partner_profiles").insert({
       ...payload,
       clerk_id: `admin-${Date.now()}`,
     });
+    if (insertError) {
+      if (insertError.message.includes("focal_points")) {
+        const { focal_points: _fp, ...safePayload } = payload;
+        const { error: retryError } = await supabase.from("partner_profiles").insert({ ...safePayload, clerk_id: `admin-${Date.now()}` });
+        if (retryError) throw new Error(retryError.message);
+      } else {
+        throw new Error(insertError.message);
+      }
+    }
   }
 
   revalidatePath("/admin/ortaklar");
