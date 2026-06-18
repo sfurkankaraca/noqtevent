@@ -10,6 +10,7 @@ const navLinks = [
   { href: "/konseptler", label: "Konseptler" },
   { href: "/sanatcilar", label: "Sanatçılar" },
   { href: "/ortaklar", label: "Ortaklar" },
+  { href: "/memory-drive", label: "Memory Drive" },
   { href: "/journal", label: "Journal" },
   { href: "/hakkimizda", label: "Hakkımızda" },
 ];
