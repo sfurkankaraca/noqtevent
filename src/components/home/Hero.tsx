@@ -1,29 +1,66 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
-export default function Hero({ heroImageUrl }: { heroImageUrl?: string }) {
-  const bgSrc = heroImageUrl ?? "/hero-bg.png";
+const SLIDE_INTERVAL = 5000;
+
+export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
+  const images = heroImages.length > 0 ? heroImages : ["/hero-bg.png"];
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const id = setInterval(() => setCurrent((c) => (c + 1) % images.length), SLIDE_INTERVAL);
+    return () => clearInterval(id);
+  }, [images.length]);
+
   return (
     <section className="relative min-h-screen flex flex-col">
       {/* Split layout: left text, right photo */}
       <div className="absolute inset-0 grid grid-cols-1 lg:grid-cols-2">
         {/* Left — warm cream */}
         <div className="bg-[oklch(0.975_0.006_80)]" />
-        {/* Right — photo */}
-        <div className="relative hidden lg:block">
-          <Image
-            src={bgSrc}
-            alt="NOQT etkinlik atmosferi"
-            fill
-            className="object-cover"
-            priority
-            unoptimized
-          />
+        {/* Right — slideshow */}
+        <div className="relative hidden lg:block overflow-hidden">
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={current}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.2, ease: "easeInOut" }}
+              className="absolute inset-0"
+            >
+              <Image
+                src={images[current]}
+                alt="NOQT etkinlik atmosferi"
+                fill
+                className="object-cover"
+                priority={current === 0}
+                unoptimized
+              />
+            </motion.div>
+          </AnimatePresence>
           {/* Subtle left-edge fade so left panel bleeds into photo */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[oklch(0.975_0.006_80)] via-transparent to-transparent w-1/3" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[oklch(0.975_0.006_80)] via-transparent to-transparent w-1/3 z-10" />
+
+          {/* Slide dots — only shown when multiple images */}
+          {images.length > 1 && (
+            <div className="absolute bottom-6 right-6 z-20 flex gap-1.5">
+              {images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrent(i)}
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    i === current ? "w-6 bg-white" : "w-1.5 bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
