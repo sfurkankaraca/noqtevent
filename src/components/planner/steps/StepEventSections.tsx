@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { type PlannerData, MUSIC_CONCEPTS, type EventSections } from "../PlannerStore";
+import { type PlannerData, MUSIC_CONCEPTS, type MusicConcept, type EventSections } from "../PlannerStore";
 
 type Props = {
   data: PlannerData;
@@ -12,123 +12,138 @@ type Props = {
   conceptCovers?: Record<string, string>;
 };
 
-// ─── RICH CONCEPT CARD ────────────────────────────────────────────────────────
+// ─── RECOMMENDATION LOGIC ─────────────────────────────────────────────────────
+
+function fitScore(c: MusicConcept, eventType: string): number {
+  const base =
+    eventType === "wedding" ? c.weddingFit :
+    eventType === "corporate" ? c.corporateFit :
+    eventType === "cocktail" ? c.cocktailFit :
+    eventType === "after-party" ? c.afterPartyFit :
+    eventType === "private-party" ? (c.weddingFit + c.afterPartyFit) / 2 :
+    eventType === "sunset" ? c.cocktailFit :
+    (c.weddingFit + c.corporateFit) / 2;
+  return base + (c.signature ? 0.5 : 0);
+}
+
+function getTop(concepts: MusicConcept[], eventType: string, n: number): string[] {
+  return [...concepts]
+    .sort((a, b) => fitScore(b, eventType) - fitScore(a, eventType))
+    .slice(0, n)
+    .map((c) => c.id);
+}
+
+function recommendReason(c: MusicConcept, eventType: string): string {
+  if (c.signature) return "NOQT'un imza konsepti — en çok tercih edilen";
+  const score = fitScore(c, eventType);
+  if (score >= 9.5) return "Bu etkinlik tipi için en ideal atmosfer";
+  if (score >= 8) return "Misafir profilinle çok uyumlu";
+  if (score >= 7) return "Bu tür etkinliklerde sıkça tercih ediliyor";
+  return "Senin için özel seçtik";
+}
+
+// ─── CONCEPT CARD ─────────────────────────────────────────────────────────────
 
 function ConceptCard({
   concept,
   selected,
   onSelect,
   coverUrl,
+  isRecommended,
+  recommendText,
 }: {
-  concept: (typeof MUSIC_CONCEPTS)[0];
+  concept: MusicConcept;
   selected: boolean;
   onSelect: () => void;
   coverUrl?: string;
+  isRecommended?: boolean;
+  recommendText?: string;
 }) {
-  const textColor = concept.dark ? "text-white" : "text-foreground";
-  const mutedColor = concept.dark ? "text-white/65" : "text-foreground/60";
-  const tagBg = concept.dark ? "bg-white/15 text-white/75" : "bg-black/8 text-foreground/65";
+  const dark = concept.dark;
+  const textColor = dark ? "text-white" : "text-foreground";
+  const mutedColor = dark ? "text-white/60" : "text-foreground/55";
+  const tagBg = dark ? "bg-white/12 text-white/70" : "bg-black/7 text-foreground/60";
+  const borderColor = dark ? "border-white/10" : "border-foreground/8";
 
   return (
     <button
       onClick={onSelect}
-      className={`relative flex flex-col text-left rounded-2xl overflow-hidden border-2 transition-all duration-200 ${
+      className={`relative flex flex-col text-left rounded-2xl overflow-hidden border-2 transition-all duration-200 w-full ${
         selected
           ? "border-foreground shadow-lg scale-[1.01]"
-          : "border-transparent hover:border-foreground/25"
+          : "border-transparent hover:border-foreground/20"
       } ${concept.color}`}
     >
-      {/* Cover photo */}
+      {/* Cover */}
       {coverUrl && (
-        <div className="relative h-40 w-full overflow-hidden flex-shrink-0">
-          <Image
-            src={coverUrl}
-            alt={concept.name}
-            fill
-            className="object-cover"
-            unoptimized
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
-          {/* Signature badge on photo */}
-          {concept.signature && (
-            <span className="absolute top-2.5 left-2.5 text-[10px] font-semibold tracking-wider bg-white/90 text-foreground px-2 py-0.5 rounded-full uppercase">
-              NOQT İmzası
+        <div className="relative h-36 w-full overflow-hidden flex-shrink-0">
+          <Image src={coverUrl} alt={concept.name} fill className="object-cover" unoptimized />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
+          {isRecommended && (
+            <span className="absolute top-2.5 left-2.5 text-[10px] font-semibold tracking-wider bg-white/95 text-foreground px-2 py-0.5 rounded-full uppercase">
+              ★ Önerilen
             </span>
           )}
         </div>
       )}
 
-      {/* Content */}
-      <div className="p-4 space-y-3 flex-1">
+      <div className="p-4 space-y-2.5 flex-1">
         {/* Header */}
-        <div className="flex items-start gap-2">
-          <span className="text-2xl leading-none mt-0.5">{concept.emoji}</span>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <p className={`text-sm font-semibold leading-tight ${textColor}`}>
-                {concept.name}
-              </p>
-              {concept.signature && !coverUrl && (
-                <span className={`text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded-full ${
-                  concept.dark ? "bg-white/25 text-white" : "bg-foreground/15 text-foreground"
-                }`}>
-                  NOQT
-                </span>
-              )}
-            </div>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xl leading-none">{concept.emoji}</span>
+            <p className={`text-sm font-semibold leading-tight ${textColor}`}>{concept.name}</p>
           </div>
+          {isRecommended && !coverUrl && (
+            <span className={`text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+              dark ? "bg-white/20 text-white" : "bg-foreground/12 text-foreground"
+            }`}>
+              ★ Önerilen
+            </span>
+          )}
         </div>
 
         {/* Description */}
-        <p className={`text-xs leading-relaxed ${mutedColor}`}>
-          {concept.description}
-        </p>
+        <p className={`text-xs leading-relaxed ${mutedColor}`}>{concept.description}</p>
 
         {/* Musical direction */}
         <div className="flex flex-wrap gap-1">
           {concept.musicalDirection.slice(0, 3).map((d) => (
-            <span key={d} className={`text-[10px] px-2 py-0.5 rounded-full ${tagBg}`}>
-              {d}
-            </span>
+            <span key={d} className={`text-[10px] px-2 py-0.5 rounded-full ${tagBg}`}>{d}</span>
           ))}
         </div>
 
-        {/* Energy bar */}
+        {/* Example artists */}
+        {concept.references.length > 0 && (
+          <div className={`text-[10px] leading-relaxed ${mutedColor} border-t ${borderColor} pt-2`}>
+            <span className="font-medium">Örnek sanatçılar: </span>
+            {concept.references.slice(0, 4).join(", ")}
+          </div>
+        )}
+
+        {/* Energy */}
         <div className="flex items-center gap-2">
           <span className={`text-[10px] font-medium ${mutedColor}`}>Enerji</span>
           <div className="flex gap-0.5">
             {Array.from({ length: 10 }, (_, i) => (
-              <div
-                key={i}
-                className={`h-1 rounded-full transition-all ${
-                  i < concept.energyLevel
-                    ? concept.dark
-                      ? "bg-white/80 w-2"
-                      : "bg-foreground/55 w-2"
-                    : concept.dark
-                    ? "bg-white/15 w-1.5"
-                    : "bg-foreground/12 w-1.5"
-                }`}
-              />
+              <div key={i} className={`h-1 rounded-full ${
+                i < concept.energyLevel
+                  ? dark ? "bg-white/75 w-2" : "bg-foreground/50 w-2"
+                  : dark ? "bg-white/12 w-1.5" : "bg-foreground/10 w-1.5"
+              }`} />
             ))}
           </div>
         </div>
 
-        {/* Atmosphere tags */}
-        <div className="flex flex-wrap gap-1">
-          {concept.atmosphere.map((a) => (
-            <span key={a} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${
-              concept.dark
-                ? "border-white/20 text-white/60"
-                : "border-foreground/15 text-foreground/55"
-            }`}>
-              {a}
-            </span>
-          ))}
-        </div>
+        {/* Recommend reason */}
+        {isRecommended && recommendText && (
+          <p className={`text-[10px] italic ${dark ? "text-white/45" : "text-foreground/40"}`}>
+            ✦ {recommendText}
+          </p>
+        )}
       </div>
 
-      {/* Selected checkmark */}
+      {/* Checkmark */}
       <AnimatePresence>
         {selected && (
           <motion.div
@@ -148,70 +163,71 @@ function ConceptCard({
   );
 }
 
+// ─── EXPAND BUTTON ────────────────────────────────────────────────────────────
+
+function ExpandButton({ expanded, count, onToggle }: { expanded: boolean; count: number; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-2 flex items-center justify-center gap-1.5 border border-dashed border-border rounded-xl hover:border-foreground/30"
+    >
+      {expanded ? "▲ Daha az göster" : `▼ Diğer ${count} konsepti gör`}
+    </button>
+  );
+}
+
 // ─── TIME PICKER ──────────────────────────────────────────────────────────────
 
 function TimePicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex items-center gap-4">
-      <p className="text-xs text-muted-foreground tracking-wide uppercase font-medium">{label}</p>
+    <div className="flex items-center gap-3">
+      <p className="text-xs text-muted-foreground font-medium">{label}</p>
       <input
-        type="time"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="px-4 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40 transition-colors"
+        type="time" value={value} onChange={(e) => onChange(e.target.value)}
+        className="px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40 transition-colors"
       />
     </div>
   );
 }
 
-// ─── SUB-STEPS ────────────────────────────────────────────────────────────────
+// ─── KARŞILAMA PANEL ──────────────────────────────────────────────────────────
 
-const SUB_STEPS = [
-  { id: "karsilama", label: "Karşılama", emoji: "🥂" },
-  { id: "anaKutlama", label: "Ana Kutlama", emoji: "🎉" },
-  { id: "afterParti", label: "After Parti", emoji: "🌙" },
-];
-
-// ─── PANELS ──────────────────────────────────────────────────────────────────
-
-function KarsilamaPanel({
-  sections, onChange, coverMap, onAdvance,
-}: {
+function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType }: {
   sections: EventSections;
   onChange: (s: EventSections) => void;
   coverMap: Record<string, string>;
   onAdvance: () => void;
+  eventType: string;
 }) {
-  const concepts = MUSIC_CONCEPTS.filter((c) => c.category === "cocktail");
+  const allConcepts = MUSIC_CONCEPTS.filter((c) => c.category === "cocktail");
+  const recommendedIds = getTop(allConcepts, eventType, 2);
+  const recommended = allConcepts.filter((c) => recommendedIds.includes(c.id));
+  const others = allConcepts.filter((c) => !recommendedIds.includes(c.id));
+
   const selected = sections.karsilama.conceptIds;
+  const [expanded, setExpanded] = useState(false);
   const advancedRef = useRef(false);
 
   const selectConcept = (id: string) => {
-    // single select: if already selected deselect, else pick only this
     const next = selected.includes(id) ? [] : [id];
     onChange({ ...sections, karsilama: { ...sections.karsilama, conceptIds: next } });
   };
 
-  // auto-advance 700ms after first selection
   useEffect(() => {
     if (selected.length > 0 && !advancedRef.current) {
       advancedRef.current = true;
-      const t = setTimeout(onAdvance, 700);
+      const t = setTimeout(onAdvance, 800);
       return () => clearTimeout(t);
     }
   }, [selected, onAdvance]);
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Misafirlerinizi nasıl karşılamak istersiniz? Bir atmosfer seçin.
+      {/* Section explanation */}
+      <div className="bg-[oklch(0.97_0.005_80)] rounded-2xl p-4 border border-border">
+        <p className="text-sm text-foreground leading-relaxed">
+          <span className="font-medium">Karşılama</span>, misafirlerinizin birbirleriyle sohbet edip müzikle atmosfere yavaş yavaş girdiği ısınma bölümü. Müzik arka planda akar, sohbeti destekler — dikkat çekmez.
         </p>
-        {sections.karsilama.startTime && (
-          <span className="text-xs text-muted-foreground flex-shrink-0 ml-4">
-            {sections.karsilama.startTime}
-          </span>
-        )}
       </div>
 
       <TimePicker
@@ -220,16 +236,51 @@ function KarsilamaPanel({
         onChange={(v) => onChange({ ...sections, karsilama: { ...sections.karsilama, startTime: v } })}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {concepts.map((c) => (
-          <ConceptCard
-            key={c.id}
-            concept={c}
-            selected={selected.includes(c.id)}
-            onSelect={() => selectConcept(c.id)}
-            coverUrl={coverMap[c.id]}
-          />
-        ))}
+      <div>
+        <p className="text-sm font-medium text-foreground mb-3">Nasıl bir atmosfer olsun?</p>
+
+        {/* Recommended */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {recommended.map((c) => (
+            <ConceptCard
+              key={c.id}
+              concept={c}
+              selected={selected.includes(c.id)}
+              onSelect={() => selectConcept(c.id)}
+              coverUrl={coverMap[c.id]}
+              isRecommended
+              recommendText={recommendReason(c, eventType)}
+            />
+          ))}
+        </div>
+
+        {/* Expand */}
+        {others.length > 0 && (
+          <div className="mt-3 space-y-3">
+            <ExpandButton expanded={expanded} count={others.length} onToggle={() => setExpanded((p) => !p)} />
+            <AnimatePresence>
+              {expanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
+                >
+                  {others.map((c) => (
+                    <ConceptCard
+                      key={c.id}
+                      concept={c}
+                      selected={selected.includes(c.id)}
+                      onSelect={() => selectConcept(c.id)}
+                      coverUrl={coverMap[c.id]}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {selected.length > 0 && (
@@ -245,175 +296,248 @@ function KarsilamaPanel({
   );
 }
 
-function AnaKutlamaPanel({
-  sections, onChange, coverMap, onAdvance,
-}: {
+// ─── ANA KUTLAMA PANEL ────────────────────────────────────────────────────────
+
+function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType }: {
   sections: EventSections;
   onChange: (s: EventSections) => void;
   coverMap: Record<string, string>;
   onAdvance: () => void;
+  eventType: string;
 }) {
-  const style = sections.anaKutlama.style;
-  const concepts = MUSIC_CONCEPTS.filter((c) =>
-    style === "traditional" ? c.category === "traditional" : c.category === "celebration"
-  );
+  const modernAll = MUSIC_CONCEPTS.filter((c) => c.category === "celebration");
+  const traditionalAll = MUSIC_CONCEPTS.filter((c) => c.category === "traditional");
+
+  const modernRecIds = getTop(modernAll, eventType, 2);
+  const modernRec = modernAll.filter((c) => modernRecIds.includes(c.id));
+  const modernOther = modernAll.filter((c) => !modernRecIds.includes(c.id));
+
+  const tradRecIds = getTop(traditionalAll, eventType, 2);
+  const tradRec = traditionalAll.filter((c) => tradRecIds.includes(c.id));
+  const tradOther = traditionalAll.filter((c) => !tradRecIds.includes(c.id));
+
   const selected = sections.anaKutlama.conceptIds;
-  const advancedRef = useRef(false);
+  const [modernExpanded, setModernExpanded] = useState(false);
+  const [tradExpanded, setTradExpanded] = useState(false);
 
-  const setStyle = (s: "modern" | "traditional") => {
-    advancedRef.current = false;
-    onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, style: s, conceptIds: [] } });
-  };
-
-  const selectConcept = (id: string) => {
-    const next = selected.includes(id) ? [] : [id];
+  const toggleConcept = (id: string) => {
+    const next = selected.includes(id)
+      ? selected.filter((x) => x !== id)
+      : [...selected, id];
     onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, conceptIds: next } });
   };
 
-  useEffect(() => {
-    if (selected.length > 0 && !advancedRef.current) {
-      advancedRef.current = true;
-      const t = setTimeout(onAdvance, 700);
-      return () => clearTimeout(t);
-    }
-  }, [selected, onAdvance]);
-
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground leading-relaxed">
-        Ana kutlamanın ruhunu belirleyin.
-      </p>
+    <div className="space-y-6">
+      {/* Modern */}
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm font-medium text-foreground">✨ Modern</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Birden fazla seçebilirsin</p>
+        </div>
 
-      <TimePicker
-        label="Başlangıç saati"
-        value={sections.anaKutlama.startTime}
-        onChange={(v) => onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, startTime: v } })}
-      />
+        <TimePicker
+          label="Başlangıç saati"
+          value={sections.anaKutlama.startTime}
+          onChange={(v) => onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, startTime: v } })}
+        />
 
-      {/* Style picker */}
-      <div className="flex gap-3">
-        {(["modern", "traditional"] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => setStyle(s)}
-            className={`flex-1 py-3 rounded-2xl text-sm font-medium border-2 transition-all ${
-              style === s
-                ? "border-foreground bg-foreground text-background"
-                : "border-border text-foreground hover:border-foreground/40"
-            }`}
-          >
-            {s === "modern" ? "✨ Modern" : "🔥 Geleneksel"}
-          </button>
-        ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {modernRec.map((c) => (
+            <ConceptCard
+              key={c.id}
+              concept={c}
+              selected={selected.includes(c.id)}
+              onSelect={() => toggleConcept(c.id)}
+              coverUrl={coverMap[c.id]}
+              isRecommended
+              recommendText={recommendReason(c, eventType)}
+            />
+          ))}
+        </div>
+
+        {modernOther.length > 0 && (
+          <div className="space-y-3">
+            <ExpandButton expanded={modernExpanded} count={modernOther.length} onToggle={() => setModernExpanded((p) => !p)} />
+            <AnimatePresence>
+              {modernExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
+                >
+                  {modernOther.map((c) => (
+                    <ConceptCard
+                      key={c.id}
+                      concept={c}
+                      selected={selected.includes(c.id)}
+                      onSelect={() => toggleConcept(c.id)}
+                      coverUrl={coverMap[c.id]}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
-      {style && (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={style}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-3"
-          >
-            <p className="text-xs text-muted-foreground tracking-wide uppercase font-medium">
-              {style === "modern" ? "Modern Konseptler" : "Geleneksel Konseptler"}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {concepts.map((c) => (
-                <ConceptCard
-                  key={c.id}
-                  concept={c}
-                  selected={selected.includes(c.id)}
-                  onSelect={() => selectConcept(c.id)}
-                  coverUrl={coverMap[c.id]}
-                />
-              ))}
-            </div>
-            {selected.length > 0 && (
-              <motion.p
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-xs text-muted-foreground text-center"
-              >
-                After parti bölümüne geçiliyor…
-              </motion.p>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      )}
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-xs text-muted-foreground font-medium">Geleneksel</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
+      {/* Traditional */}
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">🔥 Geleneksel dokunuşlar eklemek ister misin?</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {tradRec.map((c) => (
+            <ConceptCard
+              key={c.id}
+              concept={c}
+              selected={selected.includes(c.id)}
+              onSelect={() => toggleConcept(c.id)}
+              coverUrl={coverMap[c.id]}
+              isRecommended
+              recommendText={recommendReason(c, eventType)}
+            />
+          ))}
+        </div>
+
+        {tradOther.length > 0 && (
+          <div className="space-y-3">
+            <ExpandButton expanded={tradExpanded} count={tradOther.length} onToggle={() => setTradExpanded((p) => !p)} />
+            <AnimatePresence>
+              {tradExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
+                >
+                  {tradOther.map((c) => (
+                    <ConceptCard
+                      key={c.id}
+                      concept={c}
+                      selected={selected.includes(c.id)}
+                      onSelect={() => toggleConcept(c.id)}
+                      coverUrl={coverMap[c.id]}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+
+      {/* Devam button */}
+      <button
+        onClick={onAdvance}
+        className={`w-full py-3 rounded-2xl text-sm font-medium transition-all ${
+          selected.length > 0
+            ? "bg-foreground text-background hover:opacity-90"
+            : "bg-foreground/10 text-foreground/50"
+        }`}
+      >
+        {selected.length > 0
+          ? `${selected.length} seçim yapıldı — After Parti'ye geç →`
+          : "Seçim yapmadan geç →"}
+      </button>
     </div>
   );
 }
 
-function AfterPartiPanel({
-  sections, onChange, coverMap,
-}: {
+// ─── AFTER PARTİ PANEL ───────────────────────────────────────────────────────
+
+function AfterPartiPanel({ sections, onChange, coverMap, eventType }: {
   sections: EventSections;
   onChange: (s: EventSections) => void;
   coverMap: Record<string, string>;
+  eventType: string;
 }) {
-  const pref = sections.afterParti.musicPref;
-  const concepts = MUSIC_CONCEPTS.filter((c) => c.category === "after-party");
+  const allConcepts = MUSIC_CONCEPTS.filter((c) => c.category === "after-party");
+  const recommendedIds = getTop(allConcepts, eventType, 2);
+  const recommended = allConcepts.filter((c) => recommendedIds.includes(c.id));
+  const others = allConcepts.filter((c) => !recommendedIds.includes(c.id));
+
   const selected = sections.afterParti.conceptIds;
+  const [expanded, setExpanded] = useState(false);
 
   const selectConcept = (id: string) => {
     const next = selected.includes(id) ? [] : [id];
     onChange({ ...sections, afterParti: { ...sections.afterParti, conceptIds: next } });
   };
 
-  const PREF_OPTIONS = [
-    { id: "local" as const, label: "Yerli" },
-    { id: "international" as const, label: "Yabancı" },
-    { id: "mixed" as const, label: "Karışık" },
-  ];
-
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground leading-relaxed">
-        Gece nasıl kapansın?
-      </p>
-
-      <div>
-        <p className="text-xs text-muted-foreground tracking-wide uppercase font-medium mb-2.5">
-          Müzik tercihi
+      <div className="bg-[oklch(0.14_0.01_260)] rounded-2xl p-4 border border-white/10">
+        <p className="text-sm text-white/80 leading-relaxed">
+          <span className="font-medium text-white">After Parti</span>, gecenin kapanış bölümü. Enerjinin zirveye çıktığı, dans pistinin en dolduğu ve en uzun süren an.
         </p>
-        <div className="flex gap-2">
-          {PREF_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() =>
-                onChange({ ...sections, afterParti: { ...sections.afterParti, musicPref: opt.id } })
-              }
-              className={`flex-1 py-2.5 rounded-full text-xs font-medium border transition-all ${
-                pref === opt.id
-                  ? "bg-foreground text-background border-foreground"
-                  : "border-border text-foreground hover:border-foreground/30"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {concepts.map((c) => (
-          <ConceptCard
-            key={c.id}
-            concept={c}
-            selected={selected.includes(c.id)}
-            onSelect={() => selectConcept(c.id)}
-            coverUrl={coverMap[c.id]}
-          />
-        ))}
+      <div>
+        <p className="text-sm font-medium text-foreground mb-3">Gece nasıl kapansın?</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {recommended.map((c) => (
+            <ConceptCard
+              key={c.id}
+              concept={c}
+              selected={selected.includes(c.id)}
+              onSelect={() => selectConcept(c.id)}
+              coverUrl={coverMap[c.id]}
+              isRecommended
+              recommendText={recommendReason(c, eventType)}
+            />
+          ))}
+        </div>
+
+        {others.length > 0 && (
+          <div className="mt-3 space-y-3">
+            <ExpandButton expanded={expanded} count={others.length} onToggle={() => setExpanded((p) => !p)} />
+            <AnimatePresence>
+              {expanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
+                >
+                  {others.map((c) => (
+                    <ConceptCard
+                      key={c.id}
+                      concept={c}
+                      selected={selected.includes(c.id)}
+                      onSelect={() => selectConcept(c.id)}
+                      coverUrl={coverMap[c.id]}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
+
+const SUB_STEPS = [
+  { id: "karsilama", label: "Karşılama", emoji: "🥂" },
+  { id: "anaKutlama", label: "Ana Kutlama", emoji: "🎉" },
+  { id: "afterParti", label: "After Parti", emoji: "🌙" },
+];
 
 const slideVariants = {
   enter: (d: number) => ({ opacity: 0, x: d > 0 ? 40 : -40 }),
@@ -427,57 +551,40 @@ export default function StepEventSections({ data, update, onNext, conceptCovers 
 
   const sections = data.eventSections;
   const setSection = (s: EventSections) => update({ eventSections: s });
+  const eventType = data.eventType;
 
   const advance = () => {
     setDirection(1);
-    if (subStep < SUB_STEPS.length - 1) {
-      setSubStep((s) => s + 1);
-    } else {
-      onNext();
-    }
+    if (subStep < SUB_STEPS.length - 1) setSubStep((s) => s + 1);
+    else onNext();
   };
 
   const goBack = () => {
-    if (subStep > 0) {
-      setDirection(-1);
-      setSubStep((s) => s - 1);
-    }
+    if (subStep > 0) { setDirection(-1); setSubStep((s) => s - 1); }
   };
 
   const isLast = subStep === SUB_STEPS.length - 1;
-
-  // Has user selected something in current sub-step?
   const hasSelection =
-    subStep === 0
-      ? sections.karsilama.conceptIds.length > 0
-      : subStep === 1
-      ? sections.anaKutlama.conceptIds.length > 0
-      : sections.afterParti.conceptIds.length > 0;
+    subStep === 0 ? sections.karsilama.conceptIds.length > 0
+    : subStep === 1 ? sections.anaKutlama.conceptIds.length > 0
+    : sections.afterParti.conceptIds.length > 0;
 
   return (
     <div className="space-y-6">
-      {/* Sub-step breadcrumb */}
+      {/* Breadcrumb */}
       <div className="flex items-center gap-1">
         {SUB_STEPS.map((s, i) => (
           <div key={s.id} className="flex items-center gap-1">
             <button
-              onClick={() => {
-                if (i < subStep) {
-                  setDirection(i > subStep ? 1 : -1);
-                  setSubStep(i);
-                }
-              }}
+              onClick={() => { if (i < subStep) { setDirection(-1); setSubStep(i); } }}
               disabled={i > subStep}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                i === subStep
-                  ? "bg-foreground text-background"
-                  : i < subStep
-                  ? "bg-foreground/12 text-foreground cursor-pointer hover:bg-foreground/20"
-                  : "text-muted-foreground/40 cursor-default"
+                i === subStep ? "bg-foreground text-background"
+                : i < subStep ? "bg-foreground/12 text-foreground cursor-pointer hover:bg-foreground/20"
+                : "text-muted-foreground/40 cursor-default"
               }`}
             >
-              <span>{s.emoji}</span>
-              <span>{s.label}</span>
+              <span>{s.emoji}</span><span>{s.label}</span>
             </button>
             {i < SUB_STEPS.length - 1 && (
               <span className={`text-xs ${i < subStep ? "text-foreground/30" : "text-muted-foreground/20"}`}>›</span>
@@ -498,62 +605,48 @@ export default function StepEventSections({ data, update, onNext, conceptCovers 
           transition={{ duration: 0.28, ease: "easeInOut" }}
         >
           {subStep === 0 && (
-            <KarsilamaPanel
-              sections={sections}
-              onChange={setSection}
-              coverMap={conceptCovers}
-              onAdvance={advance}
-            />
+            <KarsilamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} />
           )}
           {subStep === 1 && (
-            <AnaKutlamaPanel
-              sections={sections}
-              onChange={setSection}
-              coverMap={conceptCovers}
-              onAdvance={advance}
-            />
+            <AnaKutlamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} />
           )}
           {subStep === 2 && (
-            <AfterPartiPanel
-              sections={sections}
-              onChange={setSection}
-              coverMap={conceptCovers}
-            />
+            <AfterPartiPanel sections={sections} onChange={setSection} coverMap={conceptCovers} eventType={eventType} />
           )}
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation */}
+      {/* Nav */}
       <div className="flex items-center gap-3 pt-2">
         {subStep > 0 && (
-          <button
-            onClick={goBack}
-            className="px-5 py-2.5 rounded-full text-sm text-muted-foreground border border-border hover:border-foreground/40 transition-colors"
-          >
+          <button onClick={goBack} className="px-5 py-2.5 rounded-full text-sm text-muted-foreground border border-border hover:border-foreground/40 transition-colors">
             ← Geri
           </button>
         )}
-        <AnimatePresence>
-          {(isLast || !hasSelection) && (
+        {/* After Parti: manual skip/next */}
+        {isLast && (
+          <AnimatePresence>
             <motion.button
-              key="next-btn"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
               onClick={advance}
               className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium transition-all ${
-                hasSelection
-                  ? "bg-foreground text-background hover:opacity-90"
-                  : "bg-foreground/10 text-foreground/50 hover:bg-foreground/15"
+                hasSelection ? "bg-foreground text-background hover:opacity-90" : "bg-foreground/10 text-foreground/50 hover:bg-foreground/15"
               }`}
             >
-              {isLast ? "Devam" : "Atla"}
+              {hasSelection ? "Devam" : "Atla"}
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </motion.button>
-          )}
-        </AnimatePresence>
+          </AnimatePresence>
+        )}
+        {/* Karşılama: skip if no selection */}
+        {subStep === 0 && !hasSelection && (
+          <button onClick={advance} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            Atla →
+          </button>
+        )}
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ const TOTAL_STEPS = 8;
 const stepTitles = [
   "Ne planlıyorsun?",
   "Misafirlerin kim?",
-  "Müzik yolculuğunu planla",
+  "Gecenin müzik konseptlerine karar verelim",
   "Önemli anlarını planla",
   "Mekanın var mı?",
   "Hangi alanlarda rehberlik ister misin?",
