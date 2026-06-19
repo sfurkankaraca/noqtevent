@@ -4,6 +4,16 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+const PERFORMER_TYPES = [
+  { id: "all", label: "Tümü", emoji: "✨" },
+  { id: "dj", label: "DJ", emoji: "🎧" },
+  { id: "artist", label: "Solo Sanatçı", emoji: "🎤" },
+  { id: "trio", label: "Trio / Grup", emoji: "🎶" },
+  { id: "dance", label: "Dans Ekibi", emoji: "💃" },
+  { id: "band", label: "Bando / Orkestra", emoji: "🎺" },
+];
 
 type Dj = {
   id: string;
@@ -16,9 +26,22 @@ type Dj = {
   soundcloud_url: string | null;
   mixcloud_url: string | null;
   youtube_url: string | null;
+  instagram_url?: string | null;
+  spotify_url?: string | null;
+  website_url?: string | null;
+  performer_type?: string | null;
+  city?: string | null;
+  speciality?: string | null;
 };
 
-export default function ArtistsClient({ djs }: { djs: Dj[] }) {
+export default function ArtistsClient({
+  djs,
+  activeType,
+}: {
+  djs: Dj[];
+  activeType?: string | null;
+}) {
+  const router = useRouter();
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   const allTags = [...new Set(djs.flatMap((d) => d.concept_tags))].sort();
@@ -39,7 +62,7 @@ export default function ArtistsClient({ djs }: { djs: Dj[] }) {
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16 lg:py-24">
       {/* Header */}
-      <div className="mb-16">
+      <div className="mb-10">
         <span className="text-xs tracking-[0.25em] uppercase text-muted-foreground font-medium">
           Kadromuz
         </span>
@@ -56,24 +79,47 @@ export default function ArtistsClient({ djs }: { djs: Dj[] }) {
         </p>
       </div>
 
-      {/* Tag filter */}
+      {/* Performer type tabs */}
+      <div className="flex flex-wrap gap-2 mb-8">
+        {PERFORMER_TYPES.map((pt) => {
+          const isActive = (pt.id === "all" && !activeType) || pt.id === activeType;
+          return (
+            <button
+              key={pt.id}
+              onClick={() =>
+                router.push(`/sanatcilar${pt.id !== "all" ? `?type=${pt.id}` : ""}`)
+              }
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                isActive
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border text-muted-foreground hover:border-foreground/40"
+              }`}
+            >
+              <span>{pt.emoji}</span>
+              {pt.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Concept tag filter */}
       {allTags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-12">
           <button
             onClick={() => setActiveTag(null)}
-            className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
               !activeTag
                 ? "bg-foreground text-background border-foreground"
                 : "border-border text-muted-foreground hover:border-foreground/40"
             }`}
           >
-            Tümü
+            Tüm Stiller
           </button>
           {allTags.map((tag) => (
             <button
               key={tag}
               onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-              className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                 activeTag === tag
                   ? "bg-foreground text-background border-foreground"
                   : "border-border text-muted-foreground hover:border-foreground/40"
@@ -106,6 +152,17 @@ export default function ArtistsClient({ djs }: { djs: Dj[] }) {
               .join("")
               .toUpperCase()
               .slice(0, 2);
+
+            const typeInfo = PERFORMER_TYPES.find((pt) => pt.id === (dj.performer_type ?? "dj"));
+
+            const links = [
+              { url: dj.soundcloud_url, label: "SC" },
+              { url: dj.mixcloud_url, label: "MC" },
+              { url: dj.youtube_url, label: "YT" },
+              { url: dj.instagram_url, label: "IG" },
+              { url: dj.spotify_url, label: "SP" },
+              { url: dj.website_url, label: "Web" },
+            ].filter((l) => l.url);
 
             return (
               <motion.div
@@ -142,30 +199,38 @@ export default function ArtistsClient({ djs }: { djs: Dj[] }) {
                       </span>
                     )}
 
+                    {/* Type badge */}
+                    {typeInfo && typeInfo.id !== "dj" && (
+                      <span className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                        {typeInfo.emoji} {typeInfo.label}
+                      </span>
+                    )}
+
                     {/* External links */}
                     <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {[
-                        { url: dj.soundcloud_url, label: "SC" },
-                        { url: dj.mixcloud_url, label: "MC" },
-                        { url: dj.youtube_url, label: "YT" },
-                      ]
-                        .filter((l) => l.url)
-                        .map((l) => (
-                          <a
-                            key={l.label}
-                            href={l.url!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-background/80 backdrop-blur-sm px-2.5 py-1.5 rounded-full text-xs font-medium text-foreground hover:bg-background transition-colors"
-                          >
-                            {l.label}
-                          </a>
-                        ))}
+                      {links.slice(0, 3).map((l) => (
+                        <a
+                          key={l.label}
+                          href={l.url!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-background/80 backdrop-blur-sm px-2.5 py-1.5 rounded-full text-xs font-medium text-foreground hover:bg-background transition-colors"
+                        >
+                          {l.label}
+                        </a>
+                      ))}
                     </div>
                   </div>
 
                   <div className="p-6">
-                    <h2 className="font-medium text-foreground text-lg">{dj.name}</h2>
+                    <div className="mb-2">
+                      <h2 className="font-medium text-foreground text-lg">{dj.name}</h2>
+                      {(dj.city || dj.speciality) && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {[dj.city ? `📍 ${dj.city}` : null, dj.speciality].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                    </div>
 
                     {dj.bio && (
                       <p className="text-sm text-muted-foreground mt-2 leading-relaxed line-clamp-2">
@@ -219,12 +284,20 @@ export default function ArtistsClient({ djs }: { djs: Dj[] }) {
         <p className="text-muted-foreground mt-3 text-sm">
           Deneyim planlayıcısını kullan, sana özel sanatçı önerisi yapalım.
         </p>
-        <Link
-          href="/planla"
-          className="inline-flex items-center gap-2 mt-6 bg-foreground text-background px-7 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
-        >
-          Deneyim Planlayıcısını Başlat
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-4 mt-6 justify-center">
+          <Link
+            href="/planla"
+            className="inline-flex items-center gap-2 bg-foreground text-background px-7 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Deneyim Planlayıcısını Başlat
+          </Link>
+          <Link
+            href="/basvuru"
+            className="inline-flex items-center gap-2 border border-border text-foreground px-7 py-3.5 rounded-full text-sm font-medium hover:bg-accent transition-colors"
+          >
+            Sanatçı Başvurusu
+          </Link>
+        </div>
       </div>
     </div>
   );

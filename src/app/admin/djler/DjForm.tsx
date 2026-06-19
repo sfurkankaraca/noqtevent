@@ -13,6 +13,14 @@ const CONCEPT_SUGGESTIONS = [
   "After Dark", "Deep House", "Tech House", "Latin Vibes",
 ];
 
+const PERFORMER_TYPES = [
+  { id: "dj", label: "DJ", emoji: "🎧" },
+  { id: "artist", label: "Solo Sanatçı", emoji: "🎤" },
+  { id: "trio", label: "Trio / Grup", emoji: "🎶" },
+  { id: "dance", label: "Dans Ekibi", emoji: "💃" },
+  { id: "band", label: "Bando / Orkestra", emoji: "🎺" },
+];
+
 type Dj = {
   id?: string;
   name?: string;
@@ -20,12 +28,19 @@ type Dj = {
   photo_url?: string;
   photos?: string[];
   focal_points?: Record<string, FocalPoint>;
+  performer_type?: string;
   soundcloud_url?: string;
   mixcloud_url?: string;
   youtube_url?: string;
+  instagram_url?: string;
+  spotify_url?: string;
+  website_url?: string;
+  city?: string;
+  speciality?: string;
   concept_tags?: string[];
   busy_dates?: string[];
   is_active?: boolean;
+  application_status?: string;
 };
 
 interface PhotoEntry {
@@ -168,32 +183,77 @@ export default function DjForm({ dj }: { dj?: Dj }) {
       <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
         <h2 className="font-medium text-foreground">Profil Bilgileri</h2>
 
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">İsim</label>
-          <input
-            type="text" name="name" defaultValue={dj?.name} required placeholder="DJ Adı"
-            className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Tür</label>
+            <select
+              name="performer_type" defaultValue={dj?.performer_type ?? "dj"}
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40"
+            >
+              {PERFORMER_TYPES.map((t) => (
+                <option key={t.id} value={t.id}>{t.emoji} {t.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Uzmanlık / Stil</label>
+            <input
+              type="text" name="speciality" defaultValue={dj?.speciality ?? ""}
+              placeholder="ör. Latin Dans, Caz, Deep House"
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">İsim / Ekip Adı</label>
+            <input
+              type="text" name="name" defaultValue={dj?.name} required placeholder="Ad veya ekip adı"
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Şehir</label>
+            <input
+              type="text" name="city" defaultValue={dj?.city ?? ""}
+              placeholder="ör. İstanbul, İzmir"
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+          </div>
         </div>
 
         <div>
           <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Biyografi</label>
           <textarea
             name="bio" defaultValue={dj?.bio ?? ""} rows={4}
-            placeholder="DJ hakkında kısa bir tanıtım yazısı…"
+            placeholder="Sanatçı veya ekip hakkında kısa tanıtım…"
             className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40 resize-none"
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Aktif</label>
-          <select
-            name="is_active" defaultValue={dj?.is_active !== false ? "true" : "false"}
-            className="px-3 py-1.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40"
-          >
-            <option value="true">Evet</option>
-            <option value="false">Hayır</option>
-          </select>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Aktif</label>
+            <select
+              name="is_active" defaultValue={dj?.is_active !== false ? "true" : "false"}
+              className="px-3 py-1.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40"
+            >
+              <option value="true">Evet</option>
+              <option value="false">Hayır</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Durum</label>
+            <select
+              name="application_status" defaultValue={dj?.application_status ?? "approved"}
+              className="px-3 py-1.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40"
+            >
+              <option value="approved">Onaylandı</option>
+              <option value="pending">Bekliyor</option>
+              <option value="rejected">Reddedildi</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -278,6 +338,9 @@ export default function DjForm({ dj }: { dj?: Dj }) {
           { name: "soundcloud_url", label: "SoundCloud", placeholder: "https://soundcloud.com/…" },
           { name: "mixcloud_url", label: "Mixcloud", placeholder: "https://www.mixcloud.com/…" },
           { name: "youtube_url", label: "YouTube", placeholder: "https://www.youtube.com/…" },
+          { name: "instagram_url", label: "Instagram", placeholder: "https://instagram.com/…" },
+          { name: "spotify_url", label: "Spotify", placeholder: "https://open.spotify.com/…" },
+          { name: "website_url", label: "Website", placeholder: "https://…" },
         ].map((field) => (
           <div key={field.name}>
             <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">{field.label}</label>
@@ -361,7 +424,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pending || isUploading}
           className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
-          {isUploading ? "Fotoğraf yükleniyor…" : pending ? "Kaydediliyor…" : dj?.id ? "Güncelle" : "DJ Ekle"}
+          {isUploading ? "Fotoğraf yükleniyor…" : pending ? "Kaydediliyor…" : dj?.id ? "Güncelle" : "Sanatçı Ekle"}
         </button>
         <Link href="/admin/djler" className="text-sm text-muted-foreground hover:text-foreground transition-colors">İptal</Link>
       </div>
