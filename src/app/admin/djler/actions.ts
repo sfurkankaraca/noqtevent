@@ -17,6 +17,8 @@ export async function upsertDj(formData: FormData) {
     .split(",").map((t) => t.trim()).filter(Boolean);
   const busy_dates = (formData.get("busy_dates") as string)
     .split(",").map((d) => d.trim()).filter(Boolean);
+  const event_types: string[] = JSON.parse((formData.get("event_types_json") as string) || "[]");
+  const youtube_links: string[] = JSON.parse((formData.get("youtube_links_json") as string) || "[]");
 
   const payload = {
     name: formData.get("name") as string,
@@ -31,6 +33,11 @@ export async function upsertDj(formData: FormData) {
     spotify_url: (formData.get("spotify_url") as string) || null,
     website_url: (formData.get("website_url") as string) || null,
     application_status: (formData.get("application_status") as string) || "approved",
+    repertoire: (formData.get("repertoire") as string) || null,
+    email: (formData.get("email") as string) || null,
+    phone: (formData.get("phone") as string) || null,
+    event_types,
+    youtube_links,
     concept_tags,
     busy_dates,
     is_active: formData.get("is_active") === "true",

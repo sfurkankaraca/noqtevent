@@ -13,17 +13,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Ad ve e-posta zorunludur." }, { status: 400 });
     }
 
+    const photosRaw = fd.get("photos") as string | null;
+    const photos: string[] = photosRaw ? JSON.parse(photosRaw) : [];
+
+    const youtubeLinkRaw = fd.get("youtube_links") as string | null;
+    const youtube_links: string[] = youtubeLinkRaw ? JSON.parse(youtubeLinkRaw) : [];
+
+    const eventTypesRaw = fd.get("event_types") as string | null;
+    const event_types: string[] = eventTypesRaw ? JSON.parse(eventTypesRaw) : [];
+
+    const coverCitiesRaw = fd.get("cover_cities") as string | null;
+    const cover_cities: string[] = coverCitiesRaw ? JSON.parse(coverCitiesRaw) : [];
+
     const supabase = createServiceClient();
     const { error } = await supabase.from("dj_profiles").insert({
       clerk_id: `apply-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name,
       performer_type,
-      city: (fd.get("city") as string | null) || null,
-      speciality: (fd.get("speciality") as string | null) || null,
       bio: (fd.get("bio") as string | null) || null,
+      speciality: (fd.get("speciality") as string | null) || null,
+      repertoire: (fd.get("repertoire") as string | null) || null,
+      city: cover_cities[0] ?? null,
+      cover_cities,
+      event_types,
+      email,
+      phone: (fd.get("phone") as string | null) || null,
       instagram_url: (fd.get("instagram_url") as string | null) || null,
       spotify_url: (fd.get("spotify_url") as string | null) || null,
+      soundcloud_url: (fd.get("soundcloud_url") as string | null) || null,
       website_url: (fd.get("website_url") as string | null) || null,
+      youtube_links,
+      photos,
+      photo_url: photos[0] ?? null,
       application_status: "pending",
       is_active: false,
       concept_tags: [],

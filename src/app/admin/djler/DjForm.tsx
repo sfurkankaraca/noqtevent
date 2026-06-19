@@ -21,6 +21,19 @@ const PERFORMER_TYPES = [
   { id: "band", label: "Bando / Orkestra", emoji: "🎺" },
 ];
 
+const EVENT_TYPES = [
+  { id: "wedding", label: "Düğün / Nikah", emoji: "💍" },
+  { id: "kina", label: "Kına Gecesi", emoji: "🕯️" },
+  { id: "graduation", label: "Mezuniyet", emoji: "🎓" },
+  { id: "birthday", label: "Doğum Günü", emoji: "🎂" },
+  { id: "bride", label: "Bekarlığa Veda", emoji: "👰" },
+  { id: "morning-party", label: "Morning Party", emoji: "☕" },
+  { id: "corporate", label: "Kurumsal Etkinlik", emoji: "🏢" },
+  { id: "after-party", label: "After Party", emoji: "🌙" },
+  { id: "cocktail", label: "Kokteyl / Resepsiyon", emoji: "🥂" },
+  { id: "festival", label: "Festival / Açık Hava", emoji: "🎪" },
+];
+
 type Dj = {
   id?: string;
   name?: string;
@@ -32,11 +45,17 @@ type Dj = {
   soundcloud_url?: string;
   mixcloud_url?: string;
   youtube_url?: string;
+  youtube_links?: string[];
   instagram_url?: string;
   spotify_url?: string;
   website_url?: string;
   city?: string;
+  cover_cities?: string[];
   speciality?: string;
+  repertoire?: string;
+  event_types?: string[];
+  email?: string;
+  phone?: string;
   concept_tags?: string[];
   busy_dates?: string[];
   is_active?: boolean;
@@ -77,9 +96,18 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   const [concepts, setConcepts] = useState<string[]>(dj?.concept_tags ?? []);
   const [busyDates, setBusyDates] = useState<string[]>(dj?.busy_dates ?? []);
   const [busyDateInput, setBusyDateInput] = useState("");
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(dj?.event_types ?? []);
+  const [youtubeLinks, setYoutubeLinks] = useState<string[]>(
+    dj?.youtube_links?.length ? dj.youtube_links : ["", "", ""]
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleEventType = (id: string) =>
+    setSelectedEventTypes((prev) =>
+      prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
+    );
 
   const isUploading = photos.some((p) => p.uploading);
 
@@ -150,6 +178,8 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   const handleAction = async (fd: FormData) => {
     fd.set("concept_tags", concepts.join(","));
     fd.set("busy_dates", busyDates.join(","));
+    fd.set("event_types_json", JSON.stringify(selectedEventTypes));
+    fd.set("youtube_links_json", JSON.stringify(youtubeLinks.filter(Boolean)));
 
     const readyPhotos = photos.filter((p) => p.url && !p.uploading && !p.error);
     fd.set("photos_json", JSON.stringify(readyPhotos.map((p) => p.url)));
@@ -230,6 +260,34 @@ export default function DjForm({ dj }: { dj?: Dj }) {
             placeholder="Sanatçı veya ekip hakkında kısa tanıtım…"
             className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40 resize-none"
           />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Repertuar</label>
+          <textarea
+            name="repertoire" defaultValue={dj?.repertoire ?? ""} rows={3}
+            placeholder="Hangi dillerde / türlerde çalıyorlar? Türkçe pop, caz standartları, Arapça…"
+            className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40 resize-none"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">E-posta</label>
+            <input
+              type="email" name="email" defaultValue={dj?.email ?? ""}
+              placeholder="iletisim@…"
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Telefon</label>
+            <input
+              type="tel" name="phone" defaultValue={dj?.phone ?? ""}
+              placeholder="+90 5XX…"
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-6">
@@ -352,6 +410,62 @@ export default function DjForm({ dj }: { dj?: Dj }) {
             />
           </div>
         ))}
+      </div>
+
+      {/* Event types */}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
+        <h2 className="font-medium text-foreground">Etkinlik Tipleri</h2>
+        <div className="grid grid-cols-2 gap-2">
+          {EVENT_TYPES.map((et) => (
+            <button
+              key={et.id}
+              type="button"
+              onClick={() => toggleEventType(et.id)}
+              className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs transition-all ${
+                selectedEventTypes.includes(et.id)
+                  ? "border-foreground bg-foreground/5 text-foreground font-medium"
+                  : "border-border text-muted-foreground hover:border-foreground/40"
+              }`}
+            >
+              <span>{et.emoji}</span>
+              {et.label}
+              {selectedEventTypes.includes(et.id) && <span className="ml-auto">✓</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* YouTube performance links */}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
+        <div>
+          <h2 className="font-medium text-foreground">Performans Videoları (YouTube)</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Canlı performans veya mix video linkleri</p>
+        </div>
+        <div className="space-y-2">
+          {youtubeLinks.map((link, i) => (
+            <input
+              key={i}
+              type="url"
+              value={link}
+              onChange={(e) => {
+                const next = [...youtubeLinks];
+                next[i] = e.target.value;
+                setYoutubeLinks(next);
+              }}
+              placeholder={`YouTube video linki ${i + 1}`}
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+          ))}
+          {youtubeLinks.length < 6 && (
+            <button
+              type="button"
+              onClick={() => setYoutubeLinks((prev) => [...prev, ""])}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              + Video ekle
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Concept tags */}
