@@ -294,7 +294,7 @@ export default function ArtistsClient({
             Deneyim Planlayıcısını Başlat
           </Link>
           <Link
-            href="/basvuru"
+            href="/basvuru/sanatci"
             className="inline-flex items-center gap-2 border border-border text-foreground px-7 py-3.5 rounded-full text-sm font-medium hover:bg-accent transition-colors"
           >
             Sanatçı Başvurusu
