@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   MUSIC_CONCEPTS,
@@ -41,6 +41,14 @@ const SECTION_LABELS: Record<string, { label: string; emoji: string; desc: strin
 };
 
 export default function OzetPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted-foreground text-sm">Yükleniyor…</div>}>
+      <OzetContent />
+    </Suspense>
+  );
+}
+
+function OzetContent() {
   const searchParams = useSearchParams();
   const [data, setData] = useState<PlannerData | null>(null);
   const [generatedAt] = useState(() => new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }));
@@ -56,13 +64,7 @@ export default function OzetPage() {
     }
   }, [searchParams]);
 
-  if (!data) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-muted-foreground text-sm">
-        Yükleniyor…
-      </div>
-    );
-  }
+  if (!data) return null;
 
   const sectionEntries = [
     { key: "karsilama", section: data.eventSections.karsilama },
