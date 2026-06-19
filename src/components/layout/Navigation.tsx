@@ -39,7 +39,7 @@ export default function Navigation() {
             {/* Logo */}
             <Link href="/" className="flex items-center">
               <Image
-                src="/noqt-wordmark.png"
+                src="/noqt-logo-transparent.png"
                 alt="NOQT"
                 width={120}
                 height={48}
@@ -93,7 +93,7 @@ export default function Navigation() {
             <div className="flex items-center justify-between h-16 px-6">
               <Link href="/" onClick={() => setMenuOpen(false)}>
                 <Image
-                  src="/noqt-wordmark.png"
+                  src="/noqt-logo-transparent.png"
                   alt="NOQT"
                   width={120}
                   height={48}
