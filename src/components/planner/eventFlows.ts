@@ -73,6 +73,15 @@ const FLOWS: Record<string, EventFlow> = {
       { label: "Kulüp Modu", conceptId: "kulup-modu", time: "22:00" },
     ],
   },
+  "kina-gecesi": {
+    name: "Kına Gecesi Akışı",
+    slots: [
+      { label: "Karşılama", conceptId: "anadolu-esintileri", time: "19:00" },
+      { label: "Kına Töreni", conceptId: "oyun-havalari", time: "20:30" },
+      { label: "Roman Havaları", conceptId: "roman-atesi", time: "22:00" },
+      { label: "Halaylar & Kapanış", conceptId: "halaylar", time: "23:30" },
+    ],
+  },
   "after-party": {
     name: "After Party Akışı",
     slots: [
