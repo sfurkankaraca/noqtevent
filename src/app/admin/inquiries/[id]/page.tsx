@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { InquiryActions, StatusBadge } from "./InquiryActions";
+import { MUSIC_CONCEPTS } from "@/components/planner/PlannerStore";
 
 const EVENT_LABELS: Record<string, string> = {
   wedding: "Düğün", "kina-gecesi": "Kına Gecesi", corporate: "Kurumsal",
@@ -145,11 +146,14 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
                   )}
                   {sec.conceptIds && sec.conceptIds.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
-                      {sec.conceptIds.map((cid) => (
-                        <span key={cid} className="text-xs px-2.5 py-1 bg-white rounded-full border border-border text-foreground">
-                          {cid}
-                        </span>
-                      ))}
+                      {sec.conceptIds.map((cid) => {
+                        const c = MUSIC_CONCEPTS.find((m) => m.id === cid);
+                        return (
+                          <span key={cid} className="text-xs px-2.5 py-1 bg-white rounded-full border border-border text-foreground">
+                            {c ? `${c.emoji} ${c.name}` : cid}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                   {(!sec.startTime && !sec.style && !sec.musicPref && (!sec.conceptIds || sec.conceptIds.length === 0)) && (
