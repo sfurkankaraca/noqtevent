@@ -1,7 +1,8 @@
 import { Resend } from "resend";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "karaca3888@gmail.com";
-const FROM_EMAIL = process.env.FROM_EMAIL ?? "NOQT <noreply@noqt.co>";
+// FROM_EMAIL must be from a Resend-verified domain (or onboarding@resend.dev for testing)
+const FROM_EMAIL = process.env.FROM_EMAIL ?? "onboarding@resend.dev";
 
 function getResend() {
   const key = process.env.RESEND_API_KEY;
@@ -25,7 +26,7 @@ export async function sendInquiryNotification(inquiry: {
     ? inquiry.services.map((s) => `<li>${s}</li>`).join("")
     : "<li>—</li>";
 
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
     subject: `🎉 Yeni Talep: ${inquiry.name} ${inquiry.surname}`,
@@ -54,6 +55,7 @@ export async function sendInquiryNotification(inquiry: {
       </div>
     `,
   });
+  if (error) console.error("[email] sendInquiryNotification failed:", error);
 }
 
 export async function sendContactNotification(msg: {
