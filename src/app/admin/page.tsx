@@ -13,6 +13,7 @@ export default async function AdminDashboard() {
     { count: journalCount },
     { count: messageCount },
     { count: newInquiryCount },
+    { count: testimonialCount },
   ] = await Promise.all([
     supabase.from("songs").select("*", { count: "exact", head: true }),
     supabase.from("inquiries").select("*", { count: "exact", head: true }),
@@ -22,6 +23,7 @@ export default async function AdminDashboard() {
     supabase.from("journal_posts").select("*", { count: "exact", head: true }).eq("is_published", true),
     supabase.from("contact_messages").select("*", { count: "exact", head: true }),
     supabase.from("inquiries").select("*", { count: "exact", head: true }).eq("status", "new"),
+    supabase.from("testimonials").select("*", { count: "exact", head: true }).eq("is_active", true),
   ]);
 
   const stats = [
@@ -32,6 +34,7 @@ export default async function AdminDashboard() {
     { label: "Journal", value: journalCount ?? 0, href: "/admin/journal", icon: "✍", badge: 0 },
     { label: "Şarkı", value: songCount ?? 0, href: "/admin/songs", icon: "♪", badge: 0 },
     { label: "Görsel", value: assetCount ?? 0, href: "/admin/gorseller", icon: "🖼", badge: 0 },
+    { label: "Yorum", value: testimonialCount ?? 0, href: "/admin/testimonials", icon: "💬", badge: 0 },
   ];
 
   // Recent inquiries
@@ -84,6 +87,7 @@ export default async function AdminDashboard() {
               { href: "/admin/ortaklar/new", label: "+ Yeni Ortak" },
               { href: "/admin/journal/new", label: "+ Yeni Yazı" },
               { href: "/admin/konseptler/new", label: "+ Yeni Konsept" },
+              { href: "/admin/testimonials/yeni", label: "+ Yeni Yorum" },
               { href: "/admin/gorseller", label: "Görsel Yükle" },
             ].map((item) => (
               <Link
