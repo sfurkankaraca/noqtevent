@@ -19,6 +19,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+function toSpotifyEmbedUrl(url: string): string {
+  // https://open.spotify.com/playlist/ID → https://open.spotify.com/embed/playlist/ID
+  return url.replace("open.spotify.com/", "open.spotify.com/embed/").split("?")[0];
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   "cocktail": "Kokteyl & Karşılama",
   "celebration": "Ana Kutlama",
@@ -132,6 +137,22 @@ export default async function ConceptDetailPage({ params }: Props) {
                   <span className="text-sm text-muted-foreground">{c.energy_level}/10</span>
                 </div>
               </div>
+
+              {/* Spotify embed */}
+              {c.spotify_playlist_url && (
+                <div className="space-y-3">
+                  <h2 className="text-sm uppercase tracking-widest text-muted-foreground font-medium">Playlist</h2>
+                  <iframe
+                    src={toSpotifyEmbedUrl(c.spotify_playlist_url)}
+                    width="100%"
+                    height="352"
+                    frameBorder="0"
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    loading="lazy"
+                    className="rounded-2xl"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Sidebar */}

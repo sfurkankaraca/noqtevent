@@ -22,6 +22,7 @@ export async function upsertConcept(formData: FormData) {
   const energy_level = parseInt(formData.get("energy_level") as string) || 5;
   const sort_order = parseInt(formData.get("sort_order") as string) || 0;
   const is_active = formData.get("is_active") !== "false";
+  const spotify_playlist_url = (formData.get("spotify_playlist_url") as string)?.trim() || null;
 
   // Optional cover image upload
   const file = formData.get("cover_image") as File | null;
@@ -42,6 +43,7 @@ export async function upsertConcept(formData: FormData) {
     slug, name, emoji, category, description,
     atmosphere, musical_direction, color,
     is_dark, is_signature, energy_level, sort_order, is_active,
+    spotify_playlist_url,
   };
   if (cover_image_url) payload.cover_image_url = cover_image_url;
 

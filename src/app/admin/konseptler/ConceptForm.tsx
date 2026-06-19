@@ -19,6 +19,7 @@ type Concept = {
   energy_level?: number;
   sort_order?: number;
   is_active?: boolean;
+  spotify_playlist_url?: string | null;
 };
 
 const CATEGORIES = [
@@ -93,6 +94,18 @@ export default function ConceptForm({
       <div>
         <label className={labelCls}>Müzik Yönü (virgülle ayır)</label>
         <input name="musical_direction" defaultValue={(concept?.musical_direction ?? []).join(", ")} className={inputCls} placeholder="Organic House, Afro House" />
+      </div>
+
+      <div>
+        <label className={labelCls}>Spotify Playlist URL</label>
+        <input
+          name="spotify_playlist_url"
+          type="url"
+          defaultValue={concept?.spotify_playlist_url ?? ""}
+          className={inputCls}
+          placeholder="https://open.spotify.com/playlist/..."
+        />
+        <p className="text-xs text-muted-foreground mt-1">Konsept sayfasında embed olarak görünür.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
