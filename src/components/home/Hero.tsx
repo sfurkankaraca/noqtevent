@@ -19,12 +19,10 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
 
   return (
     <section className="relative min-h-screen flex flex-col">
-      {/* Split layout: left text, right photo */}
-      <div className="absolute inset-0 grid grid-cols-1 lg:grid-cols-2">
-        {/* Left — warm cream */}
-        <div className="bg-[oklch(0.975_0.006_80)]" />
-        {/* Right — slideshow */}
-        <div className="relative hidden lg:block overflow-hidden">
+      {/* Background: mobile = full bleed photo, desktop = split */}
+      <div className="absolute inset-0">
+        {/* Mobile: full photo background */}
+        <div className="absolute inset-0 lg:hidden overflow-hidden">
           <AnimatePresence initial={false}>
             <motion.div
               key={current}
@@ -44,25 +42,53 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               />
             </motion.div>
           </AnimatePresence>
-          {/* Subtle left-edge fade so left panel bleeds into photo */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[oklch(0.975_0.006_80)] via-transparent to-transparent w-1/3 z-10" />
+          {/* Dark overlay so text stays readable */}
+          <div className="absolute inset-0 bg-black/50" />
+        </div>
 
-          {/* Slide dots — only shown when multiple images */}
-          {images.length > 1 && (
-            <div className="absolute bottom-6 right-6 z-20 flex gap-1.5">
-              {images.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrent(i)}
-                  className={`h-1 rounded-full transition-all duration-300 ${
-                    i === current ? "w-6 bg-white" : "w-1.5 bg-white/40"
-                  }`}
+        {/* Desktop: split layout */}
+        <div className="hidden lg:grid absolute inset-0 grid-cols-2">
+          <div className="bg-[oklch(0.975_0.006_80)]" />
+          <div className="relative overflow-hidden">
+            <AnimatePresence initial={false}>
+              <motion.div
+                key={current}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2, ease: "easeInOut" }}
+                className="absolute inset-0"
+              >
+                <Image
+                  src={images[current]}
+                  alt="NOQT etkinlik atmosferi"
+                  fill
+                  className="object-cover"
+                  priority={current === 0}
+                  unoptimized
                 />
-              ))}
-            </div>
-          )}
+              </motion.div>
+            </AnimatePresence>
+            {/* Left-edge fade */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[oklch(0.975_0.006_80)] via-transparent to-transparent w-1/3 z-10" />
+          </div>
         </div>
       </div>
+
+      {/* Slide dots */}
+      {images.length > 1 && (
+        <div className="absolute bottom-6 right-6 z-20 flex gap-1.5">
+          {images.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrent(i)}
+              className={`h-1 rounded-full transition-all duration-300 ${
+                i === current ? "w-6 bg-white" : "w-1.5 bg-white/40"
+              }`}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Subtle texture on left side */}
       <div
@@ -83,7 +109,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             className="flex items-center gap-3 mb-10"
           >
             <div className="h-px w-12 bg-foreground/30" />
-            <span className="text-xs tracking-[0.25em] uppercase text-muted-foreground font-medium">
+            <span className="text-xs tracking-[0.25em] uppercase text-white/60 lg:text-muted-foreground font-medium">
               Deneyim Stüdyosu
             </span>
           </motion.div>
@@ -93,7 +119,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl leading-[1.05] tracking-tight text-foreground"
+            className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl leading-[1.05] tracking-tight text-white lg:text-foreground"
             style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
           >
             Etkinliğinizi{" "}
@@ -106,7 +132,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.25 }}
-            className="mt-8 text-lg text-muted-foreground leading-relaxed max-w-lg"
+            className="mt-8 text-lg text-white/80 lg:text-muted-foreground leading-relaxed max-w-lg"
           >
             Mekandan müziğe, atmosferden anılara kadar ihtiyacınız olan her şeyi tek bir yerden planlayın.
           </motion.p>
@@ -120,7 +146,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
           >
             <Link
               href="/planla"
-              className="inline-flex items-center gap-2 bg-foreground text-background px-7 py-4 rounded-full text-sm font-medium tracking-wide hover:opacity-90 transition-all duration-200 group"
+              className="inline-flex items-center gap-2 bg-white lg:bg-foreground text-foreground lg:text-background px-7 py-4 rounded-full text-sm font-medium tracking-wide hover:opacity-90 transition-all duration-200 group"
             >
               Deneyimini Tasarla
               <svg
@@ -141,9 +167,9 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             </Link>
             <Link
               href="#deneyimler"
-              className="inline-flex items-center gap-2 text-foreground text-sm font-medium tracking-wide hover:text-muted-foreground transition-colors px-4 py-4 group"
+              className="inline-flex items-center gap-2 text-white lg:text-foreground text-sm font-medium tracking-wide hover:opacity-70 transition-opacity px-4 py-4 group"
             >
-              <span className="border-b border-foreground/30 group-hover:border-foreground/60 transition-colors">
+              <span className="border-b border-white/40 lg:border-foreground/30 group-hover:border-white/70 lg:group-hover:border-foreground/60 transition-colors">
                 İlham Al
               </span>
             </Link>
@@ -155,7 +181,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.8 }}
-          className="flex flex-wrap items-center gap-10 mt-24 pt-10 border-t border-border lg:w-1/2"
+          className="flex flex-wrap items-center gap-10 mt-24 pt-10 border-t border-white/20 lg:border-border lg:w-1/2"
         >
           {[
             { value: "500+", label: "Deneyim" },
@@ -164,10 +190,10 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             { value: "50+", label: "Partner" },
           ].map((stat) => (
             <div key={stat.label}>
-              <div className="text-3xl font-light tracking-tight text-foreground">
+              <div className="text-3xl font-light tracking-tight text-white lg:text-foreground">
                 {stat.value}
               </div>
-              <div className="text-xs text-muted-foreground tracking-wide mt-1">
+              <div className="text-xs text-white/60 lg:text-muted-foreground tracking-wide mt-1">
                 {stat.label}
               </div>
             </div>
@@ -182,13 +208,13 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
         transition={{ delay: 1.2, duration: 0.6 }}
         className="absolute bottom-10 right-8 lg:right-12 flex flex-col items-center gap-2"
       >
-        <span className="text-xs text-muted-foreground tracking-[0.2em] rotate-90 origin-center">
+        <span className="text-xs text-white/50 lg:text-muted-foreground tracking-[0.2em] rotate-90 origin-center">
           SCROLL
         </span>
         <motion.div
           animate={{ y: [0, 8, 0] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="h-px w-10 bg-muted-foreground/40"
+          className="h-px w-10 bg-white/30 lg:bg-muted-foreground/40"
         />
       </motion.div>
     </section>
