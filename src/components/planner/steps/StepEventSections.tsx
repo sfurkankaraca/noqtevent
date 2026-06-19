@@ -10,6 +10,7 @@ type Props = {
   update: (partial: Partial<PlannerData>) => void;
   onNext: () => void;
   conceptCovers?: Record<string, string>;
+  activeSlugs?: string[];
 };
 
 // ─── RECOMMENDATION LOGIC ─────────────────────────────────────────────────────
@@ -192,14 +193,15 @@ function TimePicker({ label, value, onChange }: { label: string; value: string; 
 
 // ─── KARŞILAMA PANEL ──────────────────────────────────────────────────────────
 
-function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType }: {
+function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, activeSlugs }: {
   sections: EventSections;
   onChange: (s: EventSections) => void;
   coverMap: Record<string, string>;
   onAdvance: () => void;
   eventType: string;
+  activeSlugs?: string[];
 }) {
-  const allConcepts = MUSIC_CONCEPTS.filter((c) => c.category === "cocktail");
+  const allConcepts = MUSIC_CONCEPTS.filter((c) => c.category === "cocktail" && (!activeSlugs || activeSlugs.includes(c.id)));
   const recommendedIds = getTop(allConcepts, eventType, 2);
   const recommended = allConcepts.filter((c) => recommendedIds.includes(c.id));
   const others = allConcepts.filter((c) => !recommendedIds.includes(c.id));
@@ -298,15 +300,16 @@ function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType }: 
 
 // ─── ANA KUTLAMA PANEL ────────────────────────────────────────────────────────
 
-function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType }: {
+function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, activeSlugs }: {
   sections: EventSections;
   onChange: (s: EventSections) => void;
   coverMap: Record<string, string>;
   onAdvance: () => void;
   eventType: string;
+  activeSlugs?: string[];
 }) {
-  const modernAll = MUSIC_CONCEPTS.filter((c) => c.category === "celebration");
-  const traditionalAll = MUSIC_CONCEPTS.filter((c) => c.category === "traditional");
+  const modernAll = MUSIC_CONCEPTS.filter((c) => c.category === "celebration" && (!activeSlugs || activeSlugs.includes(c.id)));
+  const traditionalAll = MUSIC_CONCEPTS.filter((c) => c.category === "traditional" && (!activeSlugs || activeSlugs.includes(c.id)));
 
   const modernRecIds = getTop(modernAll, eventType, 2);
   const modernRec = modernAll.filter((c) => modernRecIds.includes(c.id));
@@ -456,13 +459,14 @@ function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType }:
 
 // ─── AFTER PARTİ PANEL ───────────────────────────────────────────────────────
 
-function AfterPartiPanel({ sections, onChange, coverMap, eventType }: {
+function AfterPartiPanel({ sections, onChange, coverMap, eventType, activeSlugs }: {
   sections: EventSections;
   onChange: (s: EventSections) => void;
   coverMap: Record<string, string>;
   eventType: string;
+  activeSlugs?: string[];
 }) {
-  const allConcepts = MUSIC_CONCEPTS.filter((c) => c.category === "after-party");
+  const allConcepts = MUSIC_CONCEPTS.filter((c) => c.category === "after-party" && (!activeSlugs || activeSlugs.includes(c.id)));
   const recommendedIds = getTop(allConcepts, eventType, 2);
   const recommended = allConcepts.filter((c) => recommendedIds.includes(c.id));
   const others = allConcepts.filter((c) => !recommendedIds.includes(c.id));
@@ -545,7 +549,7 @@ const slideVariants = {
   exit: (d: number) => ({ opacity: 0, x: d > 0 ? -40 : 40 }),
 };
 
-export default function StepEventSections({ data, update, onNext, conceptCovers = {} }: Props) {
+export default function StepEventSections({ data, update, onNext, conceptCovers = {}, activeSlugs }: Props) {
   const [subStep, setSubStep] = useState(0);
   const [direction, setDirection] = useState(1);
 
@@ -605,13 +609,13 @@ export default function StepEventSections({ data, update, onNext, conceptCovers 
           transition={{ duration: 0.28, ease: "easeInOut" }}
         >
           {subStep === 0 && (
-            <KarsilamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} />
+            <KarsilamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} activeSlugs={activeSlugs} />
           )}
           {subStep === 1 && (
-            <AnaKutlamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} />
+            <AnaKutlamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} activeSlugs={activeSlugs} />
           )}
           {subStep === 2 && (
-            <AfterPartiPanel sections={sections} onChange={setSection} coverMap={conceptCovers} eventType={eventType} />
+            <AfterPartiPanel sections={sections} onChange={setSection} coverMap={conceptCovers} eventType={eventType} activeSlugs={activeSlugs} />
           )}
         </motion.div>
       </AnimatePresence>

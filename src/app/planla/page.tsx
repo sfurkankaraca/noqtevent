@@ -18,7 +18,9 @@ export default async function PlanlaPage() {
     .eq("is_active", true);
 
   const conceptCovers: Record<string, string> = {};
+  const activeSlugs = new Set<string>();
   for (const c of dbConcepts ?? []) {
+    activeSlugs.add(c.slug);
     if (c.cover_image_url) conceptCovers[c.slug] = c.cover_image_url;
   }
 
@@ -31,7 +33,7 @@ export default async function PlanlaPage() {
         <span className="text-base">←</span> NOQT
       </Link>
 
-      <PlannerWizard conceptCovers={conceptCovers} />
+      <PlannerWizard conceptCovers={conceptCovers} activeSlugs={[...activeSlugs]} />
     </div>
   );
 }

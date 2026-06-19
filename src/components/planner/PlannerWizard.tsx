@@ -28,7 +28,7 @@ const stepTitles = [
   "Deneyim taslağın hazır",
 ];
 
-export default function PlannerWizard({ conceptCovers = {} }: { conceptCovers?: Record<string, string> }) {
+export default function PlannerWizard({ conceptCovers = {}, activeSlugs }: { conceptCovers?: Record<string, string>; activeSlugs?: string[] }) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<PlannerData>(initialData);
   const [direction, setDirection] = useState(1);
@@ -160,7 +160,7 @@ export default function PlannerWizard({ conceptCovers = {} }: { conceptCovers?: 
               <Step2Guests data={data} update={update} onNext={next} />
             )}
             {step === 3 && (
-              <Step3EventSections data={data} update={update} onNext={next} conceptCovers={conceptCovers} />
+              <Step3EventSections data={data} update={update} onNext={next} conceptCovers={conceptCovers} activeSlugs={activeSlugs} />
             )}
             {step === 4 && (
               <Step4Moments data={data} update={update} onNext={next} />
@@ -172,7 +172,7 @@ export default function PlannerWizard({ conceptCovers = {} }: { conceptCovers?: 
               <Step6Services data={data} update={update} onNext={next} />
             )}
             {step === 7 && (
-              <Step7Recommendations data={data} onNext={next} />
+              <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} />
             )}
             {step === 8 && (
               <Step8Contact

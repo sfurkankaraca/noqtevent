@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 type Props = {
   data: PlannerData;
   onNext: () => void;
+  activeSlugs?: string[];
 };
 
 const ARTIST_DB: Record<string, { name: string; style: string }> = {
@@ -18,7 +19,7 @@ const ARTIST_DB: Record<string, { name: string; style: string }> = {
   "ada-kurt": { name: "Ada Kurt", style: "Electronic & Ambient" },
 };
 
-export default function Step9Recommendations({ data, onNext }: Props) {
+export default function Step9Recommendations({ data, onNext, activeSlugs }: Props) {
   const eventType = EVENT_TYPES.find((e) => e.id === data.eventType);
 
   // Collect all selected concept IDs across sections
@@ -34,10 +35,14 @@ export default function Step9Recommendations({ data, onNext }: Props) {
     .map((id) => MUSIC_CONCEPTS.find((c) => c.id === id))
     .filter(Boolean) as typeof MUSIC_CONCEPTS;
 
+  const activeConcepts = activeSlugs
+    ? MUSIC_CONCEPTS.filter((c) => activeSlugs.includes(c.id))
+    : MUSIC_CONCEPTS;
+
   const displayConcepts =
     selectedConcepts.length > 0
-      ? selectedConcepts.slice(0, 4)
-      : MUSIC_CONCEPTS.filter((c) => c.idealEventTypes.includes(data.eventType)).slice(0, 2);
+      ? selectedConcepts.filter((c) => !activeSlugs || activeSlugs.includes(c.id)).slice(0, 4)
+      : activeConcepts.filter((c) => c.idealEventTypes.includes(data.eventType)).slice(0, 2);
 
   const artistIds = Array.from(
     new Set(displayConcepts.flatMap((c) => c.suggestedArtistIds))
