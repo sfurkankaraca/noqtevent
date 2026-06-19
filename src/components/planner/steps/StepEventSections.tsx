@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { type PlannerData, MUSIC_CONCEPTS, type MusicConcept, type EventSections } from "../PlannerStore";
@@ -208,20 +208,11 @@ function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, ac
 
   const selected = sections.karsilama.conceptIds;
   const [expanded, setExpanded] = useState(false);
-  const advancedRef = useRef(false);
 
   const selectConcept = (id: string) => {
     const next = selected.includes(id) ? [] : [id];
     onChange({ ...sections, karsilama: { ...sections.karsilama, conceptIds: next } });
   };
-
-  useEffect(() => {
-    if (selected.length > 0 && !advancedRef.current) {
-      advancedRef.current = true;
-      const t = setTimeout(onAdvance, 800);
-      return () => clearTimeout(t);
-    }
-  }, [selected, onAdvance]);
 
   return (
     <div className="space-y-5">
