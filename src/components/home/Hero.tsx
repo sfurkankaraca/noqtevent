@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 
-export default function Hero() {
+export default function Hero({ heroImageUrl }: { heroImageUrl?: string }) {
+  const bgSrc = heroImageUrl ?? "/hero-bg.png";
   return (
     <section className="relative min-h-screen flex flex-col">
       {/* Split layout: left text, right photo */}
@@ -14,11 +15,12 @@ export default function Hero() {
         {/* Right — photo */}
         <div className="relative hidden lg:block">
           <Image
-            src="/hero-bg.png"
+            src={bgSrc}
             alt="NOQT etkinlik atmosferi"
             fill
             className="object-cover"
             priority
+            unoptimized
           />
           {/* Subtle left-edge fade so left panel bleeds into photo */}
           <div className="absolute inset-0 bg-gradient-to-r from-[oklch(0.975_0.006_80)] via-transparent to-transparent w-1/3" />

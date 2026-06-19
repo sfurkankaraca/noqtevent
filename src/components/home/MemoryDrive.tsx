@@ -3,6 +3,7 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { QrCode, Camera, Play, Archive } from "lucide-react";
 
 const steps = [
@@ -12,17 +13,25 @@ const steps = [
   { icon: Archive, label: "5 Yıl Arşiv", desc: "İstediğin zaman indir, paylaş, kalıcı tut" },
 ];
 
-// Simulated gallery photo placeholders
-const galleryItems = [
-  { w: "col-span-2", h: "row-span-2", color: "oklch(0.78 0.04 65)" },
-  { w: "col-span-1", h: "row-span-1", color: "oklch(0.72 0.03 280)" },
-  { w: "col-span-1", h: "row-span-1", color: "oklch(0.68 0.05 140)" },
-  { w: "col-span-1", h: "row-span-1", color: "oklch(0.74 0.04 320)" },
-  { w: "col-span-1", h: "row-span-1", color: "oklch(0.70 0.035 200)" },
-  { w: "col-span-2", h: "row-span-1", color: "oklch(0.75 0.03 60)" },
+const PLACEHOLDER_COLORS = [
+  "oklch(0.78 0.04 65)",
+  "oklch(0.72 0.03 280)",
+  "oklch(0.68 0.05 140)",
+  "oklch(0.74 0.04 320)",
+  "oklch(0.70 0.035 200)",
+  "oklch(0.75 0.03 60)",
 ];
 
-export default function MemoryDrive() {
+const GRID_SPANS = [
+  { w: "col-span-2", tall: true },
+  { w: "col-span-1", tall: false },
+  { w: "col-span-1", tall: false },
+  { w: "col-span-1", tall: false },
+  { w: "col-span-1", tall: false },
+  { w: "col-span-2", tall: false },
+];
+
+export default function MemoryDrive({ photos }: { photos?: string[] }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
@@ -83,19 +92,25 @@ export default function MemoryDrive() {
 
               {/* Gallery grid */}
               <div className="grid grid-cols-3 gap-1.5" style={{ gridTemplateRows: "auto" }}>
-                {galleryItems.map((item, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={inView ? { opacity: 1, scale: 1 } : {}}
-                    transition={{ duration: 0.4, delay: 0.3 + i * 0.06 }}
-                    className={`rounded-xl overflow-hidden ${item.w} ${item.h === "row-span-2" ? "aspect-[3/4]" : "aspect-square"}`}
-                    style={{ backgroundColor: item.color }}
-                  >
-                    {/* Subtle noise overlay */}
-                    <div className="w-full h-full opacity-20 bg-gradient-to-br from-white/20 to-transparent" />
-                  </motion.div>
-                ))}
+                {GRID_SPANS.map((span, i) => {
+                  const photoUrl = photos?.[i];
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={inView ? { opacity: 1, scale: 1 } : {}}
+                      transition={{ duration: 0.4, delay: 0.3 + i * 0.06 }}
+                      className={`rounded-xl overflow-hidden relative ${span.w} ${span.tall ? "aspect-[3/4]" : "aspect-square"}`}
+                      style={!photoUrl ? { backgroundColor: PLACEHOLDER_COLORS[i] } : undefined}
+                    >
+                      {photoUrl ? (
+                        <Image src={photoUrl} alt={`Galeri ${i + 1}`} fill className="object-cover" unoptimized />
+                      ) : (
+                        <div className="w-full h-full opacity-20 bg-gradient-to-br from-white/20 to-transparent" />
+                      )}
+                    </motion.div>
+                  );
+                })}
               </div>
 
               {/* Upload indicator */}

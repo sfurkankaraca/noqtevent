@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 
-const cards = [
+const STATIC_CARDS = [
   { quote: "Kimse dans etmek zorunda değil. Ama herkes iyi hissetmeli.", tag: "Düğün" },
   { quote: "Kurumsal olmak sıkıcı olmak zorunda değil.", tag: "Kurumsal" },
   { quote: "Kulübe gitmedik. Kulübü getirdik.", tag: "Özel Parti" },
@@ -28,9 +29,12 @@ const COLORS = [
   "bg-[oklch(0.16_0.01_280)] text-white",
 ];
 
-const allCards = [...cards, ...cards];
+type PhotoItem = { url: string; label?: string };
 
-export default function BrandFeed() {
+export default function BrandFeed({ photos }: { photos?: PhotoItem[] }) {
+  const hasPhotos = photos && photos.length > 0;
+  const items = hasPhotos ? [...photos, ...photos] : [...STATIC_CARDS, ...STATIC_CARDS];
+
   return (
     <section className="py-20 bg-background overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-10">
@@ -52,7 +56,24 @@ export default function BrandFeed() {
           animate={{ x: ["0%", "-50%"] }}
           transition={{ duration: 40, ease: "linear", repeat: Infinity }}
         >
-          {allCards.map((card, i) => {
+          {items.map((item, i) => {
+            if (hasPhotos) {
+              const photo = item as PhotoItem;
+              return (
+                <div
+                  key={i}
+                  className="flex-shrink-0 w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden relative"
+                >
+                  <Image src={photo.url} alt={photo.label ?? "Deneyim"} fill className="object-cover" unoptimized />
+                  {photo.label && (
+                    <span className="absolute bottom-3 left-3 text-[10px] tracking-[0.2em] uppercase text-white/70 font-medium bg-black/30 px-2 py-1 rounded-full">
+                      {photo.label}
+                    </span>
+                  )}
+                </div>
+              );
+            }
+            const card = item as { quote: string; tag: string };
             const colorClass = COLORS[i % COLORS.length];
             return (
               <div
@@ -63,7 +84,7 @@ export default function BrandFeed() {
                   className="text-sm lg:text-base leading-snug opacity-90"
                   style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400, fontStyle: "italic" }}
                 >
-                  "{card.quote}"
+                  &ldquo;{card.quote}&rdquo;
                 </p>
                 <span className="text-[10px] tracking-[0.2em] uppercase opacity-40 font-medium">
                   {card.tag}

@@ -14,7 +14,7 @@ import { createServiceClient } from "@/lib/supabase";
 export default async function Home() {
   const supabase = createServiceClient();
 
-  const [djRes, partnerRes, conceptRes, testimonialRes] = await Promise.all([
+  const [djRes, partnerRes, conceptRes, testimonialRes, heroRes, brandFeedRes, memoryDriveRes] = await Promise.all([
     supabase
       .from("dj_profiles")
       .select("id, name, bio, photo_url, photos, focal_points, concept_tags")
@@ -38,10 +38,33 @@ export default async function Home() {
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
       .limit(9),
+    supabase
+      .from("site_assets")
+      .select("url")
+      .eq("category", "hero")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("site_assets")
+      .select("url, label")
+      .eq("category", "brand-feed")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("site_assets")
+      .select("url")
+      .eq("category", "memory-drive")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .limit(6),
   ]);
 
   // photos/focal_points columns may not exist yet — fall back gracefully
   const testimonials = testimonialRes.error ? [] : (testimonialRes.data ?? []);
+  const heroImageUrl = heroRes.data?.[0]?.url ?? undefined;
+  const brandFeedPhotos = brandFeedRes.data?.map((a) => ({ url: a.url, label: a.label ?? undefined })) ?? [];
+  const memoryDrivePhotos = memoryDriveRes.data?.map((a) => a.url) ?? [];
 
   const djs = djRes.error
     ? (await supabase
@@ -70,13 +93,13 @@ export default async function Home() {
     <>
       <Navigation />
       <main>
-        <Hero />
+        <Hero heroImageUrl={heroImageUrl} />
         <FeaturedExperiences concepts={concepts ?? []} />
         <HowItWorks />
         <Testimonials testimonials={testimonials} />
-        <BrandFeed />
+        <BrandFeed photos={brandFeedPhotos.length > 0 ? brandFeedPhotos : undefined} />
         <Artists djs={djs ?? []} />
-        <MemoryDrive />
+        <MemoryDrive photos={memoryDrivePhotos.length > 0 ? memoryDrivePhotos : undefined} />
         <PartnerEcosystem categories={categories} />
         <HomeCTA />
       </main>
