@@ -41,7 +41,7 @@ export default async function EventLandingPage({ params }: Props) {
 
   const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
 
-  const jsonLd = {
+  const serviceSchema = {
     "@context": "https://schema.org",
     "@type": "Service",
     name: `${page.title} Organizasyonu — NOQT`,
@@ -50,24 +50,39 @@ export default async function EventLandingPage({ params }: Props) {
       "@type": "LocalBusiness",
       name: "NOQT Deneyim Stüdyosu",
       url: BASE,
-      telephone: "+90",
-      areaServed: "TR",
-      address: {
-        "@type": "PostalAddress",
-        addressCountry: "TR",
-      },
+      areaServed: ["İstanbul", "İzmir", "Ankara", "Türkiye"],
+      address: { "@type": "PostalAddress", addressCountry: "TR" },
     },
     serviceType: page.title,
     areaServed: "TR",
     url: `${BASE}/etkinlikler/${page.slug}`,
   };
 
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: page.faq.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: BASE },
+      { "@type": "ListItem", position: 2, name: "Etkinlikler", item: `${BASE}/etkinlikler` },
+      { "@type": "ListItem", position: 3, name: page.title, item: `${BASE}/etkinlikler/${page.slug}` },
+    ],
+  };
+
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <Navigation />
       <main className="pt-20">
         {/* Hero */}
