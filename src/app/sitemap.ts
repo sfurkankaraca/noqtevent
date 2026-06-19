@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { createServiceClient } from "@/lib/supabase";
+import { EVENT_PAGES } from "@/lib/eventPages";
 
 const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
 
@@ -17,6 +18,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     supabase.from("concepts").select("slug, updated_at").eq("is_active", true),
     supabase.from("journal_posts").select("slug, updated_at").eq("is_published", true),
   ]);
+
+  const eventRoutes: MetadataRoute.Sitemap = EVENT_PAGES.map((p) => ({
+    url: `${BASE}/etkinlikler/${p.slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.9,
+  }));
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: BASE, priority: 1.0, changeFrequency: "weekly" },
@@ -57,5 +64,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...djRoutes, ...partnerRoutes, ...conceptRoutes, ...postRoutes];
+  return [...staticRoutes, ...eventRoutes, ...djRoutes, ...partnerRoutes, ...conceptRoutes, ...postRoutes];
 }
