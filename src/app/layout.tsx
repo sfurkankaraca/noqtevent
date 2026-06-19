@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "tr_TR",
-    url: "https://noqt.co",
+    url: process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events",
     siteName: "NOQT",
     title: "NOQT — Deneyim Stüdyosu",
     description:

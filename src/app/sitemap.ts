@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createServiceClient } from "@/lib/supabase";
 
-const BASE = process.env.NEXT_PUBLIC_URL ?? "https://noqt.co";
+const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createServiceClient();
