@@ -113,7 +113,7 @@ export default function PartnersPage() {
           className="text-5xl lg:text-6xl mt-4 text-foreground leading-tight"
           style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
         >
-          Ortak Ağımız
+          Partner Ağımız
         </h1>
         <p className="text-muted-foreground mt-4 max-w-lg leading-relaxed">
           Her partner, kalite ve estetik anlayış konusunda titizlikle seçilmiştir.
@@ -202,7 +202,7 @@ export default function PartnersPage() {
             Her yıl sınırlı sayıda yeni partner kabul ediyoruz.
           </p>
           <Link
-            href="/iletisim?konu=partner"
+            href="/basvuru/partner"
             className="inline-flex mt-6 items-center gap-2 bg-background text-foreground px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
           >
             Partner Başvurusu Yap

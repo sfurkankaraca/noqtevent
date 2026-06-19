@@ -184,7 +184,7 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
             Her yıl sınırlı sayıda yeni partner kabul ediyoruz.
           </p>
           <Link
-            href="/iletisim?konu=partner"
+            href="/basvuru/partner"
             className="inline-flex mt-6 items-center gap-2 bg-background text-foreground px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
           >
             Partner Başvurusu Yap
