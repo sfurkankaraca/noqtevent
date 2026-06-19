@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Dijital Davetiye",
-  description: "noqt.co/isim-isim formatında kişisel mikrositeler. RSVP, playlist, konum ve daha fazlası.",
+  description: "noqt.events/isim-isim formatında kişisel mikrositeler. RSVP, playlist, konum ve daha fazlası.",
 };
 
 export default function Page() {
@@ -36,7 +36,7 @@ export default function Page() {
           <div className="bg-foreground text-background rounded-2xl p-8 lg:p-12 mb-16">
             <p className="text-background/50 text-sm mb-3">Örnek adres</p>
             <p className="text-3xl lg:text-4xl font-light tracking-wide">
-              noqt.co/
+              noqt.events/
               <em
                 className="italic text-background/60"
                 style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}
