@@ -997,6 +997,7 @@ export const PARTNER_SERVICES = [
   { id: "cocktail-bar", label: "Kokteyl Bar", category: "Yeme & İçme" },
   { id: "floral", label: "Çiçek Tasarımı", category: "Dekorasyon" },
   { id: "decoration", label: "Dekorasyon", category: "Dekorasyon" },
+  { id: "dance-class", label: "Dans Kursu", category: "Deneyim" },
   { id: "bridal-dress", label: "Gelinlik", category: "Stil" },
   { id: "groom-suit", label: "Damat Takımı", category: "Stil" },
   { id: "hair-makeup", label: "Saç & Makyaj", category: "Stil" },
