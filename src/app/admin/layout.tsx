@@ -8,7 +8,7 @@ const NAV = [
   { href: "/admin/songs", label: "Şarkılar", icon: "♪" },
   { href: "/admin/gorseller", label: "Görseller", icon: "🖼" },
   { href: "/admin/djler", label: "Sanatçılar", icon: "🎧" },
-  { href: "/admin/ortaklar", label: "Ortaklar", icon: "🤝" },
+  { href: "/admin/partnerler", label: "Partnerler", icon: "🤝" },
   { href: "/admin/konseptler", label: "Konseptler", icon: "✦" },
   { href: "/admin/journal", label: "Journal", icon: "✍" },
   { href: "/admin/testimonials", label: "Yorumlar", icon: "💬" },

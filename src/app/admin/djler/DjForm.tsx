@@ -19,6 +19,8 @@ const PERFORMER_TYPES = [
   { id: "trio", label: "Trio / Grup", emoji: "🎶" },
   { id: "dance", label: "Dans Ekibi", emoji: "💃" },
   { id: "band", label: "Bando / Orkestra", emoji: "🎺" },
+  { id: "host", label: "Sunucu / MC", emoji: "🎙️" },
+  { id: "moderator", label: "Moderatör", emoji: "🗣️" },
 ];
 
 const EVENT_TYPES = [
