@@ -57,7 +57,7 @@ function OzetContent() {
     const raw = searchParams.get("d");
     if (!raw) return;
     try {
-      const decoded = JSON.parse(atob(raw));
+      const decoded = JSON.parse(decodeURIComponent(escape(atob(raw))));
       setData(decoded);
     } catch {
       // invalid data
