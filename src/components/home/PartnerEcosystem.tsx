@@ -3,15 +3,26 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 type CategoryCount = { label: string; count: number };
+type LogoItem = { url: string; label?: string };
 
-export default function PartnerEcosystem({ categories }: { categories: CategoryCount[] }) {
+export default function PartnerEcosystem({
+  categories,
+  logos = [],
+}: {
+  categories: CategoryCount[];
+  logos?: LogoItem[];
+}) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
+  const hasLogos = logos.length > 0;
+  const marqueeItems = hasLogos ? [...logos, ...logos] : [];
+
   return (
-    <section ref={ref} className="py-24 lg:py-36 bg-background">
+    <section ref={ref} className="py-24 lg:py-36 bg-background overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
           {/* Left */}
@@ -70,6 +81,52 @@ export default function PartnerEcosystem({ categories }: { categories: CategoryC
           </motion.div>
         </div>
       </div>
+
+      {/* Partner logo marquee */}
+      {hasLogos && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={inView ? { opacity: 1 } : {}}
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="mt-20"
+        >
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs tracking-[0.3em] uppercase text-muted-foreground font-medium whitespace-nowrap">
+                Partnerlerimiz
+              </span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute left-0 top-0 bottom-0 w-16 lg:w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-16 lg:w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+
+            <motion.div
+              className="flex items-center gap-10 w-max"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ duration: 30, ease: "linear", repeat: Infinity }}
+            >
+              {marqueeItems.map((logo, i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 relative h-12 w-32 grayscale hover:grayscale-0 opacity-50 hover:opacity-100 transition-all duration-300"
+                >
+                  <Image
+                    src={logo.url}
+                    alt={logo.label ?? `Partner ${i + 1}`}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
     </section>
   );
 }

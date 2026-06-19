@@ -10,7 +10,7 @@ const CATEGORIES = [
   { id: "memory-drive", label: "Memory Drive Galerisi" },
   { id: "events", label: "Etkinlik Görselleri" },
   { id: "artists", label: "Sanatçı Fotoğrafları" },
-  { id: "brands", label: "Marka / Ortak Logoları" },
+  { id: "brands", label: "Partner Logoları (Anasayfa Marquee)" },
   { id: "journal", label: "Journal / Blog" },
   { id: "other", label: "Diğer" },
 ];

@@ -6,7 +6,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   hero: "Hero / Ana Görsel",
   events: "Etkinlik Görselleri",
   artists: "Sanatçı Fotoğrafları",
-  brands: "Marka / Ortak Logoları",
+  brands: "Partner Logoları",
   journal: "Journal / Blog",
   other: "Diğer",
 };

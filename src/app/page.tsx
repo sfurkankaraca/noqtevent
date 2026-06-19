@@ -14,7 +14,7 @@ import { createServiceClient } from "@/lib/supabase";
 export default async function Home() {
   const supabase = createServiceClient();
 
-  const [djRes, partnerRes, conceptRes, testimonialRes, heroRes, brandFeedRes, memoryDriveRes] = await Promise.all([
+  const [djRes, partnerRes, conceptRes, testimonialRes, heroRes, brandFeedRes, memoryDriveRes, partnerLogosRes] = await Promise.all([
     supabase
       .from("dj_profiles")
       .select("id, name, bio, photo_url, photos, focal_points, concept_tags")
@@ -58,6 +58,12 @@ export default async function Home() {
       .eq("is_active", true)
       .order("created_at", { ascending: true })
       .limit(6),
+    supabase
+      .from("site_assets")
+      .select("public_url, label")
+      .eq("category", "brands")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true }),
   ]);
 
   // photos/focal_points columns may not exist yet — fall back gracefully
@@ -65,6 +71,7 @@ export default async function Home() {
   const heroImageUrl = heroRes.data?.[0]?.public_url ?? undefined;
   const brandFeedPhotos = brandFeedRes.data?.map((a) => ({ url: a.public_url, label: a.label ?? undefined })) ?? [];
   const memoryDrivePhotos = memoryDriveRes.data?.map((a) => a.public_url) ?? [];
+  const partnerLogos = partnerLogosRes.data?.map((a) => ({ url: a.public_url, label: a.label ?? undefined })) ?? [];
 
   const djs = djRes.error
     ? (await supabase
@@ -100,7 +107,7 @@ export default async function Home() {
         <BrandFeed photos={brandFeedPhotos.length > 0 ? brandFeedPhotos : undefined} />
         <Artists djs={djs ?? []} />
         <MemoryDrive photos={memoryDrivePhotos.length > 0 ? memoryDrivePhotos : undefined} />
-        <PartnerEcosystem categories={categories} />
+        <PartnerEcosystem categories={categories} logos={partnerLogos} />
         <HomeCTA />
       </main>
       <Footer />
