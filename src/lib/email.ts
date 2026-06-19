@@ -58,6 +58,45 @@ export async function sendInquiryNotification(inquiry: {
   if (error) console.error("[email] sendInquiryNotification failed:", error);
 }
 
+export async function sendInquiryConfirmation(inquiry: {
+  name: string;
+  email: string;
+  eventType: string;
+  eventDate?: string;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: inquiry.email,
+    subject: `Deneyim taslağın alındı — NOQT`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <div style="font-size:22px;font-family:Georgia,serif;font-weight:400;margin-bottom:4px;">NOQT</div>
+        <div style="font-size:11px;color:#999;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:32px;">Deneyim Stüdyosu</div>
+        <h1 style="font-size:24px;font-family:Georgia,serif;font-weight:400;margin-bottom:8px;">Merhaba ${inquiry.name},</h1>
+        <p style="color:#555;line-height:1.7;margin-top:0;">
+          Deneyim taslağın başarıyla alındı. NOQT ekibi en kısa sürede seninle iletişime geçecek.
+        </p>
+        <div style="margin:28px 0;padding:20px 24px;background:#f9f8f6;border-radius:12px;">
+          <div style="font-size:12px;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Talep Özeti</div>
+          <div style="font-size:14px;color:#333;line-height:2;">
+            <span style="color:#999;">Etkinlik:</span> <strong>${inquiry.eventType}</strong><br/>
+            ${inquiry.eventDate ? `<span style="color:#999;">Tarih:</span> <strong>${new Date(inquiry.eventDate + "T00:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</strong>` : ""}
+          </div>
+        </div>
+        <p style="color:#555;font-size:14px;line-height:1.7;">
+          Sorularınız için bize <a href="mailto:hello@noqt.events" style="color:#1a1a1a;">hello@noqt.events</a> üzerinden ulaşabilirsiniz.
+        </p>
+        <div style="margin-top:40px;padding-top:24px;border-top:1px solid #e8e8e8;font-size:12px;color:#999;">
+          NOQT Deneyim Stüdyosu — noqt.events
+        </div>
+      </div>
+    `,
+  });
+}
+
 export async function sendContactNotification(msg: {
   name: string;
   email: string;

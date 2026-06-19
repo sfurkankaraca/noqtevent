@@ -2,7 +2,7 @@
 
 import { createServiceClient } from "@/lib/supabase";
 import { type PlannerData } from "@/components/planner/PlannerStore";
-import { sendInquiryNotification } from "@/lib/email";
+import { sendInquiryNotification, sendInquiryConfirmation } from "@/lib/email";
 
 export async function submitInquiry(
   data: PlannerData
@@ -42,15 +42,23 @@ export async function submitInquiry(
     }
   }
 
-  await sendInquiryNotification({
-    name: data.name,
-    surname: data.surname,
-    email: data.email,
-    phone: data.phone,
-    eventType: data.eventType,
-    eventDate: data.eventDate || undefined,
-    services: data.services,
-  });
+  await Promise.all([
+    sendInquiryNotification({
+      name: data.name,
+      surname: data.surname,
+      email: data.email,
+      phone: data.phone,
+      eventType: data.eventType,
+      eventDate: data.eventDate || undefined,
+      services: data.services,
+    }),
+    sendInquiryConfirmation({
+      name: data.name,
+      email: data.email,
+      eventType: data.eventType,
+      eventDate: data.eventDate || undefined,
+    }),
+  ]);
 
   return { availabilityWarning };
 }
