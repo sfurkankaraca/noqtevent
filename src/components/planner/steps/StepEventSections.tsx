@@ -308,7 +308,7 @@ function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, a
   eventType: string;
   activeSlugs?: string[];
 }) {
-  const modernAll = MUSIC_CONCEPTS.filter((c) => c.category === "celebration" && (!activeSlugs || activeSlugs.includes(c.id)));
+  const modernAll = MUSIC_CONCEPTS.filter((c) => (c.category === "celebration" || c.category === "after-party") && (!activeSlugs || activeSlugs.includes(c.id)));
   const traditionalAll = MUSIC_CONCEPTS.filter((c) => c.category === "traditional" && (!activeSlugs || activeSlugs.includes(c.id)));
 
   const modernRecIds = getTop(modernAll, eventType, 2);
