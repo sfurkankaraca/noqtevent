@@ -40,31 +40,31 @@ export default async function Home() {
       .limit(9),
     supabase
       .from("site_assets")
-      .select("url")
+      .select("public_url")
       .eq("category", "hero")
       .eq("is_active", true)
       .order("created_at", { ascending: false })
       .limit(1),
     supabase
       .from("site_assets")
-      .select("url, label")
+      .select("public_url, label")
       .eq("category", "brand-feed")
       .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
+      .order("created_at", { ascending: true }),
     supabase
       .from("site_assets")
-      .select("url")
+      .select("public_url")
       .eq("category", "memory-drive")
       .eq("is_active", true)
-      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
       .limit(6),
   ]);
 
   // photos/focal_points columns may not exist yet — fall back gracefully
   const testimonials = testimonialRes.error ? [] : (testimonialRes.data ?? []);
-  const heroImageUrl = heroRes.data?.[0]?.url ?? undefined;
-  const brandFeedPhotos = brandFeedRes.data?.map((a) => ({ url: a.url, label: a.label ?? undefined })) ?? [];
-  const memoryDrivePhotos = memoryDriveRes.data?.map((a) => a.url) ?? [];
+  const heroImageUrl = heroRes.data?.[0]?.public_url ?? undefined;
+  const brandFeedPhotos = brandFeedRes.data?.map((a) => ({ url: a.public_url, label: a.label ?? undefined })) ?? [];
+  const memoryDrivePhotos = memoryDriveRes.data?.map((a) => a.public_url) ?? [];
 
   const djs = djRes.error
     ? (await supabase

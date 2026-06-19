@@ -2,10 +2,12 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { uploadAsset } from "./actions";
+import { saveAssetRecord } from "./actions";
 
 const CATEGORIES = [
   { id: "hero", label: "Hero / Ana Görsel" },
+  { id: "brand-feed", label: "Deneyimler Anlatıyor (Dönen Kartlar)" },
+  { id: "memory-drive", label: "Memory Drive Galerisi" },
   { id: "events", label: "Etkinlik Görselleri" },
   { id: "artists", label: "Sanatçı Fotoğrafları" },
   { id: "brands", label: "Marka / Ortak Logoları" },
@@ -17,33 +19,70 @@ export default function UploadForm() {
   const [preview, setPreview] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setPreview(URL.createObjectURL(file));
+    setError(null);
+    setSuccess(false);
   };
 
-  const handleAction = async (fd: FormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = formRef.current!;
+    const file = (form.querySelector('input[name="file"]') as HTMLInputElement).files?.[0];
+    const category = (form.querySelector('select[name="category"]') as HTMLSelectElement).value;
+    const label = (form.querySelector('input[name="label"]') as HTMLInputElement).value.trim();
+
+    if (!file || !category || !label) {
+      setError("Tüm alanları doldur");
+      return;
+    }
+
     setPending(true);
     setError(null);
+    setSuccess(false);
+
     try {
-      await uploadAsset(fd);
-      formRef.current?.reset();
+      // Step 1: upload file via API route (no body-size limit)
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", category);
+
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Upload hatası: ${res.status}`);
+      }
+      const { url, path: filePath } = await res.json();
+
+      // Step 2: save record to site_assets via server action
+      await saveAssetRecord({ category, label, publicUrl: url, filePath });
+
+      form.reset();
       setPreview(null);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Yükleme başarısız");
+      setError(err instanceof Error ? err.message : "Bilinmeyen hata");
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <form ref={formRef} action={handleAction} className="bg-white rounded-2xl border border-border p-6 space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} className="bg-white rounded-2xl border border-border p-6 space-y-4">
       <h2 className="font-medium text-foreground">Yeni Görsel Yükle</h2>
 
       {error && (
         <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
+      )}
+      {success && (
+        <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+          Görsel başarıyla yüklendi ve kayıt edildi ✓
+        </p>
       )}
 
       <div className="grid grid-cols-2 gap-4">
@@ -101,7 +140,12 @@ export default function UploadForm() {
         disabled={pending}
         className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
       >
-        {pending ? "Yükleniyor…" : "Yükle"}
+        {pending ? (
+          <>
+            <span className="w-3.5 h-3.5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+            Yükleniyor…
+          </>
+        ) : "Yükle"}
       </button>
     </form>
   );
