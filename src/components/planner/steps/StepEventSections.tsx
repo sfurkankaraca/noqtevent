@@ -618,30 +618,21 @@ export default function StepEventSections({ data, update, onNext, conceptCovers 
             ← Geri
           </button>
         )}
-        {/* After Parti: manual skip/next */}
-        {isLast && (
-          <AnimatePresence>
-            <motion.button
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={advance}
-              className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium transition-all ${
-                hasSelection ? "bg-foreground text-background hover:opacity-90" : "bg-foreground/10 text-foreground/50 hover:bg-foreground/15"
-              }`}
-            >
-              {hasSelection ? "Devam" : "Atla"}
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </motion.button>
-          </AnimatePresence>
-        )}
-        {/* Karşılama: skip if no selection */}
-        {subStep === 0 && !hasSelection && (
-          <button onClick={advance} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            Atla →
-          </button>
-        )}
+        <AnimatePresence>
+          <motion.button
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={advance}
+            className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium transition-all ${
+              hasSelection ? "bg-foreground text-background hover:opacity-90" : "bg-foreground/10 text-foreground/50 hover:bg-foreground/15"
+            }`}
+          >
+            {hasSelection ? "Devam" : "Atla"}
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </motion.button>
+        </AnimatePresence>
       </div>
     </div>
   );
