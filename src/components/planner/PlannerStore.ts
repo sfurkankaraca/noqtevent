@@ -91,8 +91,10 @@ export const EVENT_TYPES = [
   { id: "opening", label: "Açılış Etkinliği", emoji: "🎊" },
   { id: "brand-launch", label: "Marka Lansmanı", emoji: "🚀" },
   { id: "private-party", label: "Özel Parti", emoji: "🎉" },
-  { id: "cocktail", label: "Kokteyl Resepsiyonu", emoji: "🍸" },
-  { id: "sunset", label: "Sunset Session", emoji: "🌅" },
+  { id: "cocktail", label: "Mezuniyet", emoji: "🎓" },
+  { id: "birthday", label: "Doğum Günü", emoji: "🎂" },
+  { id: "bride", label: "Bride / Bekarlığa Veda", emoji: "👰" },
+  { id: "morning-party", label: "Morning Party / Caffeine Club", emoji: "☕" },
   { id: "after-party", label: "After Party", emoji: "🌙" },
 ];
 
