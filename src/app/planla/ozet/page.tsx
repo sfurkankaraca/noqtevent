@@ -8,6 +8,7 @@ import {
   PARTNER_SERVICES,
   type PlannerData,
 } from "@/components/planner/PlannerStore";
+import { EVENT_MOMENTS } from "@/components/planner/momentData";
 
 function getEventLabel(id: string) {
   return EVENT_TYPES.find((e) => e.id === id)?.label ?? id;
@@ -74,6 +75,10 @@ function OzetContent() {
 
   const serviceGroups = getServicesByCategory(data.services);
   const hasServices = data.services.length > 0;
+
+  const importantMoments = Object.entries(data.momentSelections ?? {}).filter(([, v]) => v.important);
+  const customMoments = data.customMoments ?? [];
+  const hasMoments = importantMoments.length > 0 || customMoments.length > 0;
 
   return (
     <>
@@ -213,6 +218,61 @@ function OzetContent() {
                     </div>
                   );
                 })}
+              </div>
+            </section>
+          )}
+
+          {/* ─── ÖNEMLİ ANLAR ─── */}
+          {hasMoments && (
+            <section>
+              <SectionTitle>Önemli Anlar</SectionTitle>
+              <div className="space-y-3">
+                {importantMoments.map(([momentId, sel]) => {
+                  const allMoments = Object.values(EVENT_MOMENTS).flat();
+                  const momentMeta = allMoments.find((m) => m.id === momentId);
+                  return (
+                  <div key={momentId} className="flex items-start gap-4 bg-gray-50 rounded-xl px-4 py-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm">{momentMeta?.emoji ?? "⭐"}</div>
+                    <div className="flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-semibold text-gray-800">{momentMeta?.label ?? momentId.replace(/-/g, " ")}</span>
+                        {sel.startTime && <span className="text-xs text-gray-400 font-mono">{sel.startTime}</span>}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {sel.moods?.map((m) => (
+                          <span key={m} className="text-[10px] px-2 py-0.5 bg-white border border-gray-200 rounded-full text-gray-600">{m}</span>
+                        ))}
+                        {sel.energy && (
+                          <span className="text-[10px] px-2 py-0.5 bg-white border border-gray-200 rounded-full text-gray-500">
+                            {sel.energy === "slow" ? "Slow" : sel.energy === "medium" ? "Orta Tempo" : "Hareketli"}
+                          </span>
+                        )}
+                        {sel.musicPref && (
+                          <span className="text-[10px] px-2 py-0.5 bg-white border border-gray-200 rounded-full text-gray-500">
+                            {sel.musicPref === "local" ? "Yerli" : sel.musicPref === "international" ? "Yabancı" : "Karışık"}
+                          </span>
+                        )}
+                      </div>
+                      {sel.customSong?.name && (
+                        <p className="text-[10px] text-gray-500 mt-1">🎵 {sel.customSong.name}</p>
+                      )}
+                    </div>
+                  </div>
+                  );
+                })}
+
+                {customMoments.map((cm) => (
+                  <div key={cm.id} className="flex items-start gap-4 bg-gray-50 rounded-xl px-4 py-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm">{cm.emoji}</div>
+                    <div className="flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-semibold text-gray-800">{cm.label}</span>
+                        {cm.startTime && <span className="text-xs text-gray-400 font-mono">{cm.startTime}</span>}
+                      </div>
+                      {cm.note && <p className="text-xs text-gray-500 mt-0.5">{cm.note}</p>}
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
           )}

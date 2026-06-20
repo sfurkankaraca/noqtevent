@@ -9,6 +9,7 @@ import {
   MOMENT_MOODS,
   type MomentSelection,
   type MomentSong,
+  type CustomMoment,
 } from "../momentData";
 
 type Props = {
@@ -145,6 +146,17 @@ function MomentCard({
             className="overflow-hidden"
           >
             <div className="border-t border-border px-4 py-4 space-y-5">
+
+              {/* Start time */}
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-muted-foreground font-medium">Başlangıç saati</p>
+                <input
+                  type="time"
+                  value={selection.startTime ?? ""}
+                  onChange={(e) => onUpdate({ startTime: e.target.value })}
+                  className="px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40 transition-colors"
+                />
+              </div>
 
               {/* Mood */}
               <div>
@@ -330,8 +342,101 @@ const defaultSelection = (): MomentSelection => ({
   customSong: undefined,
 });
 
+const MOMENT_EMOJIS = ["🎊","🥂","💍","🎂","🎤","🎻","💃","🕺","🎆","🌹","🎁","⭐","🥳","🎵","🌸"];
+
+function CustomMomentForm({ onAdd }: { onAdd: (m: CustomMoment) => void }) {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState("");
+  const [emoji, setEmoji] = useState("🎊");
+  const [startTime, setStartTime] = useState("");
+  const [note, setNote] = useState("");
+
+  const handleAdd = () => {
+    if (!label.trim()) return;
+    onAdd({ id: `custom-${Date.now()}`, label: label.trim(), emoji, startTime, note });
+    setLabel(""); setEmoji("🎊"); setStartTime(""); setNote("");
+    setOpen(false);
+  };
+
+  return (
+    <div className="rounded-2xl border border-dashed border-border overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <span className="text-lg">+</span>
+        <span>Özel an ekle</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-border px-4 py-4 space-y-3">
+              <div className="flex gap-2">
+                <select
+                  value={emoji}
+                  onChange={(e) => setEmoji(e.target.value)}
+                  className="px-2 py-2.5 rounded-xl border border-border bg-background text-base focus:outline-none"
+                >
+                  {MOMENT_EMOJIS.map((e) => (
+                    <option key={e} value={e}>{e}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  placeholder="An adı (ör. Pasta kesimi, Sürpriz)"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40 transition-colors"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-muted-foreground font-medium flex-shrink-0">Başlangıç saati</p>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40 transition-colors"
+                />
+              </div>
+              <textarea
+                placeholder="Not (isteğe bağlı)"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:border-foreground/40 transition-colors"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAdd}
+                  disabled={!label.trim()}
+                  className="px-5 py-2 rounded-full text-xs font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
+                >
+                  Ekle
+                </button>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="px-5 py-2 rounded-full text-xs font-medium border border-border text-muted-foreground hover:border-foreground/40 transition-colors"
+                >
+                  İptal
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function StepMoments({ data, update, onNext }: Props) {
   const moments = getMomentsForEventType(data.eventType);
+  const customMoments: CustomMoment[] = data.customMoments ?? [];
 
   const [selections, setSelections] = useState<Record<string, MomentSelection>>(
     () => {
@@ -349,12 +454,27 @@ export default function StepMoments({ data, update, onNext }: Props) {
     update({ momentSelections: next });
   };
 
+  const addCustomMoment = (m: CustomMoment) => {
+    update({ customMoments: [...customMoments, m] });
+  };
+
+  const removeCustomMoment = (id: string) => {
+    update({ customMoments: customMoments.filter((m) => m.id !== id) });
+  };
+
   if (moments.length === 0) {
     return (
       <div className="space-y-6">
         <p className="text-sm text-muted-foreground">
           Bu etkinlik türü için önemli anlar henüz tanımlanmadı.
         </p>
+        <CustomMomentForm onAdd={addCustomMoment} />
+        {customMoments.map((cm) => (
+          <div key={cm.id} className="flex items-center justify-between rounded-2xl border border-border px-4 py-3">
+            <span className="text-sm">{cm.emoji} {cm.label} {cm.startTime && <span className="text-xs text-muted-foreground ml-2">{cm.startTime}</span>}</span>
+            <button onClick={() => removeCustomMoment(cm.id)} className="text-xs text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+        ))}
         <button
           onClick={onNext}
           className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
@@ -384,6 +504,21 @@ export default function StepMoments({ data, update, onNext }: Props) {
             hasSongs={moment.hasSongDatabase}
           />
         ))}
+
+        {/* Custom moments already added */}
+        {customMoments.map((cm) => (
+          <div key={cm.id} className="flex items-center justify-between rounded-2xl border border-border px-4 py-3 bg-secondary/30">
+            <div className="flex items-center gap-2 text-sm">
+              <span>{cm.emoji}</span>
+              <span className="font-medium text-foreground">{cm.label}</span>
+              {cm.startTime && <span className="text-xs text-muted-foreground font-mono">{cm.startTime}</span>}
+              {cm.note && <span className="text-xs text-muted-foreground">— {cm.note}</span>}
+            </div>
+            <button onClick={() => removeCustomMoment(cm.id)} className="text-xs text-muted-foreground hover:text-foreground ml-3">✕</button>
+          </div>
+        ))}
+
+        <CustomMomentForm onAdd={addCustomMoment} />
       </div>
 
       <div className="pt-2">

@@ -25,6 +25,7 @@ export type EventMoment = {
 
 export type MomentSelection = {
   important: boolean;
+  startTime?: string;
   moods: string[];
   musicPref: "local" | "international" | "mixed" | "";
   energy: "slow" | "medium" | "energetic" | "";
@@ -34,6 +35,14 @@ export type MomentSelection = {
     spotifyUrl?: string;
     youtubeUrl?: string;
   };
+};
+
+export type CustomMoment = {
+  id: string;
+  label: string;
+  emoji: string;
+  startTime: string;
+  note: string;
 };
 
 // ─── IMPORTANT MOMENTS PER EVENT TYPE ────────────────────────────────────────

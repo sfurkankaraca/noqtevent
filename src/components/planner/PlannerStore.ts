@@ -54,6 +54,7 @@ export type PlannerData = {
   hasChildren: boolean;
   eventSections: EventSections;
   momentSelections: Record<string, import("./momentData").MomentSelection>;
+  customMoments: import("./momentData").CustomMoment[];
   hasVenue: boolean | null;
   venueType: string;
   services: string[];
@@ -74,6 +75,7 @@ export const initialData: PlannerData = {
     afterParti: { musicPref: "", conceptIds: [] },
   },
   momentSelections: {},
+  customMoments: [],
   hasVenue: null,
   venueType: "",
   services: [],
