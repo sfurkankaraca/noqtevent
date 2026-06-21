@@ -324,7 +324,7 @@ export default function SanatciBasvuruPage() {
                       <p className="text-xs text-muted-foreground mb-3">Canlı performans, mix veya gösteri videolarınızın linklerini ekleyin.</p>
                       <div className="space-y-2">
                         {youtubeLinks.map((link, i) => (
-                          <input key={i} className={inputCls} value={link} onChange={(e) => { const next = [...youtubeLinks]; next[i] = e.target.value; setYoutubeLinks(next); }} placeholder={`YouTube video linki ${i + 1}`} type="url" />
+                          <input key={i} className={inputCls} value={link} onChange={(e) => { const next = [...youtubeLinks]; next[i] = e.target.value; setYoutubeLinks(next); }} placeholder={`YouTube video linki ${i + 1}`} type="text" />
                         ))}
                         {youtubeLinks.length < 6 && (
                           <button type="button" onClick={() => setYoutubeLinks((prev) => [...prev, ""])} className="text-xs text-muted-foreground hover:text-foreground transition-colors">+ Başka video ekle</button>
@@ -341,7 +341,7 @@ export default function SanatciBasvuruPage() {
                       ].map((f) => (
                         <div key={f.label}>
                           <label className="block text-[11px] text-muted-foreground mb-1">{f.label}</label>
-                          <input className={inputCls} value={f.value} onChange={(e) => f.set(e.target.value)} placeholder={f.placeholder} type="url" />
+                          <input className={inputCls} value={f.value} onChange={(e) => f.set(e.target.value)} placeholder={f.placeholder} type="text" />
                         </div>
                       ))}
                     </div>
