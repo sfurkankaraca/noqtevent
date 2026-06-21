@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { sendArtistApplicationReceived } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -55,6 +56,8 @@ export async function POST(req: Request) {
       console.error("Basvuru insert error:", error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    await sendArtistApplicationReceived({ name, email, performer_type });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

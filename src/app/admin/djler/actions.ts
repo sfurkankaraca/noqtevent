@@ -3,6 +3,7 @@
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import type { FocalPoint } from "@/components/admin/FocalPointPicker";
+import { sendArtistApprovalNotification } from "@/lib/email";
 
 export async function upsertDj(formData: FormData) {
   const supabase = createServiceClient();
@@ -47,9 +48,15 @@ export async function upsertDj(formData: FormData) {
   };
 
   if (id) {
+    // Onay durumu değişiyor mu kontrol et
+    const { data: prev } = await supabase
+      .from("dj_profiles")
+      .select("application_status, email, name")
+      .eq("id", id)
+      .single();
+
     const { error } = await supabase.from("dj_profiles").update(payload).eq("id", id);
     if (error) {
-      // photos/focal_points kolonları yoksa basit payload dene
       if (error.message.includes("photos") || error.message.includes("focal_points")) {
         const { photos: _p, focal_points: _fp, ...safe } = payload;
         const { error: e2 } = await supabase.from("dj_profiles").update(safe).eq("id", id);
@@ -57,6 +64,16 @@ export async function upsertDj(formData: FormData) {
       } else {
         throw new Error(error.message);
       }
+    }
+
+    // Pending → approved geçişinde sanatçıya mail at
+    if (
+      prev &&
+      prev.application_status === "pending" &&
+      payload.application_status === "approved" &&
+      prev.email
+    ) {
+      await sendArtistApprovalNotification({ name: prev.name, email: prev.email });
     }
   } else {
     const { error } = await supabase.from("dj_profiles").insert({
