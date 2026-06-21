@@ -2,6 +2,7 @@
 
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
+import { sendPartnerApprovalNotification } from "@/lib/email";
 
 export async function upsertPartner(formData: FormData) {
   const supabase = createServiceClient();
@@ -34,8 +35,27 @@ export async function upsertPartner(formData: FormData) {
   };
 
   if (id) {
+    const { data: prev } = await supabase
+      .from("partner_profiles")
+      .select("application_status, email, contact_name, business_name")
+      .eq("id", id)
+      .single();
+
     const { error } = await supabase.from("partner_profiles").update(payload).eq("id", id);
     if (error) throw new Error(error.message);
+
+    if (
+      prev &&
+      prev.application_status === "pending" &&
+      payload.application_status === "approved" &&
+      prev.email
+    ) {
+      await sendPartnerApprovalNotification({
+        business_name: prev.business_name,
+        contact_name: prev.contact_name || "",
+        email: prev.email,
+      });
+    }
   } else {
     const { error } = await supabase.from("partner_profiles").insert(payload);
     if (error) throw new Error(error.message);

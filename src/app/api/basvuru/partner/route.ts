@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { sendPartnerApplicationReceived } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -40,6 +41,9 @@ export async function POST(req: Request) {
       console.error("Partner insert error:", error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    const contact_name = (fd.get("contact_name") as string | null) || "";
+    await sendPartnerApplicationReceived({ business_name, email, contact_name });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
