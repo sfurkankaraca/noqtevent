@@ -363,11 +363,11 @@ export default function PartnerBasvuruPage() {
                       <label className="block text-xs font-medium text-foreground">Sosyal Medya & Web</label>
                       <div>
                         <label className="block text-[11px] text-muted-foreground mb-1">Instagram</label>
-                        <input className={inputCls} value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="https://instagram.com/…" type="url" />
+                        <input className={inputCls} value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="https://instagram.com/…" type="text" />
                       </div>
                       <div>
                         <label className="block text-[11px] text-muted-foreground mb-1">Website</label>
-                        <input className={inputCls} value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" type="url" />
+                        <input className={inputCls} value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" type="text" />
                       </div>
                     </div>
                   </div>
