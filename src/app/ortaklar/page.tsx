@@ -14,8 +14,9 @@ export default async function Page() {
   const supabase = createServiceClient();
   const { data: partners } = await supabase
     .from("partner_profiles")
-    .select("id, company_name, description, logo_url, portfolio_images, service_category, services, contact_email, contact_phone")
+    .select("id, business_name, description, logo_url, photos, category, services")
     .eq("is_active", true)
+    .eq("application_status", "approved")
     .order("created_at", { ascending: true });
 
   const hasPartners = partners && partners.length > 0;
