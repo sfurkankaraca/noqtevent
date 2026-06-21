@@ -35,7 +35,14 @@ type Dj = {
   soundcloud_url: string | null; concept_tags: string[] | null;
 };
 
-export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [] }: { conceptCovers?: Record<string, string>; activeSlugs?: string[]; djs?: Dj[] }) {
+type Venue = {
+  id: string; business_name: string; description: string | null;
+  category: string[] | null; city: string | null;
+  logo_url: string | null; photos: string[] | null;
+  instagram_url: string | null; website_url: string | null;
+};
+
+export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [], venues = [] }: { conceptCovers?: Record<string, string>; activeSlugs?: string[]; djs?: Dj[]; venues?: Venue[] }) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<PlannerData>(initialData);
   const [direction, setDirection] = useState(1);
@@ -211,7 +218,7 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
               <Step6Services data={data} update={update} onNext={next} />
             )}
             {step === 7 && (
-              <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} djs={djs} />
+              <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} djs={djs} venues={venues} />
             )}
             {step === 8 && (
               <Step8Contact
