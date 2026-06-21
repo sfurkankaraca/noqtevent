@@ -18,6 +18,9 @@ const PARTNER_CATEGORIES = [
   { id: "planning", label: "Organizasyon & Planlama", emoji: "📋" },
   { id: "cake", label: "Pasta & Tatlı", emoji: "🎂" },
   { id: "invitation", label: "Davetiye & Tasarım", emoji: "✉️" },
+  { id: "social-media", label: "Sosyal Medya Ajansı", emoji: "📱" },
+  { id: "content-creator", label: "İçerik Üretici", emoji: "🎬" },
+  { id: "influencer", label: "Influencer", emoji: "⭐" },
   { id: "other", label: "Diğer", emoji: "✨" },
 ];
 
