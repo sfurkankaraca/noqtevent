@@ -11,11 +11,11 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const supabase = createServiceClient();
-  const { data: p } = await supabase.from("partner_profiles").select("company_name, description").eq("id", id).single();
-  if (!p) return { title: "Ortak Bulunamadı" };
+  const { data: p } = await supabase.from("partner_profiles").select("business_name, description").eq("id", id).single();
+  if (!p) return { title: "Partner Bulunamadı" };
   return {
-    title: `${p.company_name} — NOQT Ortakları`,
-    description: p.description ?? `${p.company_name} NOQT ortak ekosisteminde yer almaktadır.`,
+    title: `${p.business_name} — NOQT Partnerleri`,
+    description: p.description ?? `${p.business_name} NOQT partner ekosisteminde yer almaktadır.`,
   };
 }
 
@@ -31,10 +31,9 @@ export default async function PartnerDetailPage({ params }: Props) {
 
   if (!partner) notFound();
 
-  type Service = { name: string; price_range: string };
-  const services: Service[] = partner.services ?? [];
-  const portfolio: string[] = partner.portfolio_images ?? [];
-  const focalPoints: Record<string, { x: number; y: number }> = partner.focal_points ?? {};
+  const services: string[] = Array.isArray(partner.services) ? partner.services : [];
+  const photos: string[] = Array.isArray(partner.photos) ? partner.photos : [];
+  const categories: string[] = Array.isArray(partner.category) ? partner.category : [];
 
   return (
     <>
@@ -44,7 +43,7 @@ export default async function PartnerDetailPage({ params }: Props) {
           {/* Breadcrumb */}
           <div className="mb-12">
             <Link href="/ortaklar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              ← Ortak Ağımız
+              ← Partner Ağımız
             </Link>
           </div>
 
@@ -58,44 +57,46 @@ export default async function PartnerDetailPage({ params }: Props) {
                   </div>
                 )}
                 <div>
-                  <span className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium">
-                    {partner.service_category}
-                  </span>
+                  {categories.length > 0 && (
+                    <span className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium">
+                      {categories[0]}
+                    </span>
+                  )}
                   <h1
                     className="text-3xl lg:text-4xl mt-2 text-foreground leading-tight"
                     style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
                   >
-                    {partner.company_name}
+                    {partner.business_name}
                   </h1>
+                  {partner.city && (
+                    <p className="text-sm text-muted-foreground mt-1">📍 {partner.city}</p>
+                  )}
                 </div>
               </div>
 
               {partner.description && (
-                <p className="text-muted-foreground leading-relaxed text-base">
-                  {partner.description}
-                </p>
+                <p className="text-muted-foreground leading-relaxed text-base">{partner.description}</p>
               )}
 
               {/* Portfolio gallery */}
-              {portfolio.length > 0 && (
+              {photos.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Portfolyo</p>
-                  <div className={`grid gap-3 ${portfolio.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-                    {portfolio.slice(0, 6).map((url, i) => {
-                      const fp = focalPoints[url] ?? { x: 50, y: 50 };
-                      return (
-                        <div key={i} className={`relative rounded-xl overflow-hidden bg-secondary ${i === 0 && portfolio.length >= 3 ? "col-span-2 aspect-[16/7]" : "aspect-[4/3]"}`}>
-                          <Image
-                            src={url}
-                            alt={`${partner.company_name} ${i + 1}`}
-                            fill
-                            className="object-cover"
-                            style={{ objectPosition: `${fp.x}% ${fp.y}%` }}
-                            unoptimized
-                          />
-                        </div>
-                      );
-                    })}
+                  <div className={`grid gap-3 ${photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                    {photos.slice(0, 6).map((url, i) => (
+                      <div
+                        key={i}
+                        className={`relative rounded-xl overflow-hidden bg-secondary ${i === 0 && photos.length >= 3 ? "col-span-2 aspect-[16/7]" : "aspect-[4/3]"}`}
+                      >
+                        <Image
+                          src={url}
+                          alt={`${partner.business_name} ${i + 1}`}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -104,14 +105,11 @@ export default async function PartnerDetailPage({ params }: Props) {
               {services.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Hizmetler</p>
-                  <div className="bg-secondary/40 rounded-2xl divide-y divide-border overflow-hidden">
+                  <div className="flex flex-wrap gap-2">
                     {services.map((s, i) => (
-                      <div key={i} className="flex items-center justify-between px-5 py-3.5 text-sm">
-                        <span className="text-foreground font-medium">{s.name}</span>
-                        {s.price_range && (
-                          <span className="text-muted-foreground ml-4 text-xs">{s.price_range}</span>
-                        )}
-                      </div>
+                      <span key={i} className="text-sm px-4 py-2 bg-secondary rounded-full text-foreground">
+                        {s}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -122,29 +120,55 @@ export default async function PartnerDetailPage({ params }: Props) {
             <div className="space-y-4">
               <div className="bg-white border border-border rounded-2xl p-6 space-y-4">
                 <p className="text-sm font-semibold text-foreground">İletişim</p>
-                {partner.contact_email && (
+                {partner.contact_name && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Yetkili</p>
+                    <p className="text-sm text-foreground">{partner.contact_name}</p>
+                  </div>
+                )}
+                {partner.email && (
                   <div>
                     <p className="text-xs text-muted-foreground">E-posta</p>
-                    <a href={`mailto:${partner.contact_email}`} className="text-sm text-foreground hover:underline break-all">
-                      {partner.contact_email}
+                    <a href={`mailto:${partner.email}`} className="text-sm text-foreground hover:underline break-all">
+                      {partner.email}
                     </a>
                   </div>
                 )}
-                {partner.contact_phone && (
+                {partner.phone && (
                   <div>
                     <p className="text-xs text-muted-foreground">Telefon</p>
-                    <a href={`tel:${partner.contact_phone}`} className="text-sm text-foreground hover:underline">
-                      {partner.contact_phone}
+                    <a href={`tel:${partner.phone}`} className="text-sm text-foreground hover:underline">
+                      {partner.phone}
                     </a>
                   </div>
                 )}
-                {!partner.contact_email && !partner.contact_phone && (
+                {partner.instagram_url && (
+                  <a
+                    href={partner.instagram_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-foreground hover:underline"
+                  >
+                    Instagram ↗
+                  </a>
+                )}
+                {partner.website_url && (
+                  <a
+                    href={partner.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-foreground hover:underline"
+                  >
+                    Website ↗
+                  </a>
+                )}
+                {!partner.email && !partner.phone && !partner.instagram_url && (
                   <p className="text-xs text-muted-foreground">İletişim bilgisi eklenmemiş.</p>
                 )}
               </div>
 
               <div className="bg-foreground rounded-2xl p-6 text-background space-y-3">
-                <p className="text-sm font-medium">Etkinliğinde {partner.company_name} ile çalışmak ister misin?</p>
+                <p className="text-sm font-medium">Etkinliğinde {partner.business_name} ile çalışmak ister misin?</p>
                 <p className="text-xs text-background/70 leading-relaxed">
                   Deneyim planlayıcımız üzerinden talebini ilet, seni yönlendirelim.
                 </p>
