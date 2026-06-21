@@ -12,10 +12,14 @@ export const metadata: Metadata = {
 export default async function PlanlaPage() {
   // Fetch concept cover images from DB (slug → cover_image_url)
   const supabase = createServiceClient();
-  const { data: dbConcepts } = await supabase
-    .from("concepts")
-    .select("slug, cover_image_url, name")
-    .eq("is_active", true);
+  const [{ data: dbConcepts }, { data: dbDjs }] = await Promise.all([
+    supabase.from("concepts").select("slug, cover_image_url, name").eq("is_active", true),
+    supabase
+      .from("dj_profiles")
+      .select("id, name, bio, performer_type, speciality, city, photo_url, instagram_url, spotify_url, website_url, soundcloud_url, concept_tags")
+      .eq("is_active", true)
+      .eq("application_status", "approved"),
+  ]);
 
   const conceptCovers: Record<string, string> = {};
   const activeSlugs = new Set<string>();
@@ -33,7 +37,7 @@ export default async function PlanlaPage() {
         <span className="text-base">←</span> NOQT
       </Link>
 
-      <PlannerWizard conceptCovers={conceptCovers} activeSlugs={[...activeSlugs]} />
+      <PlannerWizard conceptCovers={conceptCovers} activeSlugs={[...activeSlugs]} djs={dbDjs ?? []} />
     </div>
   );
 }

@@ -4,22 +4,21 @@ import { type PlannerData, MUSIC_CONCEPTS, EVENT_TYPES, PARTNER_SERVICES } from 
 import { getEventFlow } from "../eventFlows";
 import { motion } from "framer-motion";
 
+type Dj = {
+  id: string; name: string; bio: string | null; performer_type: string | null;
+  speciality: string | null; city: string | null; photo_url: string | null;
+  instagram_url: string | null; spotify_url: string | null; website_url: string | null;
+  soundcloud_url: string | null; concept_tags: string[] | null;
+};
+
 type Props = {
   data: PlannerData;
   onNext: () => void;
   activeSlugs?: string[];
+  djs?: Dj[];
 };
 
-const ARTIST_DB: Record<string, { name: string; style: string }> = {
-  "mert-yilmaz": { name: "Mert Yılmaz", style: "Deep House & Organic" },
-  "elif-kaya": { name: "Elif Kaya", style: "Disco, Funk & Nu-Disco" },
-  "can-demir": { name: "Can Demir", style: "Techno & House" },
-  "zeynep-arslan": { name: "Zeynep Arslan", style: "Jazz, Soul & Deep" },
-  "bora-sen": { name: "Bora Şen", style: "Afrobeat & Latin" },
-  "ada-kurt": { name: "Ada Kurt", style: "Electronic & Ambient" },
-};
-
-export default function Step9Recommendations({ data, onNext, activeSlugs }: Props) {
+export default function Step9Recommendations({ data, onNext, activeSlugs, djs = [] }: Props) {
   const eventType = EVENT_TYPES.find((e) => e.id === data.eventType);
 
   // Collect all selected concept IDs across sections
@@ -44,9 +43,16 @@ export default function Step9Recommendations({ data, onNext, activeSlugs }: Prop
       ? selectedConcepts.filter((c) => !activeSlugs || activeSlugs.includes(c.id)).slice(0, 4)
       : activeConcepts.filter((c) => c.idealEventTypes.includes(data.eventType)).slice(0, 2);
 
-  const artistIds = Array.from(
-    new Set(displayConcepts.flatMap((c) => c.suggestedArtistIds))
-  ).slice(0, 3);
+  // Pick DJs from DB whose concept_tags overlap with selected concepts, fallback to all
+  const selectedConceptIds = new Set(allConceptIds);
+  const suggestedDjs = djs.length > 0
+    ? (() => {
+        const withMatch = djs.filter((dj) =>
+          (dj.concept_tags ?? []).some((tag) => selectedConceptIds.has(tag))
+        );
+        return (withMatch.length > 0 ? withMatch : djs).slice(0, 3);
+      })()
+    : [];
 
   const selectedServiceLabels = data.services
     .map((id) => PARTNER_SERVICES.find((s) => s.id === id)?.label)
@@ -174,8 +180,8 @@ export default function Step9Recommendations({ data, onNext, activeSlugs }: Prop
         </motion.div>
       )}
 
-      {/* Suggested Artists */}
-      {artistIds.length > 0 && (
+      {/* Suggested DJs from DB */}
+      {suggestedDjs.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -185,18 +191,48 @@ export default function Step9Recommendations({ data, onNext, activeSlugs }: Prop
           <p className="text-xs text-muted-foreground tracking-[0.2em] uppercase font-medium mb-4">
             Önerilen Sanatçılar
           </p>
-          <div className="space-y-3">
-            {artistIds.map((id) => {
-              const artist = ARTIST_DB[id];
-              if (!artist) return null;
+          <div className="space-y-4">
+            {suggestedDjs.map((dj) => {
+              const initials = dj.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2);
+              const profileUrl = `/sanatcilar`;
+              const portfolioUrl = dj.website_url || dj.instagram_url || dj.soundcloud_url || dj.spotify_url;
               return (
-                <div key={id} className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground font-medium text-xs flex-shrink-0">
-                    {artist.name.split(" ").map((n) => n[0]).join("")}
+                <div key={dj.id} className="flex items-center gap-3">
+                  {dj.photo_url ? (
+                    <img
+                      src={dj.photo_url}
+                      alt={dj.name}
+                      className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground font-medium text-sm flex-shrink-0">
+                      {initials}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{dj.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {dj.speciality || dj.performer_type || "Sanatçı"}
+                      {dj.city ? ` — ${dj.city}` : ""}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{artist.name}</p>
-                    <p className="text-xs text-muted-foreground">{artist.style}</p>
+                  <div className="flex gap-2 flex-shrink-0">
+                    {portfolioUrl && (
+                      <a
+                        href={portfolioUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
+                      >
+                        Portfolyo →
+                      </a>
+                    )}
+                    <a
+                      href={profileUrl}
+                      className="text-xs px-3 py-1.5 rounded-full bg-foreground/8 text-foreground hover:bg-foreground/15 transition-colors"
+                    >
+                      Profil
+                    </a>
                   </div>
                 </div>
               );

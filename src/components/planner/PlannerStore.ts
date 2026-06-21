@@ -57,6 +57,8 @@ export type PlannerData = {
   customMoments: import("./momentData").CustomMoment[];
   hasVenue: boolean | null;
   venueType: string;
+  venueName: string;
+  guestCount: string;
   services: string[];
   name: string;
   surname: string;
@@ -78,6 +80,8 @@ export const initialData: PlannerData = {
   customMoments: [],
   hasVenue: null,
   venueType: "",
+  venueName: "",
+  guestCount: "",
   services: [],
   name: "",
   surname: "",

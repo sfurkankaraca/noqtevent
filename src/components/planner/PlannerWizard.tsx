@@ -28,7 +28,14 @@ const stepTitles = [
   "Deneyim taslağın hazır",
 ];
 
-export default function PlannerWizard({ conceptCovers = {}, activeSlugs }: { conceptCovers?: Record<string, string>; activeSlugs?: string[] }) {
+type Dj = {
+  id: string; name: string; bio: string | null; performer_type: string | null;
+  speciality: string | null; city: string | null; photo_url: string | null;
+  instagram_url: string | null; spotify_url: string | null; website_url: string | null;
+  soundcloud_url: string | null; concept_tags: string[] | null;
+};
+
+export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [] }: { conceptCovers?: Record<string, string>; activeSlugs?: string[]; djs?: Dj[] }) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<PlannerData>(initialData);
   const [direction, setDirection] = useState(1);
@@ -204,7 +211,7 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs }: { con
               <Step6Services data={data} update={update} onNext={next} />
             )}
             {step === 7 && (
-              <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} />
+              <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} djs={djs} />
             )}
             {step === 8 && (
               <Step8Contact

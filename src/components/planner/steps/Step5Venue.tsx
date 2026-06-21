@@ -16,8 +16,9 @@ export default function Step5Venue({ data, update, onNext }: Props) {
   const selectYesNo = (has: boolean) => {
     update({ hasVenue: has });
     setAnswered(true);
-    if (has) setTimeout(onNext, 300);
   };
+
+  const guestOptions = ["1-50", "50-100", "100-200", "200-300", "300-500", "500+"];
 
   return (
     <div className="space-y-6">
@@ -45,6 +46,26 @@ export default function Step5Venue({ data, update, onNext }: Props) {
       </div>
 
       <AnimatePresence>
+        {data.hasVenue === true && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            className="space-y-4"
+          >
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground tracking-wide">Mekan adı</label>
+              <input
+                type="text"
+                placeholder="ör. Four Seasons Bosphorus"
+                value={data.venueName}
+                onChange={(e) => update({ venueName: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:border-foreground/40 transition-colors"
+              />
+            </div>
+          </motion.div>
+        )}
+
         {data.hasVenue === false && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -71,18 +92,44 @@ export default function Step5Venue({ data, update, onNext }: Props) {
                 );
               })}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {(data.venueType || data.hasVenue === false) && (
-              <button
-                onClick={onNext}
-                className="mt-2 inline-flex items-center gap-2 bg-foreground text-background px-7 py-3.5 rounded-full text-sm font-medium tracking-wide hover:opacity-90 transition-opacity"
-              >
-                Devam Et
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            )}
+      {/* Guest count — always shown after yes/no */}
+      <AnimatePresence>
+        {data.hasVenue !== null && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="space-y-3"
+          >
+            <p className="text-sm text-muted-foreground">Tahmini davetli sayısı?</p>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {guestOptions.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => update({ guestCount: opt })}
+                  className={`py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                    data.guestCount === opt
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-card text-foreground hover:border-foreground/40"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={onNext}
+              className="mt-2 inline-flex items-center gap-2 bg-foreground text-background px-7 py-3.5 rounded-full text-sm font-medium tracking-wide hover:opacity-90 transition-opacity"
+            >
+              Devam Et
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
