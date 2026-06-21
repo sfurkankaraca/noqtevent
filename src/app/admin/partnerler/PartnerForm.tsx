@@ -278,11 +278,14 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
 
       {/* Photos */}
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
-        <h2 className="font-medium text-foreground">Portföy Fotoğrafları</h2>
+        <div>
+          <h2 className="font-medium text-foreground">Portföy Fotoğrafları</h2>
+          <p className="text-xs text-muted-foreground mt-1">İlk fotoğraf kapak olarak kullanılır. "Kapak Yap" ile sırayı değiştirebilirsin.</p>
+        </div>
         {photos.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             {photos.map((ph, i) => (
-              <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-secondary/20">
+              <div key={i} className={`relative aspect-square rounded-xl overflow-hidden border-2 bg-secondary/20 ${i === 0 ? "border-foreground" : "border-border"}`}>
                 {ph.uploading ? (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="w-6 h-6 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
@@ -290,6 +293,18 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
                 ) : (
                   <>
                     <Image src={ph.url} alt="" fill className="object-cover" unoptimized />
+                    {i === 0 && (
+                      <span className="absolute top-1.5 left-1.5 bg-foreground text-background text-[10px] px-2 py-0.5 rounded-full font-medium">Kapak</span>
+                    )}
+                    {i > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setPhotos((prev) => { const next = [...prev]; const [item] = next.splice(i, 1); next.unshift(item); return next; })}
+                        className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full hover:bg-black/80"
+                      >
+                        Kapak Yap
+                      </button>
+                    )}
                     <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
                       className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-black/80">×</button>
                   </>
