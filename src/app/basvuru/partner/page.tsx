@@ -23,7 +23,7 @@ const PARTNER_CATEGORIES = [
   { id: "other", label: "Diğer", emoji: "✨" },
 ];
 
-const CITIES = ["İstanbul", "İzmir", "Ankara", "Antalya", "Bursa", "Bodrum", "Çeşme", "Muğla"];
+const CITIES = ["Kayseri", "Nevşehir", "İstanbul", "İzmir", "Ankara", "Antalya", "Bursa", "Bodrum", "Çeşme", "Muğla"];
 
 const EVENT_TYPES = [
   { id: "wedding", label: "Düğün / Nikah", emoji: "💍" },

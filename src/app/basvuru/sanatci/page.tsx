@@ -28,7 +28,7 @@ const EVENT_TYPES = [
   { id: "festival", label: "Festival / Açık Hava", emoji: "🎪" },
 ];
 
-const CITIES = ["İstanbul", "İzmir", "Ankara", "Antalya", "Bursa", "Bodrum", "Çeşme", "Muğla"];
+const CITIES = ["Kayseri", "Nevşehir", "İstanbul", "İzmir", "Ankara", "Antalya", "Bursa", "Bodrum", "Çeşme", "Muğla"];
 
 const STEPS = ["Tür", "Hakkında", "Etkinlikler", "Medya", "İletişim"];
 

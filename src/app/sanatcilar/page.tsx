@@ -26,7 +26,16 @@ export default async function Page({ searchParams }: Props) {
 
   if (activeType) query = query.eq("performer_type", activeType);
 
-  const { data: djs } = await query;
+  const { data: rawDjs } = await query;
+
+  // DJ'leri öne al, diğerleri sonrasında
+  const djs = rawDjs
+    ? [...rawDjs].sort((a, b) => {
+        const aIsDj = a.performer_type === "dj" ? 0 : 1;
+        const bIsDj = b.performer_type === "dj" ? 0 : 1;
+        return aIsDj - bIsDj;
+      })
+    : rawDjs;
 
   const hasDjs = djs && djs.length > 0;
 
