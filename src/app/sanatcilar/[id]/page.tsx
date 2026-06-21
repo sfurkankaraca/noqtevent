@@ -44,6 +44,13 @@ export default async function DjDetailPage({ params }: Props) {
     { url: dj.youtube_url, label: "YouTube" },
   ].filter((l) => l.url);
 
+  const youtubeVideos: string[] = Array.isArray(dj.youtube_links) ? dj.youtube_links : [];
+
+  function getYouTubeEmbedId(url: string): string | null {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?]+)/);
+    return match ? match[1] : null;
+  }
+
   // photos array (new) or fall back to single photo_url
   const photos: string[] =
     Array.isArray(dj.photos) && dj.photos.length > 0
@@ -157,6 +164,29 @@ export default async function DjDetailPage({ params }: Props) {
                         {l.label} ↗
                       </a>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {youtubeVideos.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Performans Videoları</p>
+                  <div className="space-y-3">
+                    {youtubeVideos.map((url) => {
+                      const embedId = getYouTubeEmbedId(url);
+                      if (!embedId) return null;
+                      return (
+                        <div key={url} className="aspect-video rounded-xl overflow-hidden">
+                          <iframe
+                            src={`https://www.youtube.com/embed/${embedId}`}
+                            title="YouTube video"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="w-full h-full"
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
