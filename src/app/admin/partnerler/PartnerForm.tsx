@@ -74,7 +74,11 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
   const [eventTypes, setEventTypes] = useState<string[]>(partner?.event_types ?? []);
   const [coverCities, setCoverCities] = useState<string[]>(partner?.cover_cities ?? []);
   const [cityInput, setCityInput] = useState("");
-  const [services, setServices] = useState<string[]>(partner?.services ?? []);
+  const [services, setServices] = useState<string[]>(
+    (partner?.services ?? []).map((s: unknown) =>
+      typeof s === "string" ? s : (s as { name?: string }).name ?? JSON.stringify(s)
+    )
+  );
   const [serviceInput, setServiceInput] = useState("");
   const [logoUrl, setLogoUrl] = useState(partner?.logo_url ?? "");
   const [logoUploading, setLogoUploading] = useState(false);
