@@ -36,6 +36,24 @@ type Dj = {
   speciality?: string | null;
 };
 
+function PhotoGallery({ photos, name, bgColor, focalPoints }: { photos: string[]; name: string; bgColor: string; focalPoints?: Record<string, { x: number; y: number }> }) {
+  const [active, setActive] = useState(0);
+  const fp = focalPoints?.[photos[active]] ?? { x: 50, y: 50 };
+  return (
+    <div className={`${bgColor} h-56 relative overflow-hidden`}>
+      <Image src={photos[active]} alt={name} fill className="object-cover transition-opacity duration-300" style={{ objectPosition: `${fp.x}% ${fp.y}%` }} unoptimized />
+      {photos.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+          {photos.map((_, i) => (
+            <button key={i} type="button" onClick={(e) => { e.preventDefault(); setActive(i); }}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${i === active ? "bg-white scale-125" : "bg-white/50"}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ArtistsClient({
   djs,
   activeType,
@@ -176,53 +194,39 @@ export default function ArtistsClient({
               >
                 <div className="bg-card border border-border rounded-2xl overflow-hidden hover:border-foreground/20 transition-all hover:shadow-lg group">
                   {/* Photo / avatar */}
-                  <div className={`${bgColor} h-56 relative flex items-center justify-center`}>
-                    {dj.photo_url ? (
-                      <Image
-                        src={dj.photo_url}
-                        alt={dj.name}
-                        fill
-                        className="object-cover"
-                        style={{
-                          objectPosition: (() => {
-                            const cover = dj.photos?.[0] ?? dj.photo_url;
-                            const fp = cover ? (dj.focal_points?.[cover] ?? { x: 50, y: 50 }) : { x: 50, y: 50 };
-                            return `${fp.x}% ${fp.y}%`;
-                          })(),
-                        }}
-                        unoptimized
-                      />
+                  {(() => {
+                    const allPhotos = (dj.photos && dj.photos.length > 0 ? dj.photos : dj.photo_url ? [dj.photo_url] : []);
+                    return allPhotos.length > 0 ? (
+                      <div className="relative">
+                        <PhotoGallery photos={allPhotos} name={dj.name} bgColor={bgColor} focalPoints={dj.focal_points} />
+                        {typeInfo && typeInfo.id !== "dj" && (
+                          <span className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                            {typeInfo.emoji} {typeInfo.label}
+                          </span>
+                        )}
+                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {links.slice(0, 3).map((l) => (
+                            <a key={l.label} href={l.url!} target="_blank" rel="noopener noreferrer"
+                              className="bg-background/80 backdrop-blur-sm px-2.5 py-1.5 rounded-full text-xs font-medium text-foreground hover:bg-background transition-colors">
+                              {l.label}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
                     ) : (
-                      <span
-                        className="text-5xl font-light text-foreground/30"
-                        style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}
-                      >
-                        {initials}
-                      </span>
-                    )}
-
-                    {/* Type badge */}
-                    {typeInfo && typeInfo.id !== "dj" && (
-                      <span className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
-                        {typeInfo.emoji} {typeInfo.label}
-                      </span>
-                    )}
-
-                    {/* External links */}
-                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {links.slice(0, 3).map((l) => (
-                        <a
-                          key={l.label}
-                          href={l.url!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-background/80 backdrop-blur-sm px-2.5 py-1.5 rounded-full text-xs font-medium text-foreground hover:bg-background transition-colors"
-                        >
-                          {l.label}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
+                      <div className={`${bgColor} h-56 relative flex items-center justify-center`}>
+                        <span className="text-5xl font-light text-foreground/30"
+                          style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}>
+                          {initials}
+                        </span>
+                        {typeInfo && typeInfo.id !== "dj" && (
+                          <span className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                            {typeInfo.emoji} {typeInfo.label}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <div className="p-6">
                     <div className="mb-2">
