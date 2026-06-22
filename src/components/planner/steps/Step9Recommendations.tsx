@@ -71,15 +71,21 @@ export default function Step9Recommendations({ data, onNext, activeSlugs, djs = 
       ? selectedConcepts.filter((c) => !activeSlugs || activeSlugs.includes(c.id)).slice(0, 4)
       : activeConcepts.filter((c) => c.idealEventTypes.includes(data.eventType)).slice(0, 2);
 
-  // DJ önerileri: concept_tags overlap varsa önce onlar, sonra hepsi
+  // DJ önerileri: müşterinin seçtikleri öncelikli, sonra konsept eşleşmesi
   const suggestedDjs = djs.length > 0
     ? (() => {
+        const picked = data.selectedDjIds
+          .map((id) => djs.find((d) => d.id === id))
+          .filter(Boolean) as typeof djs;
+        if (picked.length > 0) return picked;
         const withMatch = djs.filter((dj) =>
           (dj.concept_tags ?? []).some((tag) => allConceptIds.includes(tag))
         );
         return (withMatch.length > 0 ? withMatch : djs).slice(0, 3);
       })()
     : [];
+
+  const hasPicks = data.selectedDjIds.length > 0;
 
   // Mekan önerileri: sadece mekan seçmediyse
   const suggestedVenues = !data.hasVenue ? venues.slice(0, 3) : [];
@@ -182,7 +188,7 @@ export default function Step9Recommendations({ data, onNext, activeSlugs, djs = 
           className="bg-card border border-border rounded-2xl p-5"
         >
           <p className="text-xs text-muted-foreground tracking-[0.2em] uppercase font-medium mb-4">
-            Önerilen Sanatçılar
+            {hasPicks ? "Seçtiğin Sanatçılar" : "Önerilen Sanatçılar"}
           </p>
           <div className="space-y-4">
             {suggestedDjs.map((dj) => (

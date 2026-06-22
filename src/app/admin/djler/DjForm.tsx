@@ -6,12 +6,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { upsertDj } from "./actions";
 import FocalPointPicker, { type FocalPoint } from "@/components/admin/FocalPointPicker";
+import { MUSIC_CONCEPTS, CONCEPT_CATEGORIES, type ConceptCategory } from "@/components/planner/PlannerStore";
 
-const CONCEPT_SUGGESTIONS = [
-  "Sunset Ritual", "Disco Romance", "Modern Club", "Mixtape",
-  "Girls Night", "Throwback 2000s", "Turkish 90s", "Turkish 2000s",
-  "After Dark", "Deep House", "Tech House", "Latin Vibes",
-];
+const CONCEPT_CATEGORY_ORDER: ConceptCategory[] = ["cocktail", "celebration", "traditional", "after-party"];
 
 const PERFORMER_TYPES = [
   { id: "dj", label: "DJ", emoji: "🎧" },
@@ -505,40 +502,76 @@ export default function DjForm({ dj }: { dj?: Dj }) {
         </div>
       </div>
 
-      {/* Concept tags */}
-      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
-        <h2 className="font-medium text-foreground">Konsept Etiketleri</h2>
-        {concepts.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {concepts.map((tag) => (
-              <span key={tag} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-foreground text-background">
-                {tag}
-                <button type="button" onClick={() => removeConcept(tag)} className="opacity-60 hover:opacity-100 transition-opacity leading-none">×</button>
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <input
-            type="text" value={conceptInput} onChange={(e) => setConceptInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addConcept(conceptInput); } }}
-            placeholder="Konsept adı yaz ve Enter'a bas…"
-            className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
-          />
-          <button type="button" onClick={() => addConcept(conceptInput)}
-            className="px-4 py-2.5 rounded-xl border border-border text-sm text-foreground hover:bg-secondary transition-colors">
-            Ekle
-          </button>
-        </div>
+      {/* Concept tags — NOQT konseptleri */}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
         <div>
-          <p className="text-xs text-muted-foreground mb-2">Hızlı seçim:</p>
-          <div className="flex flex-wrap gap-2">
-            {CONCEPT_SUGGESTIONS.filter((s) => !concepts.includes(s)).map((s) => (
-              <button key={s} type="button" onClick={() => addConcept(s)}
-                className="px-3 py-1.5 rounded-full text-xs border border-border text-foreground hover:bg-secondary transition-colors">
-                + {s}
-              </button>
-            ))}
+          <h2 className="font-medium text-foreground">İcra Edebildiği Konseptler</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Bu sanatçının çalabileceği NOQT konseptlerini seç. Planlayıcıda müşteri bu konseptleri seçtiğinde sanatçı önerilerde çıkar.
+          </p>
+        </div>
+
+        {CONCEPT_CATEGORY_ORDER.map((cat) => {
+          const catConcepts = MUSIC_CONCEPTS.filter((c) => c.category === cat);
+          if (catConcepts.length === 0) return null;
+          const meta = CONCEPT_CATEGORIES[cat];
+          return (
+            <div key={cat} className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">{meta.emoji} {meta.label}</p>
+              <div className="flex flex-wrap gap-2">
+                {catConcepts.map((concept) => {
+                  const selected = concepts.includes(concept.id);
+                  return (
+                    <button
+                      key={concept.id}
+                      type="button"
+                      onClick={() =>
+                        setConcepts((prev) =>
+                          prev.includes(concept.id)
+                            ? prev.filter((c) => c !== concept.id)
+                            : [...prev, concept.id]
+                        )
+                      }
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all ${
+                        selected
+                          ? "bg-foreground text-background border-foreground"
+                          : "border-border text-foreground hover:border-foreground/40"
+                      }`}
+                    >
+                      <span>{concept.emoji}</span>{concept.name}
+                      {selected && <span>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Custom serbest etiketler (opsiyonel) */}
+        <div className="pt-2 border-t border-border space-y-2">
+          <p className="text-xs text-muted-foreground">Ek serbest etiket (opsiyonel):</p>
+          {concepts.filter((t) => !MUSIC_CONCEPTS.some((c) => c.id === t)).length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {concepts.filter((t) => !MUSIC_CONCEPTS.some((c) => c.id === t)).map((tag) => (
+                <span key={tag} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-secondary text-foreground">
+                  {tag}
+                  <button type="button" onClick={() => removeConcept(tag)} className="opacity-60 hover:opacity-100 transition-opacity leading-none">×</button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text" value={conceptInput} onChange={(e) => setConceptInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addConcept(conceptInput); } }}
+              placeholder="Serbest etiket yaz ve Enter'a bas…"
+              className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+            <button type="button" onClick={() => addConcept(conceptInput)}
+              className="px-4 py-2.5 rounded-xl border border-border text-sm text-foreground hover:bg-secondary transition-colors">
+              Ekle
+            </button>
           </div>
         </div>
       </div>

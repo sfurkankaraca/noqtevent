@@ -18,6 +18,7 @@ export async function sendInquiryNotification(inquiry: {
   eventType: string;
   eventDate?: string;
   services?: string[];
+  selectedDjs?: string[];
 }) {
   const resend = getResend();
   if (!resend) return; // RESEND_API_KEY not set — skip silently
@@ -25,6 +26,10 @@ export async function sendInquiryNotification(inquiry: {
   const serviceList = inquiry.services?.length
     ? inquiry.services.map((s) => `<li>${s}</li>`).join("")
     : "<li>—</li>";
+
+  const djRow = inquiry.selectedDjs?.length
+    ? `<tr><td style="padding:8px 0;color:#666;">Seçilen Sanatçılar</td><td style="padding:8px 0;font-weight:500;">${inquiry.selectedDjs.join(", ")}</td></tr>`
+    : "";
 
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
@@ -41,6 +46,7 @@ export async function sendInquiryNotification(inquiry: {
           <tr><td style="padding:8px 0;color:#666;">Telefon</td><td style="padding:8px 0;">${inquiry.phone}</td></tr>
           <tr><td style="padding:8px 0;color:#666;">Etkinlik</td><td style="padding:8px 0;">${inquiry.eventType}</td></tr>
           <tr><td style="padding:8px 0;color:#666;">Tarih</td><td style="padding:8px 0;">${inquiry.eventDate ?? "Belirtilmedi"}</td></tr>
+          ${djRow}
         </table>
         <div style="margin-top:16px;">
           <p style="color:#666;margin-bottom:8px;">İstenen Hizmetler:</p>

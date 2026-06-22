@@ -26,6 +26,16 @@ export async function submitInquiry(
 
   if (error) throw new Error(error.message);
 
+  // Müşterinin seçtiği sanatçıların isimleri (bildirim e-postası için)
+  let selectedDjNames: string[] = [];
+  if (data.selectedDjIds?.length) {
+    const { data: picked } = await supabase
+      .from("dj_profiles")
+      .select("name")
+      .in("id", data.selectedDjIds);
+    selectedDjNames = (picked ?? []).map((d) => d.name as string);
+  }
+
   // Check DJ availability — only warn if no active DJ is free on the requested date
   let availabilityWarning = false;
   if (data.eventDate) {
@@ -51,6 +61,7 @@ export async function submitInquiry(
       eventType: data.eventType,
       eventDate: data.eventDate || undefined,
       services: data.services,
+      selectedDjs: selectedDjNames,
     }),
     sendInquiryConfirmation({
       name: data.name,

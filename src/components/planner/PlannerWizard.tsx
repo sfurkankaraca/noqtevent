@@ -9,18 +9,20 @@ import {
 import Step1EventType from "./steps/Step1EventType";
 import Step2Guests from "./steps/Step3Guests";
 import Step3EventSections from "./steps/StepEventSections";
+import StepDjSelection from "./steps/StepDjSelection";
 import Step4Moments from "./steps/StepMoments";
 import Step5Venue from "./steps/Step5Venue";
 import Step6Services from "./steps/Step6Services";
 import Step7Recommendations from "./steps/Step9Recommendations";
 import Step8Contact from "./steps/Step10Contact";
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 9;
 
 const stepTitles = [
   "Ne planlıyorsun?",
   "Misafirlerin kim?",
   "Gecenin müzik konseptlerine karar verelim",
+  "Sahnede kimi görmek istersin?",
   "Önemli anlarını planla",
   "Mekanın var mı?",
   "Hangi alanlarda rehberlik ister misin?",
@@ -209,18 +211,21 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
               <Step3EventSections data={data} update={update} onNext={next} conceptCovers={conceptCovers} activeSlugs={activeSlugs} />
             )}
             {step === 4 && (
-              <Step4Moments data={data} update={update} onNext={next} />
+              <StepDjSelection data={data} update={update} onNext={next} djs={djs} />
             )}
             {step === 5 && (
-              <Step5Venue data={data} update={update} onNext={next} />
+              <Step4Moments data={data} update={update} onNext={next} />
             )}
             {step === 6 && (
-              <Step6Services data={data} update={update} onNext={next} />
+              <Step5Venue data={data} update={update} onNext={next} />
             )}
             {step === 7 && (
-              <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} djs={djs} venues={venues} />
+              <Step6Services data={data} update={update} onNext={next} />
             )}
             {step === 8 && (
+              <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} djs={djs} venues={venues} />
+            )}
+            {step === 9 && (
               <Step8Contact
                 data={data}
                 update={update}

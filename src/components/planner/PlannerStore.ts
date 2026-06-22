@@ -59,6 +59,7 @@ export type PlannerData = {
   venueType: string;
   venueName: string;
   guestCount: string;
+  selectedDjIds: string[];
   services: string[];
   name: string;
   surname: string;
@@ -82,6 +83,7 @@ export const initialData: PlannerData = {
   venueType: "",
   venueName: "",
   guestCount: "",
+  selectedDjIds: [],
   services: [],
   name: "",
   surname: "",
