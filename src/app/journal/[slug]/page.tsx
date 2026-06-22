@@ -8,12 +8,36 @@ import { createServiceClient } from "@/lib/supabase";
 
 type Props = { params: Promise<{ slug: string }> };
 
+const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const supabase = createServiceClient();
-  const { data: p } = await supabase.from("journal_posts").select("title, excerpt").eq("slug", slug).single();
+  const { data: p } = await supabase
+    .from("journal_posts")
+    .select("title, excerpt, cover_image_url, published_at, category")
+    .eq("slug", slug)
+    .single();
   if (!p) return { title: "Yazı Bulunamadı" };
-  return { title: `${p.title} — NOQT Journal`, description: p.excerpt ?? undefined };
+  return {
+    title: p.title,
+    description: p.excerpt ?? undefined,
+    keywords: [
+      "kayseri düğün dj", "nevşehir düğün dj", "kapadokya düğün müziği",
+      p.category ?? "düğün müziği",
+    ],
+    openGraph: {
+      type: "article",
+      title: p.title,
+      description: p.excerpt ?? undefined,
+      url: `${BASE}/journal/${slug}`,
+      images: p.cover_image_url ? [{ url: p.cover_image_url }] : [],
+      publishedTime: p.published_at ?? undefined,
+      locale: "tr_TR",
+      siteName: "NOQT Journal",
+    },
+    alternates: { canonical: `${BASE}/journal/${slug}` },
+  };
 }
 
 export default async function JournalPostPage({ params }: Props) {
@@ -28,8 +52,39 @@ export default async function JournalPostPage({ params }: Props) {
 
   if (!post) notFound();
 
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.excerpt ?? undefined,
+    url: `${BASE}/journal/${slug}`,
+    image: post.cover_image_url ?? undefined,
+    datePublished: post.published_at ?? undefined,
+    dateModified: post.updated_at ?? post.published_at ?? undefined,
+    author: { "@type": "Organization", name: "NOQT", url: BASE },
+    publisher: {
+      "@type": "Organization",
+      name: "NOQT",
+      logo: { "@type": "ImageObject", url: `${BASE}/noqt-logo-transparent.png` },
+    },
+    inLanguage: "tr",
+    keywords: ["kayseri düğün dj", "nevşehir düğün dj", "kapadokya", post.category].filter(Boolean).join(", "),
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: BASE },
+      { "@type": "ListItem", position: 2, name: "Journal", item: `${BASE}/journal` },
+      { "@type": "ListItem", position: 3, name: post.title, item: `${BASE}/journal/${slug}` },
+    ],
+  };
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <Navigation />
       <main className="pt-20">
         {/* Hero */}

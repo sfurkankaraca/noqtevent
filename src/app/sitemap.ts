@@ -31,7 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/konseptler`, priority: 0.8, changeFrequency: "weekly" },
     { url: `${BASE}/sanatcilar`, priority: 0.8, changeFrequency: "weekly" },
     { url: `${BASE}/ortaklar`, priority: 0.8, changeFrequency: "weekly" },
-    { url: `${BASE}/journal`, priority: 0.7, changeFrequency: "weekly" },
+    { url: `${BASE}/journal`, priority: 0.8, changeFrequency: "weekly" },
     { url: `${BASE}/hakkimizda`, priority: 0.5, changeFrequency: "monthly" },
     { url: `${BASE}/iletisim`, priority: 0.5, changeFrequency: "monthly" },
   ];
@@ -60,8 +60,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const postRoutes: MetadataRoute.Sitemap = (posts ?? []).map((p) => ({
     url: `${BASE}/journal/${p.slug}`,
     lastModified: p.updated_at ? new Date(p.updated_at) : undefined,
-    changeFrequency: "weekly",
-    priority: 0.7,
+    changeFrequency: "monthly" as const,
+    priority: 0.75,
   }));
 
   return [...staticRoutes, ...eventRoutes, ...djRoutes, ...partnerRoutes, ...conceptRoutes, ...postRoutes];

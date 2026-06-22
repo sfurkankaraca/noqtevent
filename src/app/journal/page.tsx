@@ -7,8 +7,18 @@ import JournalPage from "@/components/sections/JournalPage";
 import { createServiceClient } from "@/lib/supabase";
 
 export const metadata: Metadata = {
-  title: "Journal",
-  description: "Düğün müziği, etkinlik tasarımı ve deneyim kültürü üzerine yazılar.",
+  title: "Journal — Düğün ve Etkinlik Rehberi",
+  description:
+    "Kayseri ve Nevşehir'de düğün müziği, DJ seçimi, kına gecesi, after party ve etkinlik organizasyonu hakkında uzman rehberleri.",
+  keywords: [
+    "kayseri düğün rehberi",
+    "nevşehir düğün ipuçları",
+    "düğün dj seçimi",
+    "kapadokya düğün organizasyonu",
+    "kına gecesi müziği",
+    "kayseri after party",
+  ],
+  alternates: { canonical: "https://www.noqt.events/journal" },
 };
 
 export default async function Page() {
