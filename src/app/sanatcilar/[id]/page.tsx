@@ -138,16 +138,6 @@ export default async function DjDetailPage({ params }: Props) {
                 </h1>
               </div>
 
-              {dj.concept_tags?.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {(dj.concept_tags as string[]).map((tag) => (
-                    <span key={tag} className="text-xs px-3 py-1.5 border border-border rounded-full text-muted-foreground">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
               {dj.bio && (
                 <p className="text-muted-foreground leading-relaxed text-base">{dj.bio}</p>
               )}

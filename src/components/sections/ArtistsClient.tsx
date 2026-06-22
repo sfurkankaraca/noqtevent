@@ -63,13 +63,8 @@ export default function ArtistsClient({
   activeType?: string | null;
 }) {
   const router = useRouter();
-  const [activeTag, setActiveTag] = useState<string | null>(null);
 
-  const allTags = [...new Set(djs.flatMap((d) => d.concept_tags))].sort();
-
-  const filtered = djs.filter(
-    (d) => !activeTag || d.concept_tags.includes(activeTag)
-  );
+  const filtered = djs;
 
   const BG_COLORS = [
     "bg-[oklch(0.88_0.05_75)]",
@@ -123,45 +118,12 @@ export default function ArtistsClient({
         })}
       </div>
 
-      {/* Concept tag filter */}
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-12">
-          <button
-            onClick={() => setActiveTag(null)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-              !activeTag
-                ? "bg-foreground text-background border-foreground"
-                : "border-border text-muted-foreground hover:border-foreground/40"
-            }`}
-          >
-            Tüm Stiller
-          </button>
-          {allTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                activeTag === tag
-                  ? "bg-foreground text-background border-foreground"
-                  : "border-border text-muted-foreground hover:border-foreground/40"
-              }`}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="mb-12" />
 
       {/* Grid */}
       {filtered.length === 0 ? (
         <div className="text-center py-24 text-muted-foreground">
-          <p className="text-lg">Bu kritere uygun sanatçı bulunamadı.</p>
-          <button
-            onClick={() => setActiveTag(null)}
-            className="mt-4 text-sm text-foreground underline"
-          >
-            Filtreyi temizle
-          </button>
+          <p className="text-lg">Bu kategoride sanatçı bulunamadı.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -252,19 +214,6 @@ export default function ArtistsClient({
                       <p className="text-sm text-muted-foreground mt-2 leading-relaxed line-clamp-2">
                         {dj.bio}
                       </p>
-                    )}
-
-                    {dj.concept_tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-4">
-                        {dj.concept_tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="text-xs px-2.5 py-1 bg-secondary rounded-full text-muted-foreground"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
                     )}
 
                     <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
