@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 
-const PUBLIC_FOLDERS = ["partners/logos", "partners/photos", "artists/photos"];
+const PUBLIC_FOLDERS = ["partners/logos", "partners/photos", "artists/photos", "artists/videos"];
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();

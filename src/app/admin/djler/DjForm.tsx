@@ -62,6 +62,7 @@ type Dj = {
   busy_dates?: string[];
   is_active?: boolean;
   application_status?: string;
+  preview_video_url?: string;
 };
 
 interface PhotoEntry {
@@ -102,6 +103,8 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   const [youtubeLinks, setYoutubeLinks] = useState<string[]>(
     dj?.youtube_links?.length ? dj.youtube_links : ["", "", ""]
   );
+  const [previewVideoUrl, setPreviewVideoUrl] = useState(dj?.preview_video_url ?? "");
+  const [videoUploading, setVideoUploading] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -191,6 +194,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
       fpPayload[ph.url] = getFocalPoint(ph.url);
     });
     fd.set("focal_points_json", JSON.stringify(fpPayload));
+    fd.set("preview_video_url", previewVideoUrl);
 
     setPending(true);
     setError(null);
@@ -389,6 +393,37 @@ export default function DjForm({ dj }: { dj?: Dj }) {
             <p className="text-xs text-muted-foreground mt-1 animate-pulse">Fotoğraflar yükleniyor, lütfen bekleyin…</p>
           )}
         </div>
+      </div>
+
+      {/* Preview video */}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
+        <div>
+          <h2 className="font-medium text-foreground">Tanıtım Videosu</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Sanatçı listesinde kart üzerine gelindiğinde sessizce oynar. Max 30 sn, .mp4 önerilir.</p>
+        </div>
+        {previewVideoUrl ? (
+          <div className="space-y-2">
+            <video src={previewVideoUrl} className="w-full rounded-xl max-h-48 object-cover" muted controls />
+            <button type="button" onClick={() => setPreviewVideoUrl("")} className="text-xs text-red-500 hover:text-red-700">Videoyu Kaldır</button>
+          </div>
+        ) : (
+          <label className={`flex items-center gap-3 cursor-pointer border border-dashed border-border rounded-xl px-4 py-3 hover:border-foreground/40 transition-colors ${videoUploading ? "opacity-50 pointer-events-none" : ""}`}>
+            <span className="text-xl">🎬</span>
+            <span className="text-sm text-muted-foreground">{videoUploading ? "Yükleniyor…" : "Video yükle (.mp4 / .mov)"}</span>
+            <input type="file" accept="video/mp4,video/quicktime,video/*" className="sr-only" disabled={videoUploading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                e.target.value = "";
+                setVideoUploading(true);
+                try {
+                  const url = await uploadFile(file, "artists/videos");
+                  setPreviewVideoUrl(url);
+                } catch { setError("Video yüklenemedi"); }
+                finally { setVideoUploading(false); }
+              }} />
+          </label>
+        )}
       </div>
 
       {/* Links */}

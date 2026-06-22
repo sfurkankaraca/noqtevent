@@ -34,6 +34,7 @@ type Dj = {
   performer_type?: string | null;
   city?: string | null;
   speciality?: string | null;
+  preview_video_url?: string | null;
 };
 
 function PhotoGallery({ photos, name, bgColor, focalPoints }: { photos: string[]; name: string; bgColor: string; focalPoints?: Record<string, { x: number; y: number }> }) {
@@ -193,18 +194,39 @@ export default function ArtistsClient({
                 transition={{ duration: 0.4, delay: i * 0.06 }}
               >
                 <div className="bg-card border border-border rounded-2xl overflow-hidden hover:border-foreground/20 transition-all hover:shadow-lg group">
-                  {/* Photo / avatar */}
+                  {/* Photo / avatar / hover video */}
                   {(() => {
                     const allPhotos = (dj.photos && dj.photos.length > 0 ? dj.photos : dj.photo_url ? [dj.photo_url] : []);
-                    return allPhotos.length > 0 ? (
+                    return (
                       <div className="relative">
-                        <PhotoGallery photos={allPhotos} name={dj.name} bgColor={bgColor} focalPoints={dj.focal_points} />
+                        {allPhotos.length > 0 ? (
+                          <PhotoGallery photos={allPhotos} name={dj.name} bgColor={bgColor} focalPoints={dj.focal_points} />
+                        ) : (
+                          <div className={`${bgColor} h-56 flex items-center justify-center`}>
+                            <span className="text-5xl font-light text-foreground/30"
+                              style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}>
+                              {initials}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Hover video overlay */}
+                        {dj.preview_video_url && (
+                          <video
+                            src={dj.preview_video_url}
+                            muted loop playsInline
+                            className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                            onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play()}
+                            onMouseLeave={(e) => { const v = e.currentTarget as HTMLVideoElement; v.pause(); v.currentTime = 0; }}
+                          />
+                        )}
+
                         {typeInfo && typeInfo.id !== "dj" && (
-                          <span className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                          <span className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full z-10">
                             {typeInfo.emoji} {typeInfo.label}
                           </span>
                         )}
-                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                           {links.slice(0, 3).map((l) => (
                             <a key={l.label} href={l.url!} target="_blank" rel="noopener noreferrer"
                               className="bg-background/80 backdrop-blur-sm px-2.5 py-1.5 rounded-full text-xs font-medium text-foreground hover:bg-background transition-colors">
@@ -212,18 +234,6 @@ export default function ArtistsClient({
                             </a>
                           ))}
                         </div>
-                      </div>
-                    ) : (
-                      <div className={`${bgColor} h-56 relative flex items-center justify-center`}>
-                        <span className="text-5xl font-light text-foreground/30"
-                          style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}>
-                          {initials}
-                        </span>
-                        {typeInfo && typeInfo.id !== "dj" && (
-                          <span className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
-                            {typeInfo.emoji} {typeInfo.label}
-                          </span>
-                        )}
                       </div>
                     );
                   })()}

@@ -45,6 +45,7 @@ export async function upsertDj(formData: FormData) {
     photos,
     focal_points,
     photo_url: photos[0] ?? null,
+    preview_video_url: (formData.get("preview_video_url") as string) || null,
   };
 
   if (id) {
