@@ -14,7 +14,7 @@ type Props = { searchParams: Promise<{ type?: string }> };
 
 export default async function Page({ searchParams }: Props) {
   const { type } = await searchParams;
-  const activeType = type && type !== "all" ? type : null;
+  const activeType = type && type !== "all" ? type : "dj";
 
   const supabase = createServiceClient();
   let query = supabase

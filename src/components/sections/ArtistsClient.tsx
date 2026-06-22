@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const PERFORMER_TYPES = [
-  { id: "all", label: "Tümü", emoji: "✨" },
   { id: "dj", label: "DJ", emoji: "🎧" },
   { id: "artist", label: "Solo Sanatçı", emoji: "🎤" },
   { id: "trio", label: "Trio / Grup", emoji: "🎶" },
@@ -98,12 +97,12 @@ export default function ArtistsClient({
       {/* Performer type tabs */}
       <div className="flex flex-wrap gap-2 mb-8">
         {PERFORMER_TYPES.map((pt) => {
-          const isActive = (pt.id === "all" && !activeType) || pt.id === activeType;
+          const isActive = pt.id === activeType;
           return (
             <button
               key={pt.id}
               onClick={() =>
-                router.push(`/sanatcilar${pt.id !== "all" ? `?type=${pt.id}` : ""}`)
+                router.push(`/sanatcilar?type=${pt.id}`)
               }
               className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
                 isActive
