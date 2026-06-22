@@ -18,17 +18,7 @@ export async function upsertPost(formData: FormData) {
   const is_published = formData.get("is_published") === "true";
   const published_at = is_published ? new Date().toISOString() : null;
 
-  const file = formData.get("cover_image") as File | null;
-  let cover_image_url: string | undefined;
-  if (file && file.size > 0) {
-    const ext = file.name.split(".").pop();
-    const path = `journal/${slug}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("images").upload(path, file, { upsert: true });
-    if (!error) {
-      const { data } = supabase.storage.from("images").getPublicUrl(path);
-      cover_image_url = data.publicUrl;
-    }
-  }
+  const cover_image_url = (formData.get("cover_image_url") as string | null)?.trim() || undefined;
 
   const payload: Record<string, unknown> = {
     slug, title, category, excerpt, content, color, read_time,

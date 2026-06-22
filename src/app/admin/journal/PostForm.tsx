@@ -34,6 +34,7 @@ export default function PostForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<string | null>(post?.cover_image_url ?? null);
   const [pending, setPending] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -96,19 +97,58 @@ export default function PostForm({
       {/* Cover image */}
       <div>
         <label className={labelCls}>Kapak Görseli</label>
+        <input type="hidden" name="cover_image_url" value={preview ?? ""} />
+
         {preview && (
-          <div className="relative w-full h-48 rounded-xl overflow-hidden mb-2 bg-secondary">
+          <div className="relative w-full h-52 rounded-xl overflow-hidden mb-3 bg-secondary group">
             <Image src={preview} alt="Önizleme" fill className="object-cover" unoptimized />
+            <button
+              type="button"
+              onClick={() => setPreview(null)}
+              className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              Kaldır
+            </button>
           </div>
         )}
-        <input
-          type="file" name="cover_image" accept="image/*"
-          className="text-sm text-muted-foreground"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) setPreview(URL.createObjectURL(f));
-          }}
-        />
+
+        <div className="flex gap-3 items-center flex-wrap">
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={uploadingCover}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setUploadingCover(true);
+                try {
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  fd.append("folder", "journal/covers");
+                  const res = await fetch("/api/upload", { method: "POST", body: fd });
+                  const json = await res.json();
+                  if (json.url) setPreview(json.url);
+                } finally {
+                  setUploadingCover(false);
+                }
+              }}
+            />
+            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm cursor-pointer hover:border-foreground/40 transition-colors ${uploadingCover ? "opacity-50 pointer-events-none" : ""}`}>
+              {uploadingCover ? "Yükleniyor…" : preview ? "Görseli Değiştir" : "Görsel Yükle"}
+            </span>
+          </label>
+
+          <span className="text-xs text-muted-foreground">ya da URL gir:</span>
+          <input
+            type="text"
+            placeholder="https://..."
+            className="flex-1 min-w-40 text-sm border border-border rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-foreground/20"
+            value={preview ?? ""}
+            onChange={(e) => setPreview(e.target.value || null)}
+          />
+        </div>
       </div>
 
       <div className="flex gap-6">
