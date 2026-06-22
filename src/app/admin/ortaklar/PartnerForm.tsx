@@ -78,7 +78,7 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
     if (!file) return;
     setLogoUploading(true);
     try {
-      const url = await uploadFile(file, "partners/logo");
+      const url = await uploadFile(file, "partners/logos");
       setLogoUrl(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Logo yükleme hatası");
@@ -97,7 +97,7 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
 
     for (let i = 0; i < files.length; i++) {
       try {
-        const url = await uploadFile(files[i], "partners/portfolio");
+        const url = await uploadFile(files[i], "partners/photos");
         setPhotos((prev) => {
           const next = [...prev];
           const idx = next.findIndex((p) => p.uploading && p.url === "");
