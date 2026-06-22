@@ -31,7 +31,7 @@ export async function upsertPartner(formData: FormData) {
     email: (formData.get("email") as string) || null,
     phone: (formData.get("phone") as string) || null,
     application_status: (formData.get("application_status") as string) || "approved",
-    is_active: formData.get("is_active") === "true",
+    is_active: formData.get("is_active") === "true" || (formData.get("application_status") as string) === "approved",
   };
 
   if (id) {
