@@ -28,9 +28,28 @@ const BG_COLORS = [
 
 function PhotoGallery({ photos, name, bgColor }: { photos: string[]; name: string; bgColor: string }) {
   const [active, setActive] = useState(0);
+  const [dragStart, setDragStart] = useState<number | null>(null);
+
+  const prev = () => setActive((a) => Math.max(a - 1, 0));
+  const next = () => setActive((a) => Math.min(a + 1, photos.length - 1));
+
+  const onDragStart = (x: number) => setDragStart(x);
+  const onDragEnd = (x: number) => {
+    if (dragStart === null) return;
+    const delta = dragStart - x;
+    if (delta > 40) next();
+    else if (delta < -40) prev();
+    setDragStart(null);
+  };
 
   return (
-    <div className={`${bgColor} h-44 relative overflow-hidden`}>
+    <div
+      className={`${bgColor} h-44 relative overflow-hidden select-none`}
+      onTouchStart={(e) => onDragStart(e.touches[0].clientX)}
+      onTouchEnd={(e) => onDragEnd(e.changedTouches[0].clientX)}
+      onMouseDown={(e) => onDragStart(e.clientX)}
+      onMouseUp={(e) => onDragEnd(e.clientX)}
+    >
       <Image src={photos[active]} alt={name} fill className="object-cover transition-opacity duration-300" unoptimized />
       {photos.length > 1 && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
