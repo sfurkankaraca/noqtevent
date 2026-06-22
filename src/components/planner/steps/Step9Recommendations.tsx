@@ -210,6 +210,8 @@ export default function Step9Recommendations({ data, onNext, activeSlugs, djs = 
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     <Link
                       href={`/sanatcilar/${dj.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-[10px] px-2.5 py-1 rounded-full bg-foreground text-background hover:opacity-90 transition-opacity"
                     >
                       Profil →
