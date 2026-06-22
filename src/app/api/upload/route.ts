@@ -12,6 +12,15 @@ const ALLOWED_FOLDERS = [
   "journal/covers",
   "konseptler",
   "gorseller",
+  // site asset categories (admin/gorseller)
+  "hero",
+  "brand-feed",
+  "memory-drive",
+  "events",
+  "artists",
+  "brands",
+  "journal",
+  "other",
 ];
 
 const ALLOWED_MIME_TYPES = [
