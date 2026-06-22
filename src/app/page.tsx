@@ -142,8 +142,19 @@ export default async function Home() {
     ],
   };
 
+  const firstHeroImage = heroImages[0];
+
   return (
     <>
+      {firstHeroImage && (
+        <link
+          rel="preload"
+          as="image"
+          href={`/_next/image?url=${encodeURIComponent(firstHeroImage)}&w=828&q=75`}
+          // @ts-expect-error - fetchpriority is valid but not in React types yet
+          fetchpriority="high"
+        />
+      )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <Navigation />
       <main>
