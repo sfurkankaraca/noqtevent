@@ -95,8 +95,56 @@ export default async function Home() {
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
 
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "Kayseri'de düğün DJ'i nasıl bulabilirim?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "NOQT deneyim planlayıcısını kullanarak etkinlik türünüzü, konseptinizi ve tarihini belirleyin. Size uygun DJ ve sanatçı önerilerini anında alın, teklif isteyin.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Nevşehir ve Kapadokya'da açık hava düğünü için DJ hizmeti veriyor musunuz?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Evet. Nevşehir, Kapadokya bağ evleri, cave oteller ve açık alanlarda ses sistemi, DJ ve canlı müzisyen hizmeti sunuyoruz. Ekibimiz açık hava akustiği ve teknik gereksinimler konusunda deneyimlidir.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Sadece DJ mi, yoksa canlı müzisyen de ayarlıyor musunuz?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Her ikisini de sunuyoruz. DJ, canlı klarnet, keman, akustik gitar, solist ve bando seçeneklerimiz mevcuttur. İstediğinizde karma paketler de oluşturabiliyoruz.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Kayseri'de kına gecesi organizasyonu için destek veriyor musunuz?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Evet. Kayseri'deki kına geceleri için geleneksel oyun havaları ile modern müziği harmanlayan özel setler hazırlıyoruz. DJ ve canlı müzisyen kombinasyonu da tercih edilebilir.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Fiyatlandırma nasıl çalışıyor?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Fiyatlar etkinlik süresine, mekana, sanatçı sayısına ve seçilen konsepte göre değişir. Deneyim planlayıcımız aracılığıyla etkinliğinizin detaylarını girin, size özel teklif oluşturalım.",
+        },
+      },
+    ],
+  };
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <Navigation />
       <main>
         <Hero heroImages={heroImages} />

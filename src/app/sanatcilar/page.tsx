@@ -7,7 +7,8 @@ import { createServiceClient } from "@/lib/supabase";
 
 export const metadata: Metadata = {
   title: "Sanatçılar — DJ, Solo Sanatçı, Dans Ekibi | NOQT",
-  description: "NOQT kadrosu — DJ'ler, solo sanatçılar, trio gruplar, dans ekipleri ve orkestralar.",
+  description: "Kayseri ve Nevşehir düğünleri için DJ'ler, solo sanatçılar, trio gruplar, dans ekipleri ve orkestralar. NOQT kadrosuyla tanışın.",
+  alternates: { canonical: "https://www.noqt.events/sanatcilar" },
 };
 
 type Props = { searchParams: Promise<{ type?: string }> };

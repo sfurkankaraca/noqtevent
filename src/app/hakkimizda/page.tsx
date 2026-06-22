@@ -4,8 +4,9 @@ import Footer from "@/components/layout/Footer";
 import AboutPage from "@/components/sections/AboutPage";
 
 export const metadata: Metadata = {
-  title: "Hakkımızda",
-  description: "NOQT nedir? Nasıl çalışır? Kim yaratır?",
+  title: "Hakkımızda — NOQT Kayseri & Nevşehir Deneyim Stüdyosu",
+  description: "NOQT, Kayseri ve Nevşehir merkezli bir deneyim stüdyosudur. Düğün DJ'i, kına, after party ve kurumsal etkinliklerde profesyonel müzik ve organizasyon hizmeti sunuyoruz.",
+  alternates: { canonical: "https://www.noqt.events/hakkimizda" },
 };
 
 export default function Page() {

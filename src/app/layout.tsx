@@ -46,11 +46,33 @@ export const metadata: Metadata = {
     title: "NOQT — Kayseri & Nevşehir Düğün DJ ve Etkinlik Organizasyonu",
     description:
       "Kayseri ve Nevşehir'de düğün DJ, kına gecesi, after party ve kurumsal etkinlik organizasyonu. Profesyonel müzik deneyimi.",
+    images: [
+      {
+        url: `${BASE_URL}/noqt-og.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "NOQT — Kayseri & Nevşehir Düğün DJ ve Etkinlik Organizasyonu",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NOQT — Kayseri & Nevşehir Düğün DJ ve Etkinlik Organizasyonu",
+    description:
+      "Kayseri ve Nevşehir'de düğün DJ, kına gecesi, after party ve kurumsal etkinlik organizasyonu.",
+    images: [`${BASE_URL}/noqt-og.jpg`],
+  },
+  alternates: {
+    canonical: BASE_URL,
   },
   robots: {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true },
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-icon.png",
   },
 };
 

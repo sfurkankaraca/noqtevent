@@ -4,9 +4,10 @@ import PlannerWizard from "@/components/planner/PlannerWizard";
 import { createServiceClient } from "@/lib/supabase";
 
 export const metadata: Metadata = {
-  title: "Deneyimini Tasarla",
+  title: "Deneyimini Tasarla — Kayseri & Nevşehir DJ Planlayıcı",
   description:
-    "Adım adım rehberlik eden deneyim planlayıcısı ile hayalindeki etkinliği tasarla.",
+    "Kayseri ve Nevşehir düğününüz için adım adım etkinlik planlayıcı. Konsept seçin, DJ öneri alın, teklif isteyin.",
+  alternates: { canonical: "https://www.noqt.events/planla" },
 };
 
 export default async function PlanlaPage() {
