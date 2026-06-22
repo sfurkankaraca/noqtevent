@@ -61,7 +61,7 @@ function PhotoGallery({ photos, name, bgColor, focalPoints }: { photos: string[]
       onMouseDown={(e) => onDragStart(e.clientX)}
       onMouseUp={(e) => onDragEnd(e.clientX)}
     >
-      <Image src={photos[active]} alt={name} fill className="object-cover transition-opacity duration-300" style={{ objectPosition: `${fp.x}% ${fp.y}%` }} unoptimized />
+      <Image src={photos[active]} alt={name} fill className="object-cover transition-opacity duration-300" style={{ objectPosition: `${fp.x}% ${fp.y}%` }} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
       {photos.length > 1 && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
           {photos.map((_, i) => (

@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 const SLIDE_INTERVAL = 5000;
 
 export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
-  const images = heroImages.length > 0 ? heroImages : ["/hero-bg.png"];
+  const images = heroImages.length > 0 ? heroImages : ["/hero-bg.webp"];
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
                 fill
                 className="object-cover"
                 priority={current === 0}
-                unoptimized
+                sizes="100vw"
               />
             </motion.div>
           </AnimatePresence>
@@ -65,7 +65,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
                   fill
                   className="object-cover"
                   priority={current === 0}
-                  unoptimized
+                  sizes="50vw"
                 />
               </motion.div>
             </AnimatePresence>

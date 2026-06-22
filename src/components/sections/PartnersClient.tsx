@@ -50,7 +50,7 @@ function PhotoGallery({ photos, name, bgColor }: { photos: string[]; name: strin
       onMouseDown={(e) => onDragStart(e.clientX)}
       onMouseUp={(e) => onDragEnd(e.clientX)}
     >
-      <Image src={photos[active]} alt={name} fill className="object-cover transition-opacity duration-300" unoptimized />
+      <Image src={photos[active]} alt={name} fill className="object-cover transition-opacity duration-300" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
       {photos.length > 1 && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
           {photos.map((_, i) => (
@@ -152,7 +152,7 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
                     <div className={`${bgColor} h-44 relative flex items-center justify-center`}>
                       {partner.logo_url && (
                         <div className="w-16 h-16 relative">
-                          <Image src={partner.logo_url} alt="Logo" fill className="object-contain" unoptimized />
+                          <Image src={partner.logo_url} alt="Logo" fill className="object-contain" sizes="64px" />
                         </div>
                       )}
                     </div>
@@ -162,7 +162,7 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
                   {photos.length > 0 && partner.logo_url && (
                     <div className="relative">
                       <div className="absolute -top-4 right-3 w-8 h-8 rounded-lg bg-white border border-border overflow-hidden shadow-sm">
-                        <Image src={partner.logo_url} alt="Logo" fill className="object-contain p-1" unoptimized />
+                        <Image src={partner.logo_url} alt="Logo" fill className="object-contain p-1" sizes="64px" />
                       </div>
                     </div>
                   )}

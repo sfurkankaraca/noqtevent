@@ -90,7 +90,7 @@ export default async function JournalPostPage({ params }: Props) {
         {/* Hero */}
         {post.cover_image_url && (
           <div className={`relative h-72 lg:h-96 ${post.color ?? "bg-secondary"}`}>
-            <Image src={post.cover_image_url} alt={post.title} fill className="object-cover" unoptimized />
+            <Image src={post.cover_image_url} alt={post.title} fill className="object-cover" sizes="100vw" priority />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           </div>
         )}

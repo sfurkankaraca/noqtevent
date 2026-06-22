@@ -65,7 +65,7 @@ export default async function Page() {
             <div className={`rounded-2xl overflow-hidden ${featured.color ?? "bg-secondary"} grid grid-cols-1 lg:grid-cols-2 min-h-[360px]`}>
               <div className="relative min-h-[240px]">
                 {featured.cover_image_url ? (
-                  <Image src={featured.cover_image_url} alt={featured.title} fill className="object-cover" unoptimized />
+                  <Image src={featured.cover_image_url} alt={featured.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                 ) : null}
               </div>
               <div className="p-8 lg:p-12 flex flex-col justify-center bg-white">
@@ -99,7 +99,7 @@ export default async function Page() {
                   <div className="rounded-2xl overflow-hidden border border-border hover:border-foreground/15 hover:shadow-md transition-all">
                     <div className={`relative h-48 ${post.color ?? "bg-secondary"}`}>
                       {post.cover_image_url ? (
-                        <Image src={post.cover_image_url} alt={post.title} fill className="object-cover" unoptimized />
+                        <Image src={post.cover_image_url} alt={post.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                       ) : null}
                     </div>
                     <div className="p-5 bg-white">

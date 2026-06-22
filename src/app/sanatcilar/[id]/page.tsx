@@ -88,7 +88,8 @@ export default async function DjDetailPage({ params }: Props) {
                     fill
                     className="object-cover"
                     style={{ objectPosition: `${coverFp.x}% ${coverFp.y}%` }}
-                    unoptimized
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    priority
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -115,7 +116,7 @@ export default async function DjDetailPage({ params }: Props) {
                           fill
                           className="object-cover"
                           style={{ objectPosition: `${fp.x}% ${fp.y}%` }}
-                          unoptimized
+                          sizes="33vw"
                         />
                       </div>
                     );

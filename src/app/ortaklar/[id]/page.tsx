@@ -53,7 +53,7 @@ export default async function PartnerDetailPage({ params }: Props) {
               <div className="flex items-start gap-5">
                 {partner.logo_url && (
                   <div className="w-16 h-16 rounded-xl border border-border bg-white overflow-hidden flex-shrink-0 relative">
-                    <Image src={partner.logo_url} alt="Logo" fill className="object-contain p-2" unoptimized />
+                    <Image src={partner.logo_url} alt="Logo" fill className="object-contain p-2" sizes="64px" />
                   </div>
                 )}
                 <div>
@@ -93,7 +93,7 @@ export default async function PartnerDetailPage({ params }: Props) {
                           alt={`${partner.business_name} ${i + 1}`}
                           fill
                           className="object-cover"
-                          unoptimized
+                          sizes="(max-width: 1024px) 50vw, 33vw"
                         />
                       </div>
                     ))}

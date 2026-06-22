@@ -75,7 +75,7 @@ export default async function KonseptlerPage() {
                         {/* Visual area */}
                         <div className="relative h-48">
                           {c.cover_image_url ? (
-                            <Image src={c.cover_image_url} alt={c.name} fill className="object-cover" unoptimized />
+                            <Image src={c.cover_image_url} alt={c.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                           ) : (
                             <div className="w-full h-full flex items-end p-5">
                               <span className="text-5xl">{c.emoji}</span>
