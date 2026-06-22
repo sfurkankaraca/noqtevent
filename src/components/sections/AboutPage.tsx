@@ -182,6 +182,29 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      <section className="py-16 bg-accent/30">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Topluluğumuz</p>
+          <h2
+            className="text-2xl md:text-3xl text-foreground"
+            style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
+          >
+            DJ olmak veya topluluğa katılmak ister misin?
+          </h2>
+          <p className="text-muted-foreground mt-3 text-sm max-w-md mx-auto">
+            noqta.club; DJ ve prodüksiyon eğitimi, elektronik müzik topluluğu ve etkinlik deneyimi sunan platformumuz.
+          </p>
+          <a
+            href="https://www.noqta.club"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-6 border border-border text-foreground px-7 py-3.5 rounded-full text-sm font-medium hover:bg-accent transition-colors"
+          >
+            noqta.club'u keşfet ↗
+          </a>
+        </div>
+      </section>
     </div>
   );
 }

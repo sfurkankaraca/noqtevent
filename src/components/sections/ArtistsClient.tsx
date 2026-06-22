@@ -283,6 +283,23 @@ export default function ArtistsClient({
           </Link>
         </div>
       </div>
+
+      {/* DJ olmak ister misin? */}
+      <div className="mt-8 rounded-2xl border border-border bg-accent/40 p-8 text-center">
+        <p className="text-sm text-muted-foreground mb-1">DJ olmak ister misin?</p>
+        <h3 className="text-xl font-medium text-foreground">Eğitim ve topluluk için noqta.club</h3>
+        <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">
+          DJ ve prodüksiyon eğitimi, elektronik müzik topluluğu ve etkinlik deneyimi — noqta.club&apos;da başla.
+        </p>
+        <a
+          href="https://www.noqta.club/academy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mt-5 border border-border text-foreground px-6 py-3 rounded-full text-sm font-medium hover:bg-accent transition-colors"
+        >
+          noqta.club Academy →
+        </a>
+      </div>
     </div>
   );
 }
