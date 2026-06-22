@@ -225,7 +225,7 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
               <Step6Services data={data} update={update} onNext={next} />
             )}
             {step === 8 && (
-              <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} djs={djs} venues={venues} />
+              <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} djs={djs} venues={venues} conceptCovers={conceptCovers} />
             )}
             {step === 9 && (
               <Step8Contact
