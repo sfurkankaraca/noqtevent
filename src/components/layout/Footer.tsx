@@ -22,6 +22,10 @@ const footerLinks = {
     { label: "Gizlilik Politikası", href: "/gizlilik" },
     { label: "Kullanım Koşulları", href: "/kosullar" },
   ],
+  "Topluluğa Katıl": [
+    { label: "DJ Olmak İster Misin?", href: "https://www.noqta.club/academy" },
+    { label: "Noqta Community", href: "https://www.noqta.club" },
+  ],
 };
 
 export default function Footer() {
@@ -95,6 +99,7 @@ export default function Footer() {
                     <Link
                       href={link.href}
                       className="text-sm text-background/70 hover:text-background transition-colors"
+                      {...(link.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                     >
                       {link.label}
                     </Link>
