@@ -9,10 +9,30 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Admin ve auth dışındaki tüm sayfalarda noindex header'ını ez
+        source: "/(.*)",
+        headers: [
+          // Clickjacking koruması
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          // MIME sniffing koruması
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          // Referrer policy
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Permissions policy
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+      {
+        // Public sayfalarda Clerk dev-mode noindex'ini ez
         source: "/((?!admin|sign-in|api).*)",
         headers: [
           { key: "X-Robots-Tag", value: "index, follow" },
+        ],
+      },
+      {
+        // Admin ve sign-in sayfalarını indexleme
+        source: "/(admin|sign-in)(.*)",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
     ];

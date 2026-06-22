@@ -1,5 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "karaca3888@gmail.com").split(",").map((e) => e.trim().toLowerCase());
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 
@@ -24,6 +26,10 @@ export default async function AdminLayout({
 }) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
+
+  const user = await currentUser();
+  const email = user?.emailAddresses?.[0]?.emailAddress?.toLowerCase() ?? "";
+  if (!ADMIN_EMAILS.includes(email)) redirect("/");
 
   return (
     <div className="min-h-screen flex bg-[oklch(0.97_0.005_80)]">
