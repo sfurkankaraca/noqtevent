@@ -33,8 +33,10 @@ const stepTitles = [
 type Dj = {
   id: string; name: string; bio: string | null; performer_type: string | null;
   speciality: string | null; city: string | null; photo_url: string | null;
+  photos?: string[] | null; focal_points?: Record<string, { x: number; y: number }> | null;
   instagram_url: string | null; spotify_url: string | null; website_url: string | null;
-  soundcloud_url: string | null; concept_tags: string[] | null;
+  soundcloud_url: string | null; mixcloud_url?: string | null; youtube_url?: string | null;
+  preview_video_url?: string | null; concept_tags: string[] | null;
 };
 
 type Venue = {
