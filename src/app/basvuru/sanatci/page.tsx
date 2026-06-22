@@ -35,7 +35,7 @@ const STEPS = ["Tür", "Hakkında", "Etkinlikler", "Medya", "İletişim"];
 async function uploadFile(file: File): Promise<string> {
   const fd = new FormData();
   fd.append("file", file);
-  fd.append("folder", "performers");
+  fd.append("folder", "artists/photos");
   const res = await fetch("/api/upload", { method: "POST", body: fd });
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
@@ -43,6 +43,35 @@ async function uploadFile(file: File): Promise<string> {
   }
   const { url } = await res.json();
   return url;
+}
+
+async function uploadFileDirect(
+  file: File,
+  folder: string,
+  onProgress?: (pct: number) => void
+): Promise<string> {
+  const res = await fetch("/api/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folder, filename: file.name, contentType: file.type }),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? "URL alınamadı");
+  }
+  const { signedUrl, publicUrl } = await res.json();
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error(`Yükleme hatası: ${xhr.status}`)));
+    xhr.onerror = () => reject(new Error("Ağ hatası"));
+    xhr.send(file);
+  });
+  return publicUrl;
 }
 
 export default function SanatciBasvuruPage() {
@@ -61,6 +90,9 @@ export default function SanatciBasvuruPage() {
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const [photos, setPhotos] = useState<{ url: string; uploading?: boolean; error?: string }[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState("");
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
   const [youtubeLinks, setYoutubeLinks] = useState<string[]>(["", "", ""]);
   const [instagram, setInstagram] = useState("");
   const [spotify, setSpotify] = useState("");
@@ -125,6 +157,7 @@ export default function SanatciBasvuruPage() {
       fd.set("cover_cities", JSON.stringify(coverCities));
       fd.set("event_types", JSON.stringify(selectedEventTypes));
       fd.set("photos", JSON.stringify(photos.filter((p) => p.url && !p.error).map((p) => p.url)));
+      fd.set("preview_video_url", previewVideoUrl);
       fd.set("youtube_links", JSON.stringify(youtubeLinks.filter(Boolean)));
       fd.set("instagram_url", instagram);
       fd.set("spotify_url", spotify);
@@ -318,6 +351,49 @@ export default function SanatciBasvuruPage() {
                         </div>
                         <input type="file" accept="image/*" multiple className="sr-only" onChange={handlePhotoUpload} disabled={photoUploading} />
                       </label>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Tanıtım Videosu</label>
+                      <p className="text-xs text-muted-foreground mb-3">Sanatçı listenizde kart üzerine gelindiğinde sessizce oynar. Max 500MB, MP4 önerilir.</p>
+                      {previewVideoUrl ? (
+                        <div className="relative rounded-xl overflow-hidden border border-border bg-secondary/20">
+                          <video src={previewVideoUrl} className="w-full max-h-48 object-cover" muted controls />
+                          <button type="button" onClick={() => setPreviewVideoUrl("")}
+                            className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/80">×</button>
+                        </div>
+                      ) : (
+                        <label className={`flex items-center gap-3 cursor-pointer border border-dashed border-border rounded-xl px-4 py-4 hover:border-foreground/40 transition-colors ${videoUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                          <span className="text-2xl">🎬</span>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              {videoUploading ? `Yükleniyor… %${videoProgress}` : "Video Yükle"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">MP4, MOV — büyük boyut desteklenir</p>
+                            {videoUploading && videoProgress > 0 && (
+                              <div className="w-full bg-border rounded-full h-1 mt-2 overflow-hidden">
+                                <div className="bg-foreground h-1 rounded-full transition-all duration-200" style={{ width: `${videoProgress}%` }} />
+                              </div>
+                            )}
+                          </div>
+                          <input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" className="sr-only" disabled={videoUploading}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              e.target.value = "";
+                              setVideoUploading(true);
+                              setVideoProgress(0);
+                              try {
+                                const url = await uploadFileDirect(file, "artists/videos", setVideoProgress);
+                                setPreviewVideoUrl(url);
+                              } catch (err) {
+                                alert(err instanceof Error ? err.message : "Video yüklenemedi");
+                              } finally {
+                                setVideoUploading(false);
+                                setVideoProgress(0);
+                              }
+                            }} />
+                        </label>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1.5">Performans Videoları (YouTube)</label>
