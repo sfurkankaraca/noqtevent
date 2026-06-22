@@ -15,9 +15,41 @@ const CATEGORIES = [
   { id: "other", label: "Diğer" },
 ];
 
+async function uploadDirect(
+  file: File,
+  folder: string,
+  onProgress?: (pct: number) => void
+): Promise<{ url: string; path: string }> {
+  const res = await fetch("/api/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folder, filename: file.name, contentType: file.type }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? "URL alınamadı");
+  }
+  const { signedUrl, publicUrl, path } = await res.json();
+
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error(`Yükleme hatası: ${xhr.status}`)));
+    xhr.onerror = () => reject(new Error("Ağ hatası"));
+    xhr.send(file);
+  });
+
+  return { url: publicUrl, path };
+}
+
 export default function UploadForm() {
   const [preview, setPreview] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -42,25 +74,13 @@ export default function UploadForm() {
     }
 
     setPending(true);
+    setProgress(0);
     setError(null);
     setSuccess(false);
 
     try {
-      // Step 1: upload file via API route (no body-size limit)
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("folder", category);
-
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? `Upload hatası: ${res.status}`);
-      }
-      const { url, path: filePath } = await res.json();
-
-      // Step 2: save record to site_assets via server action
+      const { url, path: filePath } = await uploadDirect(file, category, setProgress);
       await saveAssetRecord({ category, label, publicUrl: url, filePath });
-
       form.reset();
       setPreview(null);
       setSuccess(true);
@@ -69,6 +89,7 @@ export default function UploadForm() {
       setError(err instanceof Error ? err.message : "Bilinmeyen hata");
     } finally {
       setPending(false);
+      setProgress(0);
     }
   };
 
@@ -118,12 +139,12 @@ export default function UploadForm() {
 
       <div>
         <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">
-          Görsel Dosyası
+          Görsel / Video Dosyası
         </label>
         <input
           type="file"
           name="file"
-          accept="image/*"
+          accept="image/*,video/mp4,video/quicktime,video/webm"
           required
           onChange={handleFile}
           className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-foreground file:text-background hover:file:opacity-80 cursor-pointer"
@@ -135,6 +156,15 @@ export default function UploadForm() {
         )}
       </div>
 
+      {pending && progress > 0 && (
+        <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
+          <div
+            className="bg-foreground h-1.5 rounded-full transition-all duration-200"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={pending}
@@ -143,7 +173,7 @@ export default function UploadForm() {
         {pending ? (
           <>
             <span className="w-3.5 h-3.5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
-            Yükleniyor…
+            {progress > 0 ? `Yükleniyor… %${progress}` : "Hazırlanıyor…"}
           </>
         ) : "Yükle"}
       </button>

@@ -81,6 +81,40 @@ async function uploadFile(file: File, folder: string): Promise<string> {
   return url;
 }
 
+// Büyük dosyalar (video) için Supabase'e direkt yükleme
+async function uploadFileDirect(
+  file: File,
+  folder: string,
+  onProgress?: (pct: number) => void
+): Promise<string> {
+  // 1. İmzalı URL al
+  const res = await fetch("/api/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folder, filename: file.name, contentType: file.type }),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? "URL alınamadı");
+  }
+  const { signedUrl, publicUrl } = await res.json();
+
+  // 2. Direkt Supabase'e yükle (XMLHttpRequest ile progress takibi)
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error(`Yükleme hatası: ${xhr.status}`)));
+    xhr.onerror = () => reject(new Error("Ağ hatası"));
+    xhr.send(file);
+  });
+
+  return publicUrl;
+}
+
 export default function DjForm({ dj }: { dj?: Dj }) {
   const router = useRouter();
 
@@ -102,6 +136,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   );
   const [previewVideoUrl, setPreviewVideoUrl] = useState(dj?.preview_video_url ?? "");
   const [videoUploading, setVideoUploading] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -406,18 +441,21 @@ export default function DjForm({ dj }: { dj?: Dj }) {
         ) : (
           <label className={`flex items-center gap-3 cursor-pointer border border-dashed border-border rounded-xl px-4 py-3 hover:border-foreground/40 transition-colors ${videoUploading ? "opacity-50 pointer-events-none" : ""}`}>
             <span className="text-xl">🎬</span>
-            <span className="text-sm text-muted-foreground">{videoUploading ? "Yükleniyor…" : "Video yükle (.mp4 / .mov)"}</span>
+            <span className="text-sm text-muted-foreground">
+              {videoUploading ? `Yükleniyor… %${videoProgress}` : "Video yükle (.mp4 / .mov)"}
+            </span>
             <input type="file" accept="video/mp4,video/quicktime,video/*" className="sr-only" disabled={videoUploading}
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 e.target.value = "";
                 setVideoUploading(true);
+                setVideoProgress(0);
                 try {
-                  const url = await uploadFile(file, "artists/videos");
+                  const url = await uploadFileDirect(file, "artists/videos", setVideoProgress);
                   setPreviewVideoUrl(url);
                 } catch { setError("Video yüklenemedi"); }
-                finally { setVideoUploading(false); }
+                finally { setVideoUploading(false); setVideoProgress(0); }
               }} />
           </label>
         )}
