@@ -43,8 +43,15 @@ function getYouTubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
+// Proxy R2 videos through same origin to avoid CDN/range-request issues on desktop browsers
+function proxyVideo(url: string): string {
+  if (!url || !url.includes("media.noqt.events")) return url;
+  return `/api/video?url=${encodeURIComponent(url)}`;
+}
+
 // ─── Video thumbnail + inline play ───────────────────────────────────────────
-function VideoThumb({ url, isYoutube, youtubeId }: { url: string; isYoutube?: boolean; youtubeId?: string }) {
+function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYoutube?: boolean; youtubeId?: string }) {
+  const url = proxyVideo(rawUrl);
   const [ytPlaying, setYtPlaying] = useState(false);
   // null = not yet detected, true = desktop (hover+pointer), false = mobile/touch
   const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
