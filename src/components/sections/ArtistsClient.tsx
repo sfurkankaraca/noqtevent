@@ -58,6 +58,8 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  // Tracks whether user explicitly unmuted — prevents IntersectionObserver from re-muting
+  const userUnmutedRef = useRef(false);
 
   useEffect(() => {
     setIsDesktop(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
@@ -79,11 +81,14 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
         const video = videoRef.current;
         if (!video) return;
         if (entry.isIntersecting) {
-          video.muted = true;
-          setMuted(true);
+          if (!userUnmutedRef.current) {
+            video.muted = true;
+            setMuted(true);
+          }
           video.play().catch(() => {});
         } else {
           video.pause();
+          userUnmutedRef.current = false;
         }
       },
       { threshold: 0.5 }
@@ -154,8 +159,10 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
           e.stopPropagation();
           const v = videoRef.current;
           if (!v) return;
-          const next = !muted;
+          const next = !v.muted;
           v.muted = next;
+          userUnmutedRef.current = !next;
+          if (!next) v.play().catch(() => {});
           setMuted(next);
         }}
       >
