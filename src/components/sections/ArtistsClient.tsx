@@ -205,10 +205,18 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
   const allVideos: string[] = Array.isArray(dj.videos) && dj.videos.length > 0 ? dj.videos : dj.preview_video_url ? [dj.preview_video_url] : [];
   const youtubeLinks: string[] = Array.isArray(dj.youtube_links) ? dj.youtube_links : [];
 
-  // First video source — uploaded takes priority, then YouTube
-  const firstVideo = allVideos[0] ?? null;
-  const firstYtId = !firstVideo && youtubeLinks.length > 0 ? getYouTubeId(youtubeLinks[0]) : null;
-  const hasVideo = !!(firstVideo || firstYtId);
+  // Build ordered video list: uploaded first, then YouTube
+  const videoSources: Array<{ type: "upload"; url: string } | { type: "youtube"; id: string; url: string }> = [
+    ...allVideos.map((url) => ({ type: "upload" as const, url })),
+    ...youtubeLinks.flatMap((url) => {
+      const id = getYouTubeId(url);
+      return id ? [{ type: "youtube" as const, id, url }] : [];
+    }),
+  ];
+  const hasVideo = videoSources.length > 0;
+
+  const [vidIdx, setVidIdx] = useState(0);
+  const currentVid = videoSources[vidIdx] ?? null;
 
   const initials = dj.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
   const typeInfo = PERFORMER_TYPES.find((pt) => pt.id === (dj.performer_type ?? "dj"));
@@ -222,16 +230,15 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
   ].filter((l) => l.url);
 
   return (
-    <Link href={`/sanatcilar/${dj.id}`} className="block group">
-      <div className="bg-card border border-border rounded-2xl overflow-hidden hover:border-foreground/20 transition-all hover:shadow-md">
+    <div className="bg-card border border-border rounded-2xl overflow-hidden hover:border-foreground/20 transition-all hover:shadow-md">
 
-        {/* Video — full width, 16:9 */}
-        {hasVideo ? (
-          firstVideo
-            ? <VideoThumb url={firstVideo} />
-            : <VideoThumb isYoutube youtubeId={firstYtId!} url="" />
+      {/* Video / cover — full width 16:9, no Link wrapper */}
+      <div className="relative">
+        {hasVideo && currentVid ? (
+          currentVid.type === "upload"
+            ? <VideoThumb key={currentVid.url} url={currentVid.url} />
+            : <VideoThumb key={currentVid.id} isYoutube youtubeId={currentVid.id} url="" />
         ) : (
-          /* No video → show first photo in 16:9 or initials */
           <div className={`w-full aspect-video relative ${allPhotos.length === 0 ? bgColor : "bg-secondary"} flex items-center justify-center`}>
             {allPhotos.length > 0 ? (
               <Image
@@ -248,20 +255,47 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
           </div>
         )}
 
-        {/* Photo strip — show remaining photos (skip first if no video, else show all) */}
-        {(() => {
-          const stripPhotos = hasVideo ? allPhotos : allPhotos.slice(1);
-          return stripPhotos.length > 0 ? (
-            <div className="pt-2.5">
-              <PhotoStrip photos={stripPhotos.slice(0, 6)} focalPoints={dj.focal_points} name={dj.name} />
+        {/* Prev / Next arrows — only when there are multiple videos */}
+        {videoSources.length > 1 && (
+          <>
+            <button
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-30 w-8 h-8 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setVidIdx((i) => (i - 1 + videoSources.length) % videoSources.length); }}
+              aria-label="Önceki video"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-30 w-8 h-8 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setVidIdx((i) => (i + 1) % videoSources.length); }}
+              aria-label="Sonraki video"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            {/* Dot indicators */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex gap-1">
+              {videoSources.map((_, i) => (
+                <span key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === vidIdx ? "bg-white" : "bg-white/40"}`} />
+              ))}
             </div>
-          ) : null;
-        })()}
+          </>
+        )}
+      </div>
 
-        {/* Info */}
-        <div className="px-4 py-3.5 flex items-center justify-between gap-3">
+      {/* Photo strip */}
+      {(() => {
+        const stripPhotos = hasVideo ? allPhotos : allPhotos.slice(1);
+        return stripPhotos.length > 0 ? (
+          <div className="pt-2.5">
+            <PhotoStrip photos={stripPhotos.slice(0, 6)} focalPoints={dj.focal_points} name={dj.name} />
+          </div>
+        ) : null;
+      })()}
+
+      {/* Info — only this row navigates to profile */}
+      <Link href={`/sanatcilar/${dj.id}`} className="block px-4 py-3.5 hover:bg-foreground/5 transition-colors">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            {/* Avatar */}
             <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-secondary relative">
               {allPhotos[0] ? (
                 <Image
@@ -276,18 +310,18 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
                 <span className="w-full h-full flex items-center justify-center text-sm font-medium text-foreground/40">{initials}</span>
               )}
             </div>
-          <div className="min-w-0">
-            <p className="font-semibold text-foreground text-base truncate">{dj.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {[
-                dj.city ? `📍 ${dj.city}` : null,
-                typeInfo && typeInfo.id !== "dj" ? `${typeInfo.emoji} ${typeInfo.label}` : null,
-                dj.speciality ?? null,
-              ].filter(Boolean).join(" · ")}
-            </p>
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground text-base truncate">{dj.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {[
+                  dj.city ? `📍 ${dj.city}` : null,
+                  typeInfo && typeInfo.id !== "dj" ? `${typeInfo.emoji} ${typeInfo.label}` : null,
+                  dj.speciality ?? null,
+                ].filter(Boolean).join(" · ")}
+              </p>
+            </div>
           </div>
-          </div>
-          <div className="flex gap-1.5 flex-shrink-0">
+          <div className="flex gap-1.5 flex-shrink-0" onClick={(e) => e.preventDefault()}>
             {links.slice(0, 3).map((l) => (
               <a
                 key={l.label}
@@ -302,8 +336,8 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
             ))}
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
 
