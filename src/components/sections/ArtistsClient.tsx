@@ -142,11 +142,10 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
     >
       <video
         ref={setVideoRef}
-        src={`${url}#t=0.001`}
-        autoPlay
+        src={`${rawUrl}#t=0.001`}
         playsInline
         loop
-        preload="auto"
+        preload="metadata"
         className="w-full h-full object-cover"
       />
       <button
