@@ -174,11 +174,16 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
           e.stopPropagation();
           const v = videoRef.current;
           if (!v) return;
-          // Use React state as source of truth — v.muted can drift from state
-          const next = !muted;
-          v.muted = next;
-          if (!next) v.play().catch(() => {});
-          setMuted(next);
+          if (muted) {
+            // Unmute: pause → unmute → play forces iOS to commit audio
+            v.pause();
+            v.muted = false;
+            v.play().catch(() => { v.muted = true; setMuted(true); });
+            setMuted(false);
+          } else {
+            v.muted = true;
+            setMuted(true);
+          }
         }}
       >
         {muted ? (
