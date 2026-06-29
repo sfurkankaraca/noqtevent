@@ -125,44 +125,26 @@ function VideoThumb({ url, isYoutube, youtubeId }: { url: string; isYoutube?: bo
     );
   }
 
-  // ── Desktop: click-to-play with native controls ────────────────────────────
-  if (isDesktop) {
+  // ── Desktop: native controls, no autoplay tricks needed ───────────────────
+  if (isDesktop === true) {
     return (
       <div
         className="w-full aspect-video bg-black relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {desktopPlaying ? (
-          <video
-            src={url}
-            controls
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : (
-          <button
-            className="w-full h-full relative flex items-center justify-center group/play"
-            onClick={(e) => { e.stopPropagation(); setDesktopPlaying(true); }}
-          >
-            <video
-              src={url}
-              preload="metadata"
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-              tabIndex={-1}
-            />
-            <span className="relative z-10 w-14 h-14 bg-black/60 group-hover/play:bg-black/80 backdrop-blur-sm transition-colors rounded-full flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </span>
-          </button>
-        )}
+        <video
+          src={url}
+          controls
+          preload="metadata"
+          playsInline
+          className="w-full h-full object-cover"
+          onClick={(e) => e.stopPropagation()}
+        />
       </div>
     );
   }
 
-  // ── Mobile: muted autoplay on scroll ──────────────────────────────────────
+  // ── Mobile (and SSR null state): muted autoplay on scroll ─────────────────
   return (
     <div
       ref={wrapRef}
@@ -178,34 +160,31 @@ function VideoThumb({ url, isYoutube, youtubeId }: { url: string; isYoutube?: bo
         preload="metadata"
         className="w-full h-full object-cover"
       />
-      {/* Tap overlay: toggle mute */}
-      <div
-        className="absolute inset-0 z-10 cursor-pointer"
+      {/* Dedicated mute button — direct tap on button element avoids iOS audio context double-tap issue */}
+      <button
+        className="absolute bottom-2 right-2 z-20 bg-black/60 backdrop-blur-sm rounded-full p-1.5 flex items-center justify-center"
         onClick={(e) => {
           e.stopPropagation();
           const v = videoRef.current;
           if (!v) return;
           const next = !v.muted;
           v.muted = next;
+          if (!next) v.play().catch(() => {});
           setMuted(next);
         }}
-      />
-      {/* Mute indicator */}
-      <div className="absolute bottom-2 right-2 z-20 pointer-events-none">
-        <span className="bg-black/60 backdrop-blur-sm rounded-full p-1.5 flex items-center justify-center">
-          {muted ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-            </svg>
-          )}
-        </span>
-      </div>
+      >
+        {muted ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+        )}
+      </button>
     </div>
   );
 }
@@ -238,9 +217,28 @@ function PhotoStrip({ photos, focalPoints, name }: { photos: string[]; focalPoin
 // ─── Quick view sheet ─────────────────────────────────────────────────────────
 function ArtistQuickView({ dj, onClose }: { dj: Dj; onClose: () => void }) {
   const allPhotos = Array.isArray(dj.photos) && dj.photos.length > 0 ? dj.photos : dj.photo_url ? [dj.photo_url] : [];
-  const typeInfo = PERFORMER_TYPES.find((pt) => pt.id === (dj.performer_type ?? "dj"));
+  const allVideos: string[] = Array.isArray(dj.videos) && dj.videos.length > 0 ? dj.videos : dj.preview_video_url ? [dj.preview_video_url] : [];
+  const youtubeLinks: string[] = Array.isArray(dj.youtube_links) ? dj.youtube_links : [];
+
+  // Media items: videos first, then photos
+  type MediaItem =
+    | { kind: "video"; url: string }
+    | { kind: "youtube"; id: string }
+    | { kind: "photo"; url: string; fp: { x: number; y: number } };
+
+  const mediaItems: MediaItem[] = [
+    ...allVideos.map((url) => ({ kind: "video" as const, url })),
+    ...youtubeLinks.flatMap((url) => {
+      const id = getYouTubeId(url);
+      return id ? [{ kind: "youtube" as const, id }] : [];
+    }),
+    ...allPhotos.map((url) => ({ kind: "photo" as const, url, fp: dj.focal_points?.[url] ?? { x: 50, y: 50 } })),
+  ];
+
+  const [idx, setIdx] = useState(0);
+  const current = mediaItems[idx];
   const initials = dj.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-  const fp = dj.focal_points?.[allPhotos[0]] ?? { x: 50, y: 50 };
+  const typeInfo = PERFORMER_TYPES.find((pt) => pt.id === (dj.performer_type ?? "dj"));
 
   const allLinks = [
     { url: dj.soundcloud_url, label: "SoundCloud" },
@@ -251,14 +249,16 @@ function ArtistQuickView({ dj, onClose }: { dj: Dj; onClose: () => void }) {
     { url: dj.website_url, label: "Web Sitesi" },
   ].filter((l) => l.url);
 
-  // Close on Escape
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") setIdx((i) => (i - 1 + mediaItems.length) % mediaItems.length);
+      if (e.key === "ArrowRight") setIdx((i) => (i + 1) % mediaItems.length);
+    };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, mediaItems.length]);
 
-  // Prevent body scroll while open
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -272,55 +272,63 @@ function ArtistQuickView({ dj, onClose }: { dj: Dj; onClose: () => void }) {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Sheet */}
       <motion.div
-        className="relative w-full sm:max-w-sm bg-card rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl"
+        className="relative w-full sm:max-w-sm bg-card rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
         initial={{ y: "100%", scale: 0.98 }}
         animate={{ y: 0, scale: 1 }}
         exit={{ y: "100%", scale: 0.98 }}
         transition={{ type: "spring", damping: 28, stiffness: 320 }}
       >
-        {/* Cover photo */}
-        <div className="w-full aspect-[4/3] relative bg-secondary">
-          {allPhotos[0] ? (
-            <Image
-              src={allPhotos[0]}
-              alt={dj.name}
-              fill
-              className="object-cover"
-              style={{ objectPosition: `${fp.x}% ${fp.y}%` }}
-              sizes="(max-width: 640px) 100vw, 384px"
-            />
-          ) : (
+        {/* Media area */}
+        <div className="w-full aspect-[4/3] relative bg-black flex-shrink-0">
+          {!current ? (
             <div className="w-full h-full flex items-center justify-center">
-              <span className="text-6xl font-light text-foreground/20" style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}>{initials}</span>
+              <span className="text-6xl font-light text-white/20" style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}>{initials}</span>
             </div>
+          ) : current.kind === "photo" ? (
+            <Image src={current.url} alt={dj.name} fill className="object-cover" style={{ objectPosition: `${current.fp.x}% ${current.fp.y}%` }} sizes="(max-width: 640px) 100vw, 384px" />
+          ) : current.kind === "video" ? (
+            <video src={current.url} controls playsInline preload="metadata" className="w-full h-full object-cover" />
+          ) : (
+            <iframe src={`https://www.youtube.com/embed/${current.id}?autoplay=1`} allow="autoplay; encrypted-media; fullscreen" allowFullScreen className="w-full h-full" />
           )}
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
-          >
+
+          {/* Prev / Next arrows */}
+          {mediaItems.length > 1 && (
+            <>
+              <button onClick={() => setIdx((i) => (i - 1 + mediaItems.length) % mediaItems.length)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white z-10">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button onClick={() => setIdx((i) => (i + 1) % mediaItems.length)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white z-10">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              {/* Dots */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                {mediaItems.map((_, i) => (
+                  <button key={i} onClick={() => setIdx(i)} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-white" : "bg-white/40"}`} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Close */}
+          <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white z-10">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
-        {/* Info */}
-        <div className="px-5 pt-4 pb-5">
+        {/* Info — scrollable */}
+        <div className="px-5 pt-4 pb-5 overflow-y-auto">
           <div className="flex items-start justify-between gap-2 mb-1">
             <h2 className="text-xl font-semibold text-foreground leading-tight">{dj.name}</h2>
             {typeInfo && <span className="text-sm text-muted-foreground flex-shrink-0">{typeInfo.emoji} {typeInfo.label}</span>}
           </div>
           {dj.city && <p className="text-sm text-muted-foreground mb-3">📍 {dj.city}</p>}
-
-          {dj.bio && (
-            <p className="text-sm text-foreground/80 leading-relaxed mb-4 line-clamp-4">{dj.bio}</p>
-          )}
-
-          {/* Concept tags */}
+          {dj.bio && <p className="text-sm text-foreground/80 leading-relaxed mb-4 line-clamp-4">{dj.bio}</p>}
           {dj.concept_tags && dj.concept_tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-4">
               {dj.concept_tags.slice(0, 6).map((tag) => (
@@ -328,29 +336,18 @@ function ArtistQuickView({ dj, onClose }: { dj: Dj; onClose: () => void }) {
               ))}
             </div>
           )}
-
-          {/* Social links */}
           {allLinks.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-5">
               {allLinks.map((l) => (
-                <a
-                  key={l.label}
-                  href={l.url!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs px-3 py-1.5 border border-border rounded-full text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
-                >
+                <a key={l.label} href={l.url!} target="_blank" rel="noopener noreferrer"
+                  className="text-xs px-3 py-1.5 border border-border rounded-full text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors">
                   {l.label}
                 </a>
               ))}
             </div>
           )}
-
-          {/* CTA */}
-          <Link
-            href={`/sanatcilar/${dj.id}`}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-foreground text-background rounded-xl font-medium text-sm hover:opacity-90 transition-opacity"
-          >
+          <Link href={`/sanatcilar/${dj.id}`}
+            className="flex items-center justify-center gap-2 w-full py-3 bg-foreground text-background rounded-xl font-medium text-sm hover:opacity-90 transition-opacity">
             Tam Profili Gör
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </Link>
