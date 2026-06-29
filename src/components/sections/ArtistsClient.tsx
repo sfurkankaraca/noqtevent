@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -189,6 +189,131 @@ function PhotoStrip({ photos, focalPoints, name }: { photos: string[]; focalPoin
   );
 }
 
+// ─── Quick view sheet ─────────────────────────────────────────────────────────
+function ArtistQuickView({ dj, onClose }: { dj: Dj; onClose: () => void }) {
+  const allPhotos = Array.isArray(dj.photos) && dj.photos.length > 0 ? dj.photos : dj.photo_url ? [dj.photo_url] : [];
+  const typeInfo = PERFORMER_TYPES.find((pt) => pt.id === (dj.performer_type ?? "dj"));
+  const initials = dj.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+  const fp = dj.focal_points?.[allPhotos[0]] ?? { x: 50, y: 50 };
+
+  const allLinks = [
+    { url: dj.soundcloud_url, label: "SoundCloud" },
+    { url: dj.mixcloud_url, label: "Mixcloud" },
+    { url: dj.youtube_url, label: "YouTube" },
+    { url: dj.instagram_url, label: "Instagram" },
+    { url: dj.spotify_url, label: "Spotify" },
+    { url: dj.website_url, label: "Web Sitesi" },
+  ].filter((l) => l.url);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  // Prevent body scroll while open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Sheet */}
+      <motion.div
+        className="relative w-full sm:max-w-sm bg-card rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl"
+        initial={{ y: "100%", scale: 0.98 }}
+        animate={{ y: 0, scale: 1 }}
+        exit={{ y: "100%", scale: 0.98 }}
+        transition={{ type: "spring", damping: 28, stiffness: 320 }}
+      >
+        {/* Cover photo */}
+        <div className="w-full aspect-[4/3] relative bg-secondary">
+          {allPhotos[0] ? (
+            <Image
+              src={allPhotos[0]}
+              alt={dj.name}
+              fill
+              className="object-cover"
+              style={{ objectPosition: `${fp.x}% ${fp.y}%` }}
+              sizes="(max-width: 640px) 100vw, 384px"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-6xl font-light text-foreground/20" style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}>{initials}</span>
+            </div>
+          )}
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        {/* Info */}
+        <div className="px-5 pt-4 pb-5">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h2 className="text-xl font-semibold text-foreground leading-tight">{dj.name}</h2>
+            {typeInfo && <span className="text-sm text-muted-foreground flex-shrink-0">{typeInfo.emoji} {typeInfo.label}</span>}
+          </div>
+          {dj.city && <p className="text-sm text-muted-foreground mb-3">📍 {dj.city}</p>}
+
+          {dj.bio && (
+            <p className="text-sm text-foreground/80 leading-relaxed mb-4 line-clamp-4">{dj.bio}</p>
+          )}
+
+          {/* Concept tags */}
+          {dj.concept_tags && dj.concept_tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {dj.concept_tags.slice(0, 6).map((tag) => (
+                <span key={tag} className="text-[11px] px-2 py-0.5 bg-secondary rounded-full text-muted-foreground">{tag}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Social links */}
+          {allLinks.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {allLinks.map((l) => (
+                <a
+                  key={l.label}
+                  href={l.url!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs px-3 py-1.5 border border-border rounded-full text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                >
+                  {l.label}
+                </a>
+              ))}
+            </div>
+          )}
+
+          {/* CTA */}
+          <Link
+            href={`/sanatcilar/${dj.id}`}
+            className="flex items-center justify-center gap-2 w-full py-3 bg-foreground text-background rounded-xl font-medium text-sm hover:opacity-90 transition-opacity"
+          >
+            Tam Profili Gör
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </Link>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── Artist card ──────────────────────────────────────────────────────────────
 function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
   const BG_COLORS = [
@@ -216,6 +341,7 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
   const hasVideo = videoSources.length > 0;
 
   const [vidIdx, setVidIdx] = useState(0);
+  const [quickOpen, setQuickOpen] = useState(false);
   const currentVid = videoSources[vidIdx] ?? null;
 
   const initials = dj.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -292,8 +418,11 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
         ) : null;
       })()}
 
-      {/* Info — only this row navigates to profile */}
-      <Link href={`/sanatcilar/${dj.id}`} className="block px-4 py-3.5 hover:bg-foreground/5 transition-colors">
+      {/* Info row — opens quick view */}
+      <button
+        onClick={() => setQuickOpen(true)}
+        className="w-full text-left px-4 py-3.5 hover:bg-foreground/5 transition-colors"
+      >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-secondary relative">
@@ -321,7 +450,7 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
               </p>
             </div>
           </div>
-          <div className="flex gap-1.5 flex-shrink-0" onClick={(e) => e.preventDefault()}>
+          <div className="flex gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
             {links.slice(0, 3).map((l) => (
               <a
                 key={l.label}
@@ -336,7 +465,12 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
             ))}
           </div>
         </div>
-      </Link>
+      </button>
+
+      {/* Quick view sheet */}
+      <AnimatePresence>
+        {quickOpen && <ArtistQuickView dj={dj} onClose={() => setQuickOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
