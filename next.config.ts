@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
         hostname: "gztdvsduxfkdfskrdrng.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "img.youtube.com",
+      },
+      {
+        protocol: "https",
+        hostname: "media.noqt.events",
+      },
     ],
     formats: ["image/avif", "image/webp"],
   },
