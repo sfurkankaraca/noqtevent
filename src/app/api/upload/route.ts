@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
+import { uploadToR2 } from "@/lib/r2";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export const maxDuration = 60;
 
-const PUBLIC_FOLDERS = ["partners/logos", "partners/photos", "artists/photos", "artists/videos"];
+const PUBLIC_FOLDERS = ["partners/logos", "partners/photos", "artists/photos", "artists/videos", "invitations/covers", "invitations/seating", "memory"];
 
 const ALLOWED_FOLDERS = [
   ...PUBLIC_FOLDERS,
@@ -21,6 +22,8 @@ const ALLOWED_FOLDERS = [
   "brands",
   "journal",
   "other",
+  "invitations/covers",
+  "invitations/seating",
 ];
 
 const ALLOWED_MIME_TYPES = [
@@ -30,7 +33,7 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15 MB
-const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200 MB
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500 MB
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -82,6 +85,17 @@ export async function POST(req: NextRequest) {
   const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (isVideo) {
+    let fileUrl: string;
+    try {
+      fileUrl = await uploadToR2(path, buffer, file.type);
+    } catch (err) {
+      console.error("R2 upload error:", err);
+      return NextResponse.json({ error: "Video yükleme başarısız." }, { status: 500 });
+    }
+    return NextResponse.json({ url: fileUrl, path });
+  }
 
   const supabase = createServiceClient();
   const { data, error } = await supabase.storage

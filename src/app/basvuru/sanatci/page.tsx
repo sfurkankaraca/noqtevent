@@ -90,15 +90,15 @@ export default function SanatciBasvuruPage() {
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const [photos, setPhotos] = useState<{ url: string; uploading?: boolean; error?: string }[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
-  const [previewVideoUrl, setPreviewVideoUrl] = useState("");
+  const [videos, setVideos] = useState<{ url: string; uploading?: boolean; progress?: number; error?: string }[]>([]);
   const [videoUploading, setVideoUploading] = useState(false);
-  const [videoProgress, setVideoProgress] = useState(0);
   const [youtubeLinks, setYoutubeLinks] = useState<string[]>(["", "", ""]);
   const [instagram, setInstagram] = useState("");
   const [spotify, setSpotify] = useState("");
   const [soundcloud, setSoundcloud] = useState("");
   const [website, setWebsite] = useState("");
   const [contactName, setContactName] = useState("");
+  const [referralSource, setReferralSource] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
@@ -157,7 +157,7 @@ export default function SanatciBasvuruPage() {
       fd.set("cover_cities", JSON.stringify(coverCities));
       fd.set("event_types", JSON.stringify(selectedEventTypes));
       fd.set("photos", JSON.stringify(photos.filter((p) => p.url && !p.error).map((p) => p.url)));
-      fd.set("preview_video_url", previewVideoUrl);
+      fd.set("videos_json", JSON.stringify(videos.filter((v) => v.url && !v.error).map((v) => v.url)));
       fd.set("youtube_links", JSON.stringify(youtubeLinks.filter(Boolean)));
       fd.set("instagram_url", instagram);
       fd.set("spotify_url", spotify);
@@ -166,6 +166,7 @@ export default function SanatciBasvuruPage() {
       fd.set("contact_name", contactName);
       fd.set("email", email);
       fd.set("phone", phone);
+      fd.set("referral_source", referralSource);
       const res = await fetch("/api/basvuru", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Bir hata oluştu.");
@@ -353,47 +354,56 @@ export default function SanatciBasvuruPage() {
                       </label>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-foreground mb-1.5">Tanıtım Videosu</label>
-                      <p className="text-xs text-muted-foreground mb-3">Sanatçı listenizde kart üzerine gelindiğinde sessizce oynar. Max 500MB, MP4 önerilir.</p>
-                      {previewVideoUrl ? (
-                        <div className="relative rounded-xl overflow-hidden border border-border bg-secondary/20">
-                          <video src={previewVideoUrl} className="w-full max-h-48 object-cover" muted controls />
-                          <button type="button" onClick={() => setPreviewVideoUrl("")}
-                            className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/80">×</button>
-                        </div>
-                      ) : (
-                        <label className={`flex items-center gap-3 cursor-pointer border border-dashed border-border rounded-xl px-4 py-4 hover:border-foreground/40 transition-colors ${videoUploading ? "opacity-50 pointer-events-none" : ""}`}>
-                          <span className="text-2xl">🎬</span>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-foreground">
-                              {videoUploading ? `Yükleniyor… %${videoProgress}` : "Video Yükle"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">MP4, MOV — büyük boyut desteklenir</p>
-                            {videoUploading && videoProgress > 0 && (
-                              <div className="w-full bg-border rounded-full h-1 mt-2 overflow-hidden">
-                                <div className="bg-foreground h-1 rounded-full transition-all duration-200" style={{ width: `${videoProgress}%` }} />
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Videolar</label>
+                      <p className="text-xs text-muted-foreground mb-3">Birden fazla video yükleyebilirsiniz. Max 500MB, MP4 önerilir.</p>
+                      <div className="space-y-2">
+                        {videos.map((v, i) => (
+                          <div key={i} className="relative rounded-xl overflow-hidden border border-border bg-secondary/20">
+                            {v.uploading ? (
+                              <div className="px-4 py-3">
+                                <p className="text-xs text-muted-foreground mb-1">Yükleniyor… %{v.progress ?? 0}</p>
+                                <div className="w-full bg-border rounded-full h-1 overflow-hidden">
+                                  <div className="bg-foreground h-1 rounded-full transition-all" style={{ width: `${v.progress ?? 0}%` }} />
+                                </div>
                               </div>
+                            ) : v.error ? (
+                              <div className="px-4 py-3 flex items-center justify-between">
+                                <p className="text-xs text-red-500">{v.error}</p>
+                                <button type="button" onClick={() => setVideos((p) => p.filter((_, idx) => idx !== i))} className="text-xs text-muted-foreground hover:text-foreground">Kaldır</button>
+                              </div>
+                            ) : (
+                              <>
+                                <video src={v.url} className="w-full max-h-36 object-cover" muted controls />
+                                <button type="button" onClick={() => setVideos((p) => p.filter((_, idx) => idx !== i))}
+                                  className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/80">×</button>
+                              </>
                             )}
                           </div>
+                        ))}
+                        <label className={`flex items-center gap-3 cursor-pointer border border-dashed border-border rounded-xl px-4 py-3 hover:border-foreground/40 transition-colors ${videoUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                          <span className="text-xl">🎬</span>
+                          <span className="text-sm text-muted-foreground">{videoUploading ? "Yükleniyor…" : "+ Video Ekle"}</span>
                           <input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" className="sr-only" disabled={videoUploading}
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (!file) return;
                               e.target.value = "";
+                              const idx = videos.length;
+                              setVideos((p) => [...p, { url: "", uploading: true, progress: 0 }]);
                               setVideoUploading(true);
-                              setVideoProgress(0);
                               try {
-                                const url = await uploadFileDirect(file, "artists/videos", setVideoProgress);
-                                setPreviewVideoUrl(url);
+                                const url = await uploadFileDirect(file, "artists/videos", (pct) => {
+                                  setVideos((p) => p.map((v, i) => i === idx ? { ...v, progress: pct } : v));
+                                });
+                                setVideos((p) => p.map((v, i) => i === idx ? { url } : v));
                               } catch (err) {
-                                alert(err instanceof Error ? err.message : "Video yüklenemedi");
+                                setVideos((p) => p.map((v, i) => i === idx ? { url: "", error: err instanceof Error ? err.message : "Hata" } : v));
                               } finally {
                                 setVideoUploading(false);
-                                setVideoProgress(0);
                               }
                             }} />
                         </label>
-                      )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1.5">Performans Videoları (YouTube)</label>
@@ -443,6 +453,18 @@ export default function SanatciBasvuruPage() {
                       <label className="block text-xs font-medium text-foreground mb-1.5">Telefon</label>
                       <input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+90 5XX XXX XX XX" type="tel" />
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-2">Bizi nasıl duydun?</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {["Instagram", "TikTok", "Google", "Arkadaş / Tanıdık", "Düğün fuarı / Etkinlik", "Diğer"].map((opt) => (
+                          <button key={opt} type="button" onClick={() => setReferralSource(opt)}
+                            className={`px-3 py-2.5 rounded-xl border text-sm text-left transition-all ${referralSource === opt ? "border-foreground bg-foreground/5 font-medium" : "border-border text-muted-foreground hover:border-foreground/40"}`}>
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="bg-[oklch(0.975_0.006_80)] rounded-xl p-4 space-y-2">
                       <p className="font-medium text-foreground text-xs uppercase tracking-wide mb-3">Başvuru Özeti</p>
                       {[

@@ -35,6 +35,8 @@ export default async function AdminDashboard() {
     { label: "Şarkı", value: songCount ?? 0, href: "/admin/songs", icon: "♪", badge: 0 },
     { label: "Görsel", value: assetCount ?? 0, href: "/admin/gorseller", icon: "🖼", badge: 0 },
     { label: "Yorum", value: testimonialCount ?? 0, href: "/admin/testimonials", icon: "💬", badge: 0 },
+    { label: "Davetiye", value: 0, href: "/admin/davetiyeler", icon: "💌", badge: 0 },
+    { label: "Memory Drive", value: 0, href: "/admin/memory", icon: "📸", badge: 0 },
   ];
 
   // Recent inquiries

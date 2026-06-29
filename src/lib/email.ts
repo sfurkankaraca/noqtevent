@@ -281,6 +281,77 @@ export async function sendPartnerApprovalNotification(partner: {
   });
 }
 
+export async function sendRsvpConfirmation(data: {
+  guestName: string;
+  guestEmail: string;
+  attending: boolean;
+  brideName: string;
+  groomName: string;
+  weddingDate?: string | null;
+  venueName?: string | null;
+  invitationUrl: string;
+  memoryDriveUrl?: string | null;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const dateStr = data.weddingDate
+    ? new Date(data.weddingDate + "T00:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+
+  const memoryDriveSection = data.memoryDriveUrl
+    ? `<div style="margin-top:20px;padding:16px 20px;background:#f9f8f6;border-radius:12px;font-size:14px;">
+        <p style="margin:0 0 8px;color:#666;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Memory Drive</p>
+        <p style="margin:0 0 12px;color:#333;line-height:1.6;">Etkinlik anlarını paylaşmak için Memory Drive'a fotoğraf ve video yükleyebilirsiniz.</p>
+        <a href="${data.memoryDriveUrl}" style="color:#1a1a1a;font-weight:500;text-decoration:none;border-bottom:1px solid #ccc;">Memory Drive'a Git →</a>
+      </div>`
+    : "";
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.guestEmail,
+    subject: data.attending
+      ? `Katılım onayınız alındı — ${data.brideName} & ${data.groomName}`
+      : `Yanıtınız alındı — ${data.brideName} & ${data.groomName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;background:#fff;">
+        <div style="font-size:11px;color:#999;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:32px;">NOQT.EVENTS · Dijital Davetiye</div>
+
+        <h1 style="font-size:28px;font-family:Georgia,serif;font-weight:400;margin-bottom:4px;line-height:1.3;">
+          ${data.brideName} <span style="color:#bbb;">&amp;</span> ${data.groomName}
+        </h1>
+        ${dateStr ? `<p style="color:#888;font-size:14px;margin-top:4px;margin-bottom:24px;">${dateStr}${data.venueName ? ` · ${data.venueName}` : ""}</p>` : ""}
+
+        <p style="color:#333;line-height:1.7;font-size:15px;">
+          Merhaba <strong>${data.guestName}</strong>,<br/>
+          ${data.attending
+            ? "Katılım bildiriminiz alındı. Sizi görmekten çok mutlu olacağız! 🎉"
+            : "Yanıtınız alındı. İyi günler dileriz."}
+        </p>
+
+        <div style="margin:28px 0;padding:20px 24px;background:#f9f8f6;border-radius:12px;">
+          <p style="margin:0 0 8px;font-size:12px;color:#999;text-transform:uppercase;letter-spacing:0.1em;">Davetiye Linki</p>
+          <a href="${data.invitationUrl}" style="color:#1a1a1a;font-size:14px;word-break:break-all;">${data.invitationUrl}</a>
+          <p style="margin:12px 0 0;font-size:12px;color:#aaa;">Daveti paylaşmak veya PDF olarak kaydetmek için bu linki ziyaret edin.</p>
+        </div>
+
+        ${memoryDriveSection}
+
+        <div style="margin-top:32px;">
+          <a href="${data.invitationUrl}"
+             style="display:inline-block;background:#1a1a1a;color:#fff;padding:12px 28px;border-radius:100px;text-decoration:none;font-size:14px;font-weight:500;">
+            Daveti Görüntüle →
+          </a>
+        </div>
+
+        <div style="margin-top:40px;padding-top:24px;border-top:1px solid #e8e8e8;font-size:12px;color:#aaa;">
+          NOQT Deneyim Stüdyosu — noqt.events
+        </div>
+      </div>
+    `,
+  });
+}
+
 export async function sendContactNotification(msg: {
   name: string;
   email: string;

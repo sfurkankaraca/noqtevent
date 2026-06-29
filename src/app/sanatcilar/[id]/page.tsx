@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import { createServiceClient } from "@/lib/supabase";
+import DjGallery from "./DjGallery";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -31,13 +31,6 @@ export default async function DjDetailPage({ params }: Props) {
 
   if (!dj) notFound();
 
-  const initials = dj.name
-    .split(" ")
-    .map((w: string) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
   const musicLinks = [
     { url: dj.soundcloud_url, label: "SoundCloud" },
     { url: dj.mixcloud_url, label: "Mixcloud" },
@@ -45,6 +38,9 @@ export default async function DjDetailPage({ params }: Props) {
   ].filter((l) => l.url);
 
   const youtubeVideos: string[] = Array.isArray(dj.youtube_links) ? dj.youtube_links : [];
+  const uploadedVideos: string[] = Array.isArray(dj.videos) && dj.videos.length > 0
+    ? dj.videos
+    : dj.preview_video_url ? [dj.preview_video_url] : [];
 
   function getYouTubeEmbedId(url: string): string | null {
     const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?]+)/);
@@ -60,9 +56,6 @@ export default async function DjDetailPage({ params }: Props) {
       : [];
 
   const focalPoints: Record<string, { x: number; y: number }> = dj.focal_points ?? {};
-  const coverPhoto = photos[0] ?? null;
-  const coverFp = coverPhoto ? (focalPoints[coverPhoto] ?? { x: 50, y: 50 }) : { x: 50, y: 50 };
-  const galleryPhotos = photos.slice(1);
 
   return (
     <>
@@ -77,52 +70,14 @@ export default async function DjDetailPage({ params }: Props) {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start">
-            {/* Left: Photos */}
+            {/* Left: Photos + Videos (client component with lightbox) */}
             <div className="lg:col-span-2 space-y-3">
-              {/* Cover photo */}
-              <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-[oklch(0.92_0.02_320)] relative">
-                {coverPhoto ? (
-                  <Image
-                    src={coverPhoto}
-                    alt={dj.name}
-                    fill
-                    className="object-cover"
-                    style={{ objectPosition: `${coverFp.x}% ${coverFp.y}%` }}
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    priority
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span
-                      className="text-8xl font-light text-foreground/20"
-                      style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}
-                    >
-                      {initials}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Gallery strip */}
-              {galleryPhotos.length > 0 && (
-                <div className="grid grid-cols-3 gap-2">
-                  {galleryPhotos.map((url, i) => {
-                    const fp = focalPoints[url] ?? { x: 50, y: 50 };
-                    return (
-                      <div key={url} className="aspect-square rounded-xl overflow-hidden relative">
-                        <Image
-                          src={url}
-                          alt={`${dj.name} ${i + 2}`}
-                          fill
-                          className="object-cover"
-                          style={{ objectPosition: `${fp.x}% ${fp.y}%` }}
-                          sizes="33vw"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <DjGallery
+                photos={photos}
+                focalPoints={focalPoints}
+                name={dj.name}
+                uploadedVideos={uploadedVideos}
+              />
             </div>
 
             {/* Right: Info */}
@@ -141,6 +96,19 @@ export default async function DjDetailPage({ params }: Props) {
 
               {dj.bio && (
                 <p className="text-muted-foreground leading-relaxed text-base">{dj.bio}</p>
+              )}
+
+              {dj.presskit_url && (
+                <div>
+                  <a
+                    href={dj.presskit_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+                  >
+                    Press Kit ↓
+                  </a>
+                </div>
               )}
 
               {musicLinks.length > 0 && (

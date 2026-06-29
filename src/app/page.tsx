@@ -5,8 +5,6 @@ import FeaturedExperiences from "@/components/home/FeaturedExperiences";
 import HowItWorks from "@/components/home/HowItWorks";
 import Artists from "@/components/home/Artists";
 import Testimonials from "@/components/home/Testimonials";
-import BrandFeed from "@/components/home/BrandFeed";
-import MemoryDrive from "@/components/home/MemoryDrive";
 import PartnerEcosystem from "@/components/home/PartnerEcosystem";
 import HomeCTA from "@/components/home/HomeCTA";
 import { createServiceClient } from "@/lib/supabase";
@@ -14,7 +12,7 @@ import { createServiceClient } from "@/lib/supabase";
 export default async function Home() {
   const supabase = createServiceClient();
 
-  const [djRes, partnerRes, conceptRes, testimonialRes, heroRes, brandFeedRes, memoryDriveRes, partnerLogosRes] = await Promise.all([
+  const [djRes, partnerRes, conceptRes, testimonialRes, heroRes, partnerLogosRes] = await Promise.all([
     supabase
       .from("dj_profiles")
       .select("id, name, bio, photo_url, photos, focal_points, concept_tags")
@@ -47,19 +45,6 @@ export default async function Home() {
     supabase
       .from("site_assets")
       .select("public_url, label")
-      .eq("category", "brand-feed")
-      .eq("is_active", true)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("site_assets")
-      .select("public_url")
-      .eq("category", "memory-drive")
-      .eq("is_active", true)
-      .order("created_at", { ascending: true })
-      .limit(6),
-    supabase
-      .from("site_assets")
-      .select("public_url, label")
       .eq("category", "brands")
       .eq("is_active", true)
       .order("created_at", { ascending: true }),
@@ -68,8 +53,6 @@ export default async function Home() {
   // photos/focal_points columns may not exist yet — fall back gracefully
   const testimonials = testimonialRes.error ? [] : (testimonialRes.data ?? []);
   const heroImages = heroRes.data?.map((a) => a.public_url) ?? [];
-  const brandFeedPhotos = brandFeedRes.data?.map((a) => ({ url: a.public_url, label: a.label ?? undefined })) ?? [];
-  const memoryDrivePhotos = memoryDriveRes.data?.map((a) => a.public_url) ?? [];
   const partnerLogos = partnerLogosRes.data?.map((a) => ({ url: a.public_url, label: a.label ?? undefined })) ?? [];
 
   const djs = djRes.error
@@ -162,9 +145,7 @@ export default async function Home() {
         <FeaturedExperiences concepts={concepts ?? []} />
         <HowItWorks />
         <Testimonials testimonials={testimonials} />
-        <BrandFeed photos={brandFeedPhotos.length > 0 ? brandFeedPhotos : undefined} />
         <Artists djs={djs ?? []} />
-        <MemoryDrive photos={memoryDrivePhotos.length > 0 ? memoryDrivePhotos : undefined} />
         <PartnerEcosystem categories={categories} logos={partnerLogos} />
         <HomeCTA />
       </main>

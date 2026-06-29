@@ -52,7 +52,7 @@ export default function ContactPage() {
             </a>
 
             <a
-              href="https://instagram.com/noqt"
+              href="https://www.instagram.com/noqtevents"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-4 group"
@@ -64,7 +64,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Instagram</p>
-                <p className="text-sm font-medium text-foreground">@noqt</p>
+                <p className="text-sm font-medium text-foreground">@noqtevents</p>
               </div>
             </a>
 

@@ -51,7 +51,7 @@ export default function Footer() {
             </p>
             <div className="flex items-center gap-4 mt-8">
               <a
-                href="https://instagram.com/noqt"
+                href="https://www.instagram.com/noqtevents"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-background/60 hover:text-background transition-colors"
@@ -62,7 +62,7 @@ export default function Footer() {
                 </svg>
               </a>
               <a
-                href="https://youtube.com/noqt"
+                href="https://www.youtube.com/@noqtclubradio"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-background/60 hover:text-background transition-colors"
@@ -70,18 +70,6 @@ export default function Footer() {
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.95C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96C1 8.12 1 12 1 12s0 3.88.46 5.58a2.78 2.78 0 0 0 1.95 1.95C5.12 20 12 20 12 20s6.88 0 8.59-.47a2.78 2.78 0 0 0 1.95-1.95C23 15.88 23 12 23 12s0-3.88-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/>
-                </svg>
-              </a>
-              {/* SoundCloud icon (custom SVG) */}
-              <a
-                href="https://soundcloud.com/noqt"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-background/60 hover:text-background transition-colors"
-                aria-label="SoundCloud"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M1.175 12.225c-.015.132-.023.265-.023.4 0 .135.008.268.023.4.015.132.038.262.067.39l-.067-.39V12.225zm.85.95c-.008-.052-.012-.104-.012-.175 0-.068.004-.12.012-.175-.008.055-.012.107-.012.175 0 .07.004.123.012.175zm12.775-8.35c-2.025 0-3.75 1.45-4.15 3.375-.35-.175-.75-.275-1.15-.275-1.475 0-2.675 1.2-2.675 2.675 0 .1.006.198.018.295C4.44 11.28 3.1 12.83 3.1 14.7c0 2.075 1.675 3.75 3.75 3.75h7.95c2.075 0 3.75-1.675 3.75-3.75 0-1.638-1.05-3.035-2.525-3.538.025-.162.038-.33.038-.5 0-2.487-2.013-4.5-4.5-4.5z"/>
                 </svg>
               </a>
             </div>

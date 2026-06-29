@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { r2, R2_PUBLIC_URL } from "@/lib/r2";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const ALLOWED_FOLDERS = [
   "artists/videos",
@@ -69,6 +72,21 @@ export async function POST(req: NextRequest) {
 
   const ext = filename.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const isVideo = contentType.startsWith("video/");
+
+  if (isVideo) {
+    const command = new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME ?? "noqt-memory",
+      Key: path,
+      ContentType: contentType,
+    });
+    const signedUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
+    return NextResponse.json({
+      signedUrl,
+      path,
+      publicUrl: `${R2_PUBLIC_URL}/${path}`,
+    });
+  }
 
   const supabase = createServiceClient();
   const { data, error } = await supabase.storage

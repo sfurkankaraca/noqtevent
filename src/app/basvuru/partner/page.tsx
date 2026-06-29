@@ -53,6 +53,35 @@ async function uploadFile(file: File, folder: string): Promise<string> {
   return url;
 }
 
+async function uploadVideoDirect(
+  file: File,
+  folder: string,
+  onProgress?: (pct: number) => void
+): Promise<string> {
+  const res = await fetch("/api/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folder, filename: file.name, contentType: file.type }),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? "URL alınamadı");
+  }
+  const { signedUrl, publicUrl } = await res.json();
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error(`Yükleme hatası: ${xhr.status}`)));
+    xhr.onerror = () => reject(new Error("Ağ hatası"));
+    xhr.send(file);
+  });
+  return publicUrl;
+}
+
 export default function PartnerBasvuruPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -72,8 +101,10 @@ export default function PartnerBasvuruPage() {
   // Step 2 — Media
   const [logo, setLogo] = useState<{ url: string; uploading?: boolean } | null>(null);
   const [photos, setPhotos] = useState<{ url: string; uploading?: boolean; error?: string }[]>([]);
+  const [videos, setVideos] = useState<{ url: string; uploading?: boolean; progress?: number; error?: string }[]>([]);
   const [logoUploading, setLogoUploading] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
   const [instagram, setInstagram] = useState("");
   const [website, setWebsite] = useState("");
 
@@ -85,6 +116,7 @@ export default function PartnerBasvuruPage() {
   const [contactName, setContactName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [referralSource, setReferralSource] = useState("");
 
   const toggleCategory = (id: string) =>
     setSelectedCategories((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]);
@@ -145,6 +177,38 @@ export default function PartnerBasvuruPage() {
     setPhotoUploading(false);
   };
 
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    e.target.value = "";
+    setVideoUploading(true);
+    for (const file of files) {
+      const idx = videos.length;
+      setVideos((prev) => [...prev, { url: "", uploading: true, progress: 0 }]);
+      try {
+        const url = await uploadVideoDirect(file, "partners/videos", (pct) => {
+          setVideos((prev) => {
+            const next = [...prev];
+            if (next[idx]) next[idx] = { ...next[idx], progress: pct };
+            return next;
+          });
+        });
+        setVideos((prev) => {
+          const next = [...prev];
+          if (next[idx]) next[idx] = { url };
+          return next;
+        });
+      } catch (err) {
+        setVideos((prev) => {
+          const next = [...prev];
+          if (next[idx]) next[idx] = { url: "", error: err instanceof Error ? err.message : "Hata" };
+          return next;
+        });
+      }
+    }
+    setVideoUploading(false);
+  };
+
   const canProceed = () => {
     if (step === 0) return selectedCategories.length > 0;
     if (step === 1) return businessName.trim().length > 1 && description.trim().length > 10;
@@ -166,6 +230,7 @@ export default function PartnerBasvuruPage() {
       fd.set("event_types", JSON.stringify(selectedEventTypes));
       fd.set("logo_url", logo?.url ?? "");
       fd.set("photos", JSON.stringify(photos.filter((p) => p.url && !p.error).map((p) => p.url)));
+      fd.set("videos_json", JSON.stringify(videos.filter((v) => v.url && !v.error).map((v) => v.url)));
       fd.set("cover_cities", JSON.stringify(coverCities));
       fd.set("city", coverCities[0] ?? "");
       fd.set("instagram_url", instagram);
@@ -173,6 +238,7 @@ export default function PartnerBasvuruPage() {
       fd.set("contact_name", contactName);
       fd.set("email", email);
       fd.set("phone", phone);
+      fd.set("referral_source", referralSource);
 
       const res = await fetch("/api/basvuru/partner", { method: "POST", body: fd });
       const json = await res.json();
@@ -358,6 +424,46 @@ export default function PartnerBasvuruPage() {
                       </label>
                     </div>
 
+                    {/* Videos */}
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Tanıtım / Showreel Videosu</label>
+                      <p className="text-xs text-muted-foreground mb-3">Çalışmalarınızı gösteren video (maks. 500MB)</p>
+                      {videos.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                          {videos.map((v, i) => (
+                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-secondary/20">
+                              {v.uploading ? (
+                                <>
+                                  <div className="flex-1">
+                                    <div className="h-1.5 bg-border rounded-full overflow-hidden">
+                                      <div className="h-full bg-foreground transition-all duration-300 rounded-full" style={{ width: `${v.progress ?? 0}%` }} />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">{v.progress ?? 0}% yükleniyor…</p>
+                                  </div>
+                                </>
+                              ) : v.error ? (
+                                <p className="text-xs text-red-500 flex-1">{v.error}</p>
+                              ) : (
+                                <>
+                                  <svg className="text-foreground/40" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                  <span className="text-xs text-foreground flex-1 truncate">Video {i + 1}</span>
+                                  <button type="button" onClick={() => setVideos((prev) => prev.filter((_, j) => j !== i))} className="text-xs text-red-400 hover:text-red-600">Kaldır</button>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <label className="flex items-center gap-3 cursor-pointer border border-dashed border-border rounded-xl px-4 py-4 hover:border-foreground/40 transition-colors">
+                        <span className="text-2xl">🎬</span>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Video Yükle</p>
+                          <p className="text-xs text-muted-foreground">{videoUploading ? "Yükleniyor…" : "MP4, MOV — maks. 500MB"}</p>
+                        </div>
+                        <input type="file" accept="video/*" multiple className="sr-only" onChange={handleVideoUpload} disabled={videoUploading} />
+                      </label>
+                    </div>
+
                     {/* Social */}
                     <div className="space-y-3">
                       <label className="block text-xs font-medium text-foreground">Sosyal Medya & Web</label>
@@ -426,6 +532,18 @@ export default function PartnerBasvuruPage() {
                       <label className="block text-xs font-medium text-foreground mb-1.5">Telefon</label>
                       <input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+90 5XX XXX XX XX" type="tel" />
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-2">Bizi nasıl duydun?</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {["Instagram", "TikTok", "Google", "Arkadaş / Tanıdık", "Düğün fuarı / Etkinlik", "Diğer"].map((opt) => (
+                          <button key={opt} type="button" onClick={() => setReferralSource(opt)}
+                            className={`px-3 py-2.5 rounded-xl border text-sm text-left transition-all ${referralSource === opt ? "border-foreground bg-foreground/5 font-medium" : "border-border text-muted-foreground hover:border-foreground/40"}`}>
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="bg-[oklch(0.975_0.006_80)] rounded-xl p-4 space-y-2">
                       <p className="font-medium text-foreground text-xs uppercase tracking-wide mb-3">Başvuru Özeti</p>
                       {[
@@ -433,6 +551,7 @@ export default function PartnerBasvuruPage() {
                         ["Kategori", `${selectedCategories.length} seçim`],
                         ["Hizmet", `${services.length} adet`],
                         ["Fotoğraf", `${photos.filter((p) => p.url && !p.error).length} adet`],
+                        ["Video", `${videos.filter((v) => v.url && !v.error).length} adet`],
                         ["Şehir", coverCities.join(", ")],
                       ].map(([k, v]) => (
                         <div key={k} className="flex justify-between text-xs">
@@ -456,7 +575,7 @@ export default function PartnerBasvuruPage() {
                       Devam Et →
                     </button>
                   ) : (
-                    <button type="button" onClick={handleSubmit} disabled={loading || !canProceed() || photoUploading || logoUploading}
+                    <button type="button" onClick={handleSubmit} disabled={loading || !canProceed() || photoUploading || logoUploading || videoUploading}
                       className="bg-foreground text-background px-8 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">
                       {loading ? "Gönderiliyor…" : "Başvuruyu Gönder"}
                     </button>

@@ -20,7 +20,7 @@ export default async function Page({ searchParams }: Props) {
   const supabase = createServiceClient();
   let query = supabase
     .from("dj_profiles")
-    .select("id, name, bio, photo_url, photos, focal_points, concept_tags, soundcloud_url, mixcloud_url, youtube_url, instagram_url, spotify_url, website_url, performer_type, city, speciality")
+    .select("id, name, bio, photo_url, photos, focal_points, concept_tags, soundcloud_url, mixcloud_url, youtube_url, instagram_url, spotify_url, website_url, performer_type, city, speciality, preview_video_url, videos, youtube_links")
     .eq("is_active", true)
     .eq("application_status", "approved")
     .order("created_at", { ascending: true });

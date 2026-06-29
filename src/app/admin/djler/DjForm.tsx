@@ -48,6 +48,7 @@ type Dj = {
   instagram_url?: string;
   spotify_url?: string;
   website_url?: string;
+  presskit_url?: string;
   city?: string;
   cover_cities?: string[];
   speciality?: string;
@@ -60,6 +61,7 @@ type Dj = {
   is_active?: boolean;
   application_status?: string;
   preview_video_url?: string;
+  videos?: string[];
 };
 
 interface PhotoEntry {
@@ -134,9 +136,10 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   const [youtubeLinks, setYoutubeLinks] = useState<string[]>(
     dj?.youtube_links?.length ? dj.youtube_links : ["", "", ""]
   );
-  const [previewVideoUrl, setPreviewVideoUrl] = useState(dj?.preview_video_url ?? "");
+  const [videos, setVideos] = useState<{ url: string; uploading?: boolean; progress?: number; error?: string }[]>(
+    (dj?.videos ?? (dj?.preview_video_url ? [dj.preview_video_url] : [])).map((url: string) => ({ url }))
+  );
   const [videoUploading, setVideoUploading] = useState(false);
-  const [videoProgress, setVideoProgress] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -226,7 +229,9 @@ export default function DjForm({ dj }: { dj?: Dj }) {
       fpPayload[ph.url] = getFocalPoint(ph.url);
     });
     fd.set("focal_points_json", JSON.stringify(fpPayload));
-    fd.set("preview_video_url", previewVideoUrl);
+    const readyVideos = videos.filter((v) => v.url && !v.uploading && !v.error).map((v) => v.url);
+    fd.set("videos_json", JSON.stringify(readyVideos));
+    fd.set("preview_video_url", readyVideos[0] ?? "");
 
     setPending(true);
     setError(null);
@@ -427,38 +432,60 @@ export default function DjForm({ dj }: { dj?: Dj }) {
         </div>
       </div>
 
-      {/* Preview video */}
+      {/* Videos */}
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
         <div>
-          <h2 className="font-medium text-foreground">Tanıtım Videosu</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Sanatçı listesinde kart üzerine gelindiğinde sessizce oynar. Max 30 sn, .mp4 önerilir.</p>
+          <h2 className="font-medium text-foreground">Videolar</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Birden fazla video yükleyebilirsiniz. İlk video kart hover'ında oynar. Max 500MB, MP4 önerilir.</p>
         </div>
-        {previewVideoUrl ? (
-          <div className="space-y-2">
-            <video src={previewVideoUrl} className="w-full rounded-xl max-h-48 object-cover" muted controls />
-            <button type="button" onClick={() => setPreviewVideoUrl("")} className="text-xs text-red-500 hover:text-red-700">Videoyu Kaldır</button>
-          </div>
-        ) : (
+        <div className="space-y-3">
+          {videos.map((v, i) => (
+            <div key={i} className="relative rounded-xl overflow-hidden border border-border bg-secondary/20">
+              {v.uploading ? (
+                <div className="px-4 py-3">
+                  <p className="text-xs text-muted-foreground mb-1">Yükleniyor… %{v.progress ?? 0}</p>
+                  <div className="w-full bg-border rounded-full h-1 overflow-hidden">
+                    <div className="bg-foreground h-1 rounded-full transition-all" style={{ width: `${v.progress ?? 0}%` }} />
+                  </div>
+                </div>
+              ) : v.error ? (
+                <div className="px-4 py-3 flex items-center justify-between">
+                  <p className="text-xs text-red-500">{v.error}</p>
+                  <button type="button" onClick={() => setVideos((p) => p.filter((_, idx) => idx !== i))} className="text-xs text-muted-foreground hover:text-foreground">Kaldır</button>
+                </div>
+              ) : (
+                <>
+                  <video src={v.url} className="w-full max-h-40 object-cover" muted controls />
+                  <button type="button" onClick={() => setVideos((p) => p.filter((_, idx) => idx !== i))}
+                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/80">×</button>
+                  {i === 0 && <span className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full">Kart videosu</span>}
+                </>
+              )}
+            </div>
+          ))}
           <label className={`flex items-center gap-3 cursor-pointer border border-dashed border-border rounded-xl px-4 py-3 hover:border-foreground/40 transition-colors ${videoUploading ? "opacity-50 pointer-events-none" : ""}`}>
             <span className="text-xl">🎬</span>
-            <span className="text-sm text-muted-foreground">
-              {videoUploading ? `Yükleniyor… %${videoProgress}` : "Video yükle (.mp4 / .mov)"}
-            </span>
+            <span className="text-sm text-muted-foreground">{videoUploading ? "Yükleniyor…" : "+ Video Ekle"}</span>
             <input type="file" accept="video/mp4,video/quicktime,video/*" className="sr-only" disabled={videoUploading}
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 e.target.value = "";
+                const idx = videos.length;
+                setVideos((p) => [...p, { url: "", uploading: true, progress: 0 }]);
                 setVideoUploading(true);
-                setVideoProgress(0);
                 try {
-                  const url = await uploadFileDirect(file, "artists/videos", setVideoProgress);
-                  setPreviewVideoUrl(url);
-                } catch { setError("Video yüklenemedi"); }
-                finally { setVideoUploading(false); setVideoProgress(0); }
+                  const url = await uploadFileDirect(file, "artists/videos", (pct) => {
+                    setVideos((p) => p.map((v, i) => i === idx ? { ...v, progress: pct } : v));
+                  });
+                  setVideos((p) => p.map((v, i) => i === idx ? { url } : v));
+                } catch (err) {
+                  setVideos((p) => p.map((v, i) => i === idx ? { url: "", error: err instanceof Error ? err.message : "Hata" } : v));
+                  setError("Video yüklenemedi: " + (err instanceof Error ? err.message : String(err)));
+                } finally { setVideoUploading(false); }
               }} />
           </label>
-        )}
+        </div>
       </div>
 
       {/* Links */}
@@ -471,6 +498,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
           { name: "instagram_url", label: "Instagram", placeholder: "https://instagram.com/…" },
           { name: "spotify_url", label: "Spotify", placeholder: "https://open.spotify.com/…" },
           { name: "website_url", label: "Website", placeholder: "https://…" },
+          { name: "presskit_url", label: "Press Kit (EPK)", placeholder: "https://… (PDF veya link)" },
         ].map((field) => (
           <div key={field.name}>
             <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">{field.label}</label>

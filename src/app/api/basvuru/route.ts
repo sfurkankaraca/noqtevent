@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
 
     const performer_type = VALID_PERFORMER_TYPES.includes(performer_type_raw) ? performer_type_raw : "dj";
     const photos = parseJsonArray(fd.get("photos"), 10);
+    const videos = parseJsonArray(fd.get("videos_json"), 20);
     const youtube_links = parseJsonArray(fd.get("youtube_links"), 10);
     const event_types = parseJsonArray(fd.get("event_types"), 20);
     const cover_cities = parseJsonArray(fd.get("cover_cities"), 20);
@@ -63,6 +64,9 @@ export async function POST(req: NextRequest) {
       youtube_links,
       photos,
       photo_url: photos[0] ?? null,
+      videos,
+      preview_video_url: videos[0] ?? null,
+      referral_source: ((fd.get("referral_source") as string | null) || null)?.slice(0, 100) ?? null,
       application_status: "pending",
       is_active: false,
       concept_tags: [],

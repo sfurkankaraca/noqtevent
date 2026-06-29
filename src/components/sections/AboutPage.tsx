@@ -67,9 +67,9 @@ export default function AboutPage() {
                 Müzik, atmosfer ve insan enerjisini bir araya getiriyoruz.
               </p>
               <p className="text-muted-foreground mt-4 leading-relaxed">
-                2012 yılında İstanbul'da kurulan NOQT, 500'ü aşkın etkinlikte
-                edindiği deneyimle bugün Türkiye'nin önde gelen deneyim
-                stüdyolarından biri haline geldi.
+                2025 yılında kurulan NOQT, ilk yılında 35 etkinliği başarıyla
+                tamamladı. Her etkinlikte biriktirdiğimiz deneyimle büyüyor,
+                her müşteriyle daha iyi hale geliyoruz.
               </p>
             </motion.div>
           </div>
@@ -135,8 +135,8 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { value: "500+", label: "Gerçekleştirilen Etkinlik" },
-              { value: "12", label: "Yıllık Deneyim" },
+              { value: "35", label: "Gerçekleştirilen Etkinlik" },
+              { value: "2025", label: "Kuruluş Yılı" },
               { value: "50+", label: "Seçilmiş Partner" },
               { value: "98%", label: "Müşteri Memnuniyeti" },
             ].map((stat) => (
