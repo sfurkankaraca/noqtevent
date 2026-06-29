@@ -126,8 +126,10 @@ function VideoThumb({ url, isYoutube, youtubeId }: { url: string; isYoutube?: bo
       <video
         ref={setVideoRef}
         src={url}
+        autoPlay
         playsInline
         loop
+        preload="metadata"
         className="w-full h-full object-cover"
       />
       {/* Transparent overlay — captures all taps to toggle mute, prevents Link navigation */}
@@ -258,6 +260,22 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
 
         {/* Info */}
         <div className="px-4 py-3.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Avatar */}
+            <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-secondary relative">
+              {allPhotos[0] ? (
+                <Image
+                  src={allPhotos[0]}
+                  alt={dj.name}
+                  fill
+                  className="object-cover"
+                  style={{ objectPosition: `${(dj.focal_points?.[allPhotos[0]] ?? { x: 50, y: 50 }).x}% ${(dj.focal_points?.[allPhotos[0]] ?? { x: 50, y: 50 }).y}%` }}
+                  sizes="40px"
+                />
+              ) : (
+                <span className="w-full h-full flex items-center justify-center text-sm font-medium text-foreground/40">{initials}</span>
+              )}
+            </div>
           <div className="min-w-0">
             <p className="font-semibold text-foreground text-base truncate">{dj.name}</p>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -267,6 +285,7 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
                 dj.speciality ?? null,
               ].filter(Boolean).join(" · ")}
             </p>
+          </div>
           </div>
           <div className="flex gap-1.5 flex-shrink-0">
             {links.slice(0, 3).map((l) => (
