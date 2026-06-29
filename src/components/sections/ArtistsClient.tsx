@@ -46,20 +46,27 @@ function getYouTubeId(url: string): string | null {
 // ─── Video thumbnail + inline play ───────────────────────────────────────────
 function VideoThumb({ url, isYoutube, youtubeId }: { url: string; isYoutube?: boolean; youtubeId?: string }) {
   const [ytPlaying, setYtPlaying] = useState(false);
+  // null = not yet detected, true = desktop (hover+pointer), false = mobile/touch
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
+  const [desktopPlaying, setDesktopPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
-  // Callback ref: set muted=true on the DOM element immediately at creation
-  // (React's `muted` prop is a known bug — it doesn't reflect to DOM, blocking Chrome autoplay)
+  // Detect desktop vs mobile after mount
+  useEffect(() => {
+    setIsDesktop(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+  }, []);
+
+  // Mobile: callback ref sets muted immediately (React muted prop bug workaround)
   const setVideoRef = (el: HTMLVideoElement | null) => {
     videoRef.current = el;
     if (el) el.muted = true;
   };
 
-  // Autoplay when scrolled into view, pause when leaving
+  // Mobile only: autoplay on scroll via IntersectionObserver
   useEffect(() => {
-    if (isYoutube) return;
+    if (isDesktop !== false || isYoutube) return;
     const wrap = wrapRef.current;
     if (!wrap) return;
     const obs = new IntersectionObserver(
@@ -78,8 +85,9 @@ function VideoThumb({ url, isYoutube, youtubeId }: { url: string; isYoutube?: bo
     );
     obs.observe(wrap);
     return () => obs.disconnect();
-  }, [isYoutube]);
+  }, [isDesktop, isYoutube]);
 
+  // ── YouTube (same on all devices) ──────────────────────────────────────────
   if (isYoutube && youtubeId) {
     return (
       <div
@@ -117,6 +125,44 @@ function VideoThumb({ url, isYoutube, youtubeId }: { url: string; isYoutube?: bo
     );
   }
 
+  // ── Desktop: click-to-play with native controls ────────────────────────────
+  if (isDesktop) {
+    return (
+      <div
+        className="w-full aspect-video bg-black relative overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {desktopPlaying ? (
+          <video
+            src={url}
+            controls
+            autoPlay
+            playsInline
+            className="w-full h-full object-cover"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <button
+            className="w-full h-full relative flex items-center justify-center group/play"
+            onClick={(e) => { e.stopPropagation(); setDesktopPlaying(true); }}
+          >
+            <video
+              src={url}
+              preload="metadata"
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+              tabIndex={-1}
+            />
+            <span className="relative z-10 w-14 h-14 bg-black/60 group-hover/play:bg-black/80 backdrop-blur-sm transition-colors rounded-full flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Mobile: muted autoplay on scroll ──────────────────────────────────────
   return (
     <div
       ref={wrapRef}
@@ -132,7 +178,7 @@ function VideoThumb({ url, isYoutube, youtubeId }: { url: string; isYoutube?: bo
         preload="metadata"
         className="w-full h-full object-cover"
       />
-      {/* Transparent overlay — captures all taps to toggle mute, prevents Link navigation */}
+      {/* Tap overlay: toggle mute */}
       <div
         className="absolute inset-0 z-10 cursor-pointer"
         onClick={(e) => {
