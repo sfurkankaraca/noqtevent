@@ -53,22 +53,25 @@ function proxyVideo(url: string): string {
 function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYoutube?: boolean; youtubeId?: string }) {
   const url = proxyVideo(rawUrl);
   const [ytPlaying, setYtPlaying] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [desktopPlaying, setDesktopPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  // Tracks whether user explicitly unmuted — prevents IntersectionObserver from re-muting
-  const userUnmutedRef = useRef(false);
 
+  useEffect(() => {
+    setIsDesktop(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+  }, []);
+
+  // Callback ref: set muted immediately (React muted prop bug workaround)
   const setVideoRef = (el: HTMLVideoElement | null) => {
     videoRef.current = el;
     if (el) el.muted = true;
   };
 
-  // Mobile: autoplay muted on scroll, pause when out of view
+  // Mobile only: autoplay on scroll
   useEffect(() => {
-    if (isYoutube) return;
-    const isMobile = window.matchMedia("(hover: none)").matches;
-    if (!isMobile) return;
+    if (isDesktop || isYoutube) return;
     const wrap = wrapRef.current;
     if (!wrap) return;
     const obs = new IntersectionObserver(
@@ -76,11 +79,8 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
         const video = videoRef.current;
         if (!video) return;
         if (entry.isIntersecting) {
-          // Only force-mute if user hasn't explicitly unmuted
-          if (!userUnmutedRef.current) {
-            video.muted = true;
-            setMuted(true);
-          }
+          video.muted = true;
+          setMuted(true);
           video.play().catch(() => {});
         } else {
           video.pause();
@@ -90,7 +90,7 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
     );
     obs.observe(wrap);
     return () => obs.disconnect();
-  }, [isYoutube]);
+  }, [isDesktop, isYoutube]);
 
   // ── YouTube ────────────────────────────────────────────────────────────────
   if (isYoutube && youtubeId) {
@@ -113,9 +113,27 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
     );
   }
 
-  // ── Uploaded video: native controls always visible ─────────────────────────
-  // Desktop: user clicks play in native controls
-  // Mobile: IntersectionObserver autoplays muted; mute button shown
+  // ── Desktop: click to play ─────────────────────────────────────────────────
+  if (isDesktop) {
+    return (
+      <div className="w-full aspect-video bg-zinc-900 relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {desktopPlaying ? (
+          <video src={url} controls autoPlay playsInline className="w-full h-full object-cover" onClick={(e) => e.stopPropagation()} />
+        ) : (
+          <button
+            className="w-full h-full flex items-center justify-center group/play"
+            onClick={(e) => { e.stopPropagation(); setDesktopPlaying(true); }}
+          >
+            <span className="w-14 h-14 bg-white/15 group-hover/play:bg-white/25 transition-colors rounded-full flex items-center justify-center border border-white/30">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Mobile: muted autoplay on scroll ──────────────────────────────────────
   return (
     <div
       ref={wrapRef}
@@ -124,26 +142,20 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
     >
       <video
         ref={setVideoRef}
-        src={`${url}#t=0.001`}
-        controls
+        src={url}
         playsInline
         loop
-        preload="auto"
+        preload="metadata"
         className="w-full h-full object-cover"
-        onClick={(e) => e.stopPropagation()}
       />
-      {/* Mobile mute button — floats over native controls area */}
       <button
-        className="absolute top-2 right-2 z-20 bg-black/60 backdrop-blur-sm rounded-full p-1.5 flex items-center justify-center md:hidden"
+        className="absolute bottom-2 right-2 z-20 bg-black/60 backdrop-blur-sm rounded-full p-1.5 flex items-center justify-center"
         onClick={(e) => {
           e.stopPropagation();
           const v = videoRef.current;
           if (!v) return;
-          const next = !v.muted; // use DOM property, not React state (avoids desync)
-          v.muted = next;
-          userUnmutedRef.current = !next; // true = user wants sound on
-          if (!next) v.play().catch(() => {});
-          setMuted(next);
+          v.muted = !v.muted;
+          setMuted(v.muted);
         }}
       >
         {muted ? (
