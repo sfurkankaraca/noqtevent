@@ -56,6 +56,7 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
   const [isDesktop, setIsDesktop] = useState(false);
   const [desktopPlaying, setDesktopPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [buffering, setBuffering] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   // Tracks whether user explicitly unmuted — prevents IntersectionObserver from re-muting
@@ -71,12 +72,27 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
     if (el) el.muted = true;
   };
 
-  // Mobile only: autoplay on scroll
+  // Mobile only: autoplay on scroll; preload when nearby
   useEffect(() => {
     if (isDesktop || isYoutube) return;
     const wrap = wrapRef.current;
     if (!wrap) return;
-    const obs = new IntersectionObserver(
+
+    // Start buffering early — when video is within 400px of viewport
+    const preloadObs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          const video = videoRef.current;
+          if (video && video.preload !== "auto") video.preload = "auto";
+          preloadObs.disconnect();
+        }
+      },
+      { rootMargin: "400px" }
+    );
+    preloadObs.observe(wrap);
+
+    // Play/pause when in view
+    const playObs = new IntersectionObserver(
       ([entry]) => {
         const video = videoRef.current;
         if (!video) return;
@@ -93,8 +109,8 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
       },
       { threshold: 0.5 }
     );
-    obs.observe(wrap);
-    return () => obs.disconnect();
+    playObs.observe(wrap);
+    return () => { preloadObs.disconnect(); playObs.disconnect(); };
   }, [isDesktop, isYoutube]);
 
   // ── YouTube ────────────────────────────────────────────────────────────────
@@ -150,9 +166,16 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
         src={`${rawUrl}#t=0.001`}
         playsInline
         loop
-        preload="metadata"
+        preload="none"
         className="w-full h-full object-cover"
+        onCanPlay={() => setBuffering(false)}
+        onWaiting={() => setBuffering(true)}
       />
+      {buffering && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-8 h-8 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+        </div>
+      )}
       <button
         className="absolute bottom-2 right-2 z-20 bg-black/60 backdrop-blur-sm rounded-full p-1.5 flex items-center justify-center"
         onClick={(e) => {
