@@ -54,21 +54,21 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
   const url = proxyVideo(rawUrl);
   const [ytPlaying, setYtPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
-  const isTouchRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  // Tracks whether user explicitly unmuted — prevents IntersectionObserver from re-muting
+  const userUnmutedRef = useRef(false);
 
-  // Callback ref: set muted=true immediately (React muted prop bug workaround)
   const setVideoRef = (el: HTMLVideoElement | null) => {
     videoRef.current = el;
     if (el) el.muted = true;
   };
 
-  // On touch devices: autoplay muted on scroll via IntersectionObserver
+  // Mobile: autoplay muted on scroll, pause when out of view
   useEffect(() => {
     if (isYoutube) return;
-    isTouchRef.current = window.matchMedia("(hover: none)").matches;
-    if (!isTouchRef.current) return;
+    const isMobile = window.matchMedia("(hover: none)").matches;
+    if (!isMobile) return;
     const wrap = wrapRef.current;
     if (!wrap) return;
     const obs = new IntersectionObserver(
@@ -76,8 +76,11 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
         const video = videoRef.current;
         if (!video) return;
         if (entry.isIntersecting) {
-          video.muted = true;
-          setMuted(true);
+          // Only force-mute if user hasn't explicitly unmuted
+          if (!userUnmutedRef.current) {
+            video.muted = true;
+            setMuted(true);
+          }
           video.play().catch(() => {});
         } else {
           video.pause();
@@ -136,8 +139,9 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
           e.stopPropagation();
           const v = videoRef.current;
           if (!v) return;
-          const next = !muted;
+          const next = !v.muted; // use DOM property, not React state (avoids desync)
           v.muted = next;
+          userUnmutedRef.current = !next; // true = user wants sound on
           if (!next) v.play().catch(() => {});
           setMuted(next);
         }}
