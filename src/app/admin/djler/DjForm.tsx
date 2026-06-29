@@ -455,10 +455,15 @@ export default function DjForm({ dj }: { dj?: Dj }) {
                 </div>
               ) : (
                 <>
-                  <video src={v.url} className="w-full max-h-40 object-cover" muted controls />
-                  <button type="button" onClick={() => setVideos((p) => p.filter((_, idx) => idx !== i))}
-                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/80">×</button>
-                  {i === 0 && <span className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full">Kart videosu</span>}
+                  <video src={v.url} className="w-full max-h-48 object-cover bg-black" muted controls preload="metadata" />
+                  <div className="px-3 py-1.5 flex items-center justify-between gap-2 bg-secondary/30">
+                    <span className="text-[11px] text-muted-foreground truncate max-w-[80%]" title={v.url}>
+                      {i === 0 && <span className="mr-1.5 bg-foreground text-background text-[10px] px-1.5 py-0.5 rounded-full">Ana</span>}
+                      {decodeURIComponent(v.url.split("/").pop() ?? v.url).slice(0, 60)}
+                    </span>
+                    <button type="button" onClick={() => setVideos((p) => p.filter((_, idx) => idx !== i))}
+                      className="text-xs text-red-500 hover:text-red-600 flex-shrink-0">Kaldır</button>
+                  </div>
                 </>
               )}
             </div>
