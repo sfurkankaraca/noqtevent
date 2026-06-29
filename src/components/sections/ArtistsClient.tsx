@@ -156,7 +156,6 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
           if (!v) return;
           const next = !muted;
           v.muted = next;
-          if (!next) v.play().catch(() => {});
           setMuted(next);
         }}
       >
