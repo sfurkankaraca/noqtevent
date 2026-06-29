@@ -455,7 +455,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
                 </div>
               ) : (
                 <>
-                  <video src={v.url} className="w-full max-h-48 object-cover bg-black" muted controls preload="metadata" />
+                  <video src={`${v.url}#t=0.001`} className="w-full max-h-48 object-cover bg-black" muted controls preload="auto" />
                   <div className="px-3 py-1.5 flex items-center justify-between gap-2 bg-secondary/30">
                     <span className="text-[11px] text-muted-foreground truncate max-w-[80%]" title={v.url}>
                       {i === 0 && <span className="mr-1.5 bg-foreground text-background text-[10px] px-1.5 py-0.5 rounded-full">Ana</span>}
