@@ -54,6 +54,7 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
   const url = proxyVideo(rawUrl);
   const [ytPlaying, setYtPlaying] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [desktopPlaying, setDesktopPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -62,15 +63,15 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
     setIsDesktop(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
   }, []);
 
-  // Callback ref: set muted on DOM element immediately (React muted prop bug)
+  // Callback ref: set muted immediately (React muted prop bug workaround)
   const setVideoRef = (el: HTMLVideoElement | null) => {
     videoRef.current = el;
     if (el) el.muted = true;
   };
 
-  // IntersectionObserver: autoplay muted when in view, pause when leaving — ALL devices
+  // Mobile only: autoplay on scroll
   useEffect(() => {
-    if (isYoutube) return;
+    if (isDesktop || isYoutube) return;
     const wrap = wrapRef.current;
     if (!wrap) return;
     const obs = new IntersectionObserver(
@@ -89,7 +90,7 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
     );
     obs.observe(wrap);
     return () => obs.disconnect();
-  }, [isYoutube]);
+  }, [isDesktop, isYoutube]);
 
   // ── YouTube ────────────────────────────────────────────────────────────────
   if (isYoutube && youtubeId) {
@@ -112,9 +113,27 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
     );
   }
 
-  // ── Uploaded video — same element for all devices ─────────────────────────
-  // Desktop: shows native controls (volume, seek, fullscreen)
-  // Mobile: no controls, custom mute button
+  // ── Desktop: click to play ─────────────────────────────────────────────────
+  if (isDesktop) {
+    return (
+      <div className="w-full aspect-video bg-zinc-900 relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {desktopPlaying ? (
+          <video src={url} controls autoPlay playsInline className="w-full h-full object-cover" onClick={(e) => e.stopPropagation()} />
+        ) : (
+          <button
+            className="w-full h-full flex items-center justify-center group/play"
+            onClick={(e) => { e.stopPropagation(); setDesktopPlaying(true); }}
+          >
+            <span className="w-14 h-14 bg-white/15 group-hover/play:bg-white/25 transition-colors rounded-full flex items-center justify-center border border-white/30">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Mobile: muted autoplay on scroll ──────────────────────────────────────
   return (
     <div
       ref={wrapRef}
@@ -127,35 +146,30 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
         playsInline
         loop
         preload="metadata"
-        controls={isDesktop}
         className="w-full h-full object-cover"
-        onClick={(e) => e.stopPropagation()}
       />
-      {/* Mobile-only mute button */}
-      {!isDesktop && (
-        <button
-          className="absolute bottom-2 right-2 z-20 bg-black/60 backdrop-blur-sm rounded-full p-1.5 flex items-center justify-center"
-          onClick={(e) => {
-            e.stopPropagation();
-            const v = videoRef.current;
-            if (!v) return;
-            v.muted = !v.muted;
-            setMuted(v.muted);
-          }}
-        >
-          {muted ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-            </svg>
-          )}
-        </button>
-      )}
+      <button
+        className="absolute bottom-2 right-2 z-20 bg-black/60 backdrop-blur-sm rounded-full p-1.5 flex items-center justify-center"
+        onClick={(e) => {
+          e.stopPropagation();
+          const v = videoRef.current;
+          if (!v) return;
+          v.muted = !v.muted;
+          setMuted(v.muted);
+        }}
+      >
+        {muted ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+        )}
+      </button>
     </div>
   );
 }
