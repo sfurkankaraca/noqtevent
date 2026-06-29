@@ -129,16 +129,21 @@ function VideoThumb({ url, isYoutube, youtubeId }: { url: string; isYoutube?: bo
         playsInline
         loop
         className="w-full h-full object-cover"
+      />
+      {/* Transparent overlay — captures all taps to toggle mute, prevents Link navigation */}
+      <div
+        className="absolute inset-0 z-10 cursor-pointer"
         onClick={(e) => {
           e.stopPropagation();
-          const v = e.currentTarget;
+          const v = videoRef.current;
+          if (!v) return;
           const next = !v.muted;
           v.muted = next;
           setMuted(next);
         }}
       />
-      {/* Mute indicator — tap to toggle */}
-      <div className="absolute bottom-2 right-2 pointer-events-none">
+      {/* Mute indicator */}
+      <div className="absolute bottom-2 right-2 z-20 pointer-events-none">
         <span className="bg-black/60 backdrop-blur-sm rounded-full p-1.5 flex items-center justify-center">
           {muted ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
