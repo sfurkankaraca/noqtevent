@@ -142,10 +142,11 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
     >
       <video
         ref={setVideoRef}
-        src={url}
+        src={`${url}#t=0.001`}
+        autoPlay
         playsInline
         loop
-        preload="metadata"
+        preload="auto"
         className="w-full h-full object-cover"
       />
       <button
@@ -154,8 +155,10 @@ function VideoThumb({ url: rawUrl, isYoutube, youtubeId }: { url: string; isYout
           e.stopPropagation();
           const v = videoRef.current;
           if (!v) return;
-          v.muted = !v.muted;
-          setMuted(v.muted);
+          const next = !muted;
+          v.muted = next;
+          if (!next) v.play().catch(() => {});
+          setMuted(next);
         }}
       >
         {muted ? (
