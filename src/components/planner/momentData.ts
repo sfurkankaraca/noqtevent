@@ -979,5 +979,7 @@ export function getSongsForMoment(
 }
 
 export function getMomentsForEventType(eventType: string): EventMoment[] {
+  // Nişan, düğüne en yakın anları kullanır (kendi tanımı yoksa)
+  if (eventType === "engagement") return EVENT_MOMENTS.wedding ?? [];
   return EVENT_MOMENTS[eventType] ?? [];
 }

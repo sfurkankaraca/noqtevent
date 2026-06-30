@@ -105,7 +105,8 @@ export function getEventFlow(
   eventType: string,
   selectedConceptIds: string[]
 ): EventFlow {
-  const baseFlow = FLOWS[eventType] ?? DEFAULT_FLOW;
+  // Nişan, düğüne en yakın akış — kendi tanımı yoksa düğün akışını kullan
+  const baseFlow = FLOWS[eventType] ?? (eventType === "engagement" ? FLOWS.wedding : DEFAULT_FLOW);
 
   if (selectedConceptIds.length === 0) return baseFlow;
 

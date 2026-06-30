@@ -94,6 +94,7 @@ export const initialData: PlannerData = {
 
 export const EVENT_TYPES = [
   { id: "wedding", label: "Düğün", emoji: "💍", price: "15.000–50.000" },
+  { id: "engagement", label: "Nişan", emoji: "💐", price: "10.000–30.000" },
   { id: "kina-gecesi", label: "Kına Gecesi", emoji: "🔥", price: "10.000–30.000" },
   { id: "corporate", label: "Kurumsal Etkinlik", emoji: "🏢", price: "7.500–20.000" },
   { id: "opening", label: "Açılış Etkinliği", emoji: "🎊", price: "10.000–20.000" },

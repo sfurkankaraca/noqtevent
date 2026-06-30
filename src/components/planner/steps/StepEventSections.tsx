@@ -18,6 +18,7 @@ type Props = {
 function fitScore(c: MusicConcept, eventType: string): number {
   const base =
     eventType === "wedding" ? c.weddingFit :
+    eventType === "engagement" ? c.weddingFit :
     eventType === "corporate" ? c.corporateFit :
     eventType === "cocktail" ? c.cocktailFit :
     eventType === "after-party" ? c.afterPartyFit :
