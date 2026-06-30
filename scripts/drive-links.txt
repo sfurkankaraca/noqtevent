@@ -1,0 +1,12 @@
+# Google Drive video linkleri — satır başına bir link.
+# Opsiyonel: "| not" ekleyebilirsin (örn. hangi sanatçı olduğu) — çıktıda görünür.
+# # ile başlayan satırlar ve boş satırlar yok sayılır.
+#
+# Örnek:
+# https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view?usp=sharing | DJ Mert
+# https://drive.google.com/file/d/2XyZ.../view | DJ Selin
+#
+# Çalıştırma:
+#   node scripts/import-drive-videos.mjs --auth      (ilk sefer, Drive izni)
+#   node scripts/import-drive-videos.mjs             (aktarım)
+#   node scripts/import-drive-videos.mjs --dry-run   (sadece linkleri kontrol et)

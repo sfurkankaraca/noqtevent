@@ -136,6 +136,10 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   const [youtubeLinks, setYoutubeLinks] = useState<string[]>(
     dj?.youtube_links?.length ? dj.youtube_links : ["", "", ""]
   );
+  const [driveUrl, setDriveUrl] = useState("");
+  const [driveTitle, setDriveTitle] = useState("");
+  const [driveUploading, setDriveUploading] = useState(false);
+  const [driveError, setDriveError] = useState<string | null>(null);
   const [videos, setVideos] = useState<{ url: string; uploading?: boolean; progress?: number; error?: string }[]>(
     (dj?.videos ?? (dj?.preview_video_url ? [dj.preview_video_url] : [])).map((url: string) => ({ url }))
   );
@@ -550,6 +554,63 @@ export default function DjForm({ dj }: { dj?: Dj }) {
           <h2 className="font-medium text-foreground">Performans Videoları (YouTube)</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Canlı performans veya mix video linkleri</p>
         </div>
+
+        {/* Drive → YouTube yükleme */}
+        <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Drive'dan YouTube'a Yükle</p>
+          <input
+            type="url"
+            value={driveUrl}
+            onChange={(e) => { setDriveUrl(e.target.value); setDriveError(null); }}
+            placeholder="https://drive.google.com/file/d/… linki yapıştır"
+            className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={driveTitle}
+              onChange={(e) => setDriveTitle(e.target.value)}
+              placeholder="Video başlığı (opsiyonel)"
+              className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+            <button
+              type="button"
+              disabled={!driveUrl.trim() || driveUploading}
+              onClick={async () => {
+                setDriveUploading(true);
+                setDriveError(null);
+                try {
+                  const res = await fetch("/api/admin/drive-to-youtube", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ driveUrl: driveUrl.trim(), title: driveTitle.trim() || undefined }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error ?? "Yükleme başarısız");
+                  setYoutubeLinks((prev) => [...prev.filter(Boolean), data.youtubeUrl]);
+                  setDriveUrl("");
+                  setDriveTitle("");
+                } catch (err) {
+                  setDriveError(err instanceof Error ? err.message : "Hata oluştu");
+                } finally {
+                  setDriveUploading(false);
+                }
+              }}
+              className="px-4 py-2.5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 flex-shrink-0"
+            >
+              {driveUploading ? "Yükleniyor…" : "YouTube'a Yükle"}
+            </button>
+          </div>
+          {driveUploading && (
+            <p className="text-xs text-muted-foreground animate-pulse">
+              Drive'dan indirip YouTube'a yükleniyor, video boyutuna göre 1-5 dakika sürebilir…
+            </p>
+          )}
+          {driveError && (
+            <p className="text-xs text-red-500">{driveError}</p>
+          )}
+        </div>
+
         <div className="space-y-2">
           {youtubeLinks.map((link, i) => (
             <div key={i} className="flex items-center gap-2">

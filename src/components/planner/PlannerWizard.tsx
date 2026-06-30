@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/analytics";
 import {
   initialData,
+  EVENT_TYPES,
   type PlannerData,
 } from "./PlannerStore";
 import Step1EventType from "./steps/Step1EventType";
@@ -155,6 +156,26 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
           transition={{ duration: 0.4, ease: "easeInOut" }}
         />
       </div>
+
+      {/* DJ price banner — shown when an event type is selected */}
+      {data.eventType && (() => {
+        const et = EVENT_TYPES.find((t) => t.id === data.eventType);
+        if (!et?.price) return null;
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="fixed top-1 left-0 right-0 z-40 flex justify-center pointer-events-none"
+          >
+            <div className="bg-foreground/90 backdrop-blur-sm text-background text-xs px-4 py-1.5 rounded-full flex items-center gap-2 pointer-events-auto">
+              <span className="opacity-60">DJ hizmeti tahmini:</span>
+              <span className="font-semibold tabular-nums">{et.price} ₺</span>
+              <span className="opacity-40">·</span>
+              <span className="opacity-60">Ek hizmetler ayrıca teklif edilir</span>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* Header */}
       <div className="pt-8 pb-6 px-6 lg:px-8 flex items-center justify-between max-w-3xl mx-auto w-full">
