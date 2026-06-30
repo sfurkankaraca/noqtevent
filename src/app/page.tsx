@@ -2,11 +2,7 @@ import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
 import FeaturedExperiences from "@/components/home/FeaturedExperiences";
-import HowItWorks from "@/components/home/HowItWorks";
-import Artists from "@/components/home/Artists";
-import Testimonials from "@/components/home/Testimonials";
-import PartnerEcosystem from "@/components/home/PartnerEcosystem";
-import HomeCTA from "@/components/home/HomeCTA";
+import HomeBelowFold from "@/components/home/HomeBelowFold";
 import { createServiceClient } from "@/lib/supabase";
 
 export default async function Home() {
@@ -143,11 +139,12 @@ export default async function Home() {
       <main>
         <Hero heroImages={heroImages} />
         <FeaturedExperiences concepts={concepts ?? []} />
-        <HowItWorks />
-        <Testimonials testimonials={testimonials} />
-        <Artists djs={djs ?? []} />
-        <PartnerEcosystem categories={categories} logos={partnerLogos} />
-        <HomeCTA />
+        <HomeBelowFold
+          testimonials={testimonials}
+          djs={djs ?? []}
+          categories={categories}
+          logos={partnerLogos}
+        />
       </main>
       <Footer />
     </>
