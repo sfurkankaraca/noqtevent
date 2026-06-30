@@ -361,10 +361,26 @@ export async function sendArtistBookingNotification(data: {
   artistName: string;
   eventType: string;
   eventDate?: string;
+  country?: string;
   city?: string;
   venueName?: string;
+  venueSocial?: string;
+  isTicketed?: string;
+  ticketPrice?: string;
   venueCapacity?: string;
+  sponsors?: string;
+  performanceType?: string;
   setDuration?: string;
+  doorOpenTime?: string;
+  stageTime?: string;
+  curfew?: string;
+  openingDj?: string;
+  closingDj?: string;
+  otherPerformers?: string;
+  mixerModel?: string;
+  cdjModel?: string;
+  soundSystem?: string;
+  hasMonitor?: string;
   budget?: string;
   accommodation?: string;
   transfer?: string;
@@ -373,37 +389,85 @@ export async function sendArtistBookingNotification(data: {
   const resend = getResend();
   if (!resend) return;
 
-  const rows: [string, string][] = [
-    ["Ad Soyad", `${data.name} ${data.surname}`],
-    ...(data.company ? [["Şirket", data.company] as [string, string]] : []),
-    ["E-posta", `<a href="mailto:${data.email}">${data.email}</a>`],
-    ["Telefon", data.phone],
-    ["Sanatçı", `<strong>${data.artistName}</strong>`],
-    ["Etkinlik Türü", data.eventType],
-    ["Tarih", data.eventDate ?? "Belirtilmedi"],
-    ["Şehir", data.city || "—"],
-    ...(data.venueName ? [["Mekân", data.venueName] as [string, string]] : []),
-    ...(data.venueCapacity ? [["Kapasite", data.venueCapacity] as [string, string]] : []),
-    ["Set Süresi", data.setDuration || "—"],
-    ["Bütçe", data.budget || "—"],
-    ...(data.accommodation ? [["Konaklama", data.accommodation === "yes" ? "Dahil" : "Dahil Değil"] as [string, string]] : []),
-    ...(data.transfer ? [["Transfer", data.transfer === "yes" ? "Dahil" : "Dahil Değil"] as [string, string]] : []),
-    ...(data.specialRequests ? [["Özel Talepler", data.specialRequests] as [string, string]] : []),
-  ];
+  function row(label: string, value: string | undefined | null, html = false): string {
+    if (!value) return "";
+    const cell = html ? value : value;
+    return `<tr><td style="padding:6px 0;color:#666;width:38%;vertical-align:top;font-size:13px;">${label}</td><td style="padding:6px 0;font-weight:500;font-size:13px;">${cell}</td></tr>`;
+  }
+
+  function section(title: string, rows: string): string {
+    const content = rows.trim();
+    if (!content) return "";
+    return `
+      <tr><td colspan="2" style="padding-top:20px;padding-bottom:4px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:#aaa;font-weight:600;">${title}</div>
+      </td></tr>
+      ${content}
+    `;
+  }
+
+  const tableContent = [
+    section("İletişim", [
+      row("Ad Soyad", `${data.name} ${data.surname}`),
+      row("Şirket", data.company),
+      row("E-posta", `<a href="mailto:${data.email}" style="color:#1a1a1a;">${data.email}</a>`, true),
+      row("Telefon", data.phone),
+    ].join("")),
+
+    section("Etkinlik", [
+      row("Sanatçı", `<strong>${data.artistName}</strong>`, true),
+      row("Etkinlik Türü", data.eventType),
+      row("Tarih", data.eventDate ?? "Belirtilmedi"),
+      row("Ülke", data.country),
+      row("Şehir", data.city),
+      row("Mekân", data.venueName),
+      row("Mekân Web / Sosyal", data.venueSocial),
+      row("Biletli mi?", data.isTicketed === "yes" ? "Evet" : data.isTicketed === "no" ? "Hayır" : ""),
+      row("Bilet Fiyatı", data.ticketPrice),
+      row("Kapasite", data.venueCapacity),
+      row("Sponsorlar", data.sponsors),
+    ].join("")),
+
+    section("Performans", [
+      row("Performans Türü", data.performanceType),
+      row("Set Süresi", data.setDuration),
+      row("Kapı Açılış", data.doorOpenTime),
+      row("Sahne Saati", data.stageTime),
+      row("Bitiş / Curfew", data.curfew),
+      row("Ön DJ", data.openingDj),
+      row("Kapanış DJ'i", data.closingDj),
+      row("Diğer Sanatçılar", data.otherPerformers),
+    ].join("")),
+
+    section("Teknik", [
+      row("Mikser", data.mixerModel),
+      row("CDJ / Player", data.cdjModel),
+      row("Ses Sistemi", data.soundSystem),
+      row("Monitör", data.hasMonitor === "yes" ? "Mevcut" : data.hasMonitor === "no" ? "Yok" : ""),
+    ].join("")),
+
+    section("Bütçe & Lojistik", [
+      row("Bütçe", data.budget),
+      row("Konaklama", data.accommodation === "yes" ? "Dahil" : data.accommodation === "no" ? "Dahil Değil" : ""),
+      row("Transfer", data.transfer === "yes" ? "Dahil" : data.transfer === "no" ? "Dahil Değil" : ""),
+    ].join("")),
+
+    data.specialRequests ? section("Özel Talepler", row("", data.specialRequests)) : "",
+  ].join("");
 
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
-    subject: `🎤 Sanatçı Rezervasyon Talebi: ${data.artistName} — ${data.name} ${data.surname}`,
+    subject: `🎤 Sanatçı Rezervasyon: ${data.artistName} — ${data.name} ${data.surname}`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
-        <h1 style="font-size:24px;margin-bottom:8px;">Yeni Sanatçı Rezervasyon Talebi</h1>
-        <p style="color:#666;margin-top:0;">NOQT sanatçı rezervasyon formu üzerinden yeni bir ön değerlendirme talebi geldi.</p>
-        <hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0;" />
-        <table style="width:100%;border-collapse:collapse;font-size:14px;">
-          ${rows.map(([k, v]) => `<tr><td style="padding:8px 0;color:#666;width:40%;vertical-align:top;">${k}</td><td style="padding:8px 0;font-weight:500;">${v}</td></tr>`).join("")}
+        <h1 style="font-size:22px;margin-bottom:6px;">Yeni Sanatçı Rezervasyon Talebi</h1>
+        <p style="color:#666;margin-top:0;font-size:14px;">NOQT sanatçı rezervasyon formu üzerinden yeni bir ön değerlendirme talebi geldi.</p>
+        <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;" />
+        <table style="width:100%;border-collapse:collapse;">
+          ${tableContent}
         </table>
-        <div style="margin-top:32px;">
+        <div style="margin-top:28px;">
           <a href="${process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events"}/admin/inquiries"
              style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">
             Admin'de Görüntüle →
