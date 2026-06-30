@@ -86,6 +86,14 @@ const localBusinessSchema = {
   logo: `${BASE_URL}/noqt-logo-transparent.png`,
   email: "booking@noqt.events",
   telephone: "+905447335514",
+  // Fiyat seviyesi göstergesi (₺ az – ₺₺₺ üst segment). Gerçek konumlamaya göre ayarla.
+  priceRange: "₺₺-₺₺₺",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Kayseri",
+    addressRegion: "Kayseri",
+    addressCountry: "TR",
+  },
   areaServed: [
     { "@type": "City", name: "Kayseri" },
     { "@type": "City", name: "Nevşehir" },
@@ -102,7 +110,11 @@ const localBusinessSchema = {
     "After Party",
     "Morning Party",
   ],
-  sameAs: ["https://www.noqt.events"],
+  sameAs: [
+    "https://www.instagram.com/noqtevents",
+    "https://www.youtube.com/@noqtclubradio",
+    "https://open.spotify.com/user/31jte7ldctopxvipofwgucvts5sm",
+  ],
 };
 
 export default function RootLayout({

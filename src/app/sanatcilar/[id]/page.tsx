@@ -57,8 +57,35 @@ export default async function DjDetailPage({ params }: Props) {
 
   const focalPoints: Record<string, { x: number; y: number }> = dj.focal_points ?? {};
 
+  // Person schema — sanatçının sosyal profillerini Google'a bağlar (knowledge/rich sonuç adayı)
+  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const sameAs = [
+    dj.instagram_url,
+    dj.spotify_url,
+    dj.soundcloud_url,
+    dj.mixcloud_url,
+    dj.youtube_url,
+    dj.website_url,
+  ].filter((url): url is string => Boolean(url));
+
+  const personSchema = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: dj.name,
+    ...(dj.bio ? { description: dj.bio } : {}),
+    ...(photos[0] ? { image: photos[0] } : {}),
+    jobTitle: dj.performer_type || dj.speciality || "DJ / Sanatçı",
+    url: `${BASE}/sanatcilar/${id}`,
+    worksFor: { "@type": "Organization", name: "NOQT", url: BASE },
+    ...(sameAs.length > 0 ? { sameAs } : {}),
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
+      />
       <Navigation />
       <main className="pt-20">
         <div className="max-w-5xl mx-auto px-6 lg:px-8 py-16 lg:py-24">
