@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
+import { EVENT_TYPE_LABELS as EVENT_LABELS } from "@/lib/eventTypeLabels";
 
 const STATUS_STYLES: Record<string, string> = {
   new: "bg-blue-50 text-blue-700 border-blue-200",
@@ -17,18 +18,6 @@ export default async function InquiriesPage() {
     .from("inquiries")
     .select("*")
     .order("created_at", { ascending: false });
-
-  const EVENT_LABELS: Record<string, string> = {
-    wedding: "Düğün",
-    "kina-gecesi": "Kına Gecesi",
-    corporate: "Kurumsal",
-    opening: "Açılış",
-    "brand-launch": "Marka Lansmanı",
-    "private-party": "Özel Parti",
-    cocktail: "Kokteyl",
-    sunset: "Sunset Session",
-    "after-party": "After Party",
-  };
 
   return (
     <div className="space-y-6">

@@ -3,12 +3,7 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { InquiryActions, StatusBadge } from "./InquiryActions";
 import { MUSIC_CONCEPTS } from "@/components/planner/PlannerStore";
-
-const EVENT_LABELS: Record<string, string> = {
-  wedding: "Düğün", "kina-gecesi": "Kına Gecesi", corporate: "Kurumsal",
-  opening: "Açılış", "brand-launch": "Marka Lansmanı", "private-party": "Özel Parti",
-  cocktail: "Kokteyl", sunset: "Sunset Session", "after-party": "After Party",
-};
+import { EVENT_TYPE_LABELS as EVENT_LABELS } from "@/lib/eventTypeLabels";
 
 const GUEST_LABELS: Record<string, string> = {
   family: "Aile odaklı", friends: "Arkadaş odaklı", mixed: "Karma kitlesi",

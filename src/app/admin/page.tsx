@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase";
 import Link from "next/link";
+import { EVENT_TYPE_LABELS as EVENT_LABELS } from "@/lib/eventTypeLabels";
 
 export default async function AdminDashboard() {
   const supabase = createServiceClient();
@@ -45,12 +46,6 @@ export default async function AdminDashboard() {
     .select("id, created_at, event_type, contact")
     .order("created_at", { ascending: false })
     .limit(5);
-
-  const EVENT_LABELS: Record<string, string> = {
-    wedding: "Düğün", "kina-gecesi": "Kına Gecesi", corporate: "Kurumsal",
-    opening: "Açılış", "brand-launch": "Marka Lansmanı", "private-party": "Özel Parti",
-    cocktail: "Kokteyl", sunset: "Sunset Session", "after-party": "After Party",
-  };
 
   return (
     <div className="space-y-8">

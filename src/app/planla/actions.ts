@@ -3,6 +3,7 @@
 import { createServiceClient } from "@/lib/supabase";
 import { type PlannerData } from "@/components/planner/PlannerStore";
 import { sendInquiryNotification, sendInquiryConfirmation } from "@/lib/email";
+import { eventTypeLabel } from "@/lib/eventTypeLabels";
 
 export async function submitInquiry(
   data: PlannerData
@@ -58,7 +59,7 @@ export async function submitInquiry(
       surname: data.surname,
       email: data.email,
       phone: data.phone,
-      eventType: data.eventType,
+      eventType: eventTypeLabel(data.eventType),
       eventDate: data.eventDate || undefined,
       services: data.services,
       selectedDjs: selectedDjNames,
@@ -66,7 +67,7 @@ export async function submitInquiry(
     sendInquiryConfirmation({
       name: data.name,
       email: data.email,
-      eventType: data.eventType,
+      eventType: eventTypeLabel(data.eventType),
       eventDate: data.eventDate || undefined,
     }),
   ]);
