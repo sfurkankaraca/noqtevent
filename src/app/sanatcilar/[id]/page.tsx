@@ -5,6 +5,7 @@ import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import { createServiceClient } from "@/lib/supabase";
 import DjGallery from "./DjGallery";
+import ArtistBookingButton from "./ArtistBookingButton";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -178,12 +179,7 @@ export default async function DjDetailPage({ params }: Props) {
               )}
 
               <div className="pt-4 border-t border-border">
-                <Link
-                  href="/planla"
-                  className="inline-flex items-center gap-2 bg-foreground text-background px-7 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
-                >
-                  Bu Sanatçıyla Planla
-                </Link>
+                <ArtistBookingButton artistId={id} artistName={dj.name} />
               </div>
             </div>
           </div>

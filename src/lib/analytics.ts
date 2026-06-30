@@ -10,7 +10,9 @@ export type ConversionEvent =
   | "cta_click"
   | "planner_step"
   | "planner_complete"
-  | "lead_submit";
+  | "lead_submit"
+  | "artist_booking_step"
+  | "artist_booking_submit";
 
 type EventProps = Record<string, string | number | boolean | null>;
 

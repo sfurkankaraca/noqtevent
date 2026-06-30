@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ArtistBookingWizard from "@/components/artist-booking/ArtistBookingWizard";
 
 const PERFORMER_TYPES = [
   { id: "dj", label: "DJ", emoji: "🎧" },
@@ -231,7 +232,7 @@ function PhotoStrip({ photos, focalPoints, name }: { photos: string[]; focalPoin
 }
 
 // ─── Quick view sheet ─────────────────────────────────────────────────────────
-function ArtistQuickView({ dj, onClose }: { dj: Dj; onClose: () => void }) {
+function ArtistQuickView({ dj, onClose, onBooking }: { dj: Dj; onClose: () => void; onBooking: () => void }) {
   const allPhotos = Array.isArray(dj.photos) && dj.photos.length > 0 ? dj.photos : dj.photo_url ? [dj.photo_url] : [];
   const allVideos: string[] = Array.isArray(dj.videos) && dj.videos.length > 0 ? dj.videos : dj.preview_video_url ? [dj.preview_video_url] : [];
   const youtubeLinks: string[] = Array.isArray(dj.youtube_links) ? dj.youtube_links : [];
@@ -362,11 +363,19 @@ function ArtistQuickView({ dj, onClose }: { dj: Dj; onClose: () => void }) {
               ))}
             </div>
           )}
-          <Link href={`/sanatcilar/${dj.id}`}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-foreground text-background rounded-xl font-medium text-sm hover:opacity-90 transition-opacity">
-            Tam Profili Gör
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </Link>
+          <div className="space-y-2">
+            <button
+              onClick={onBooking}
+              className="flex items-center justify-center gap-2 w-full py-3 bg-foreground text-background rounded-xl font-medium text-sm hover:opacity-90 transition-opacity"
+            >
+              Bu Sanatçıyla Planla
+            </button>
+            <Link href={`/sanatcilar/${dj.id}`}
+              className="flex items-center justify-center gap-2 w-full py-3 border border-border text-foreground rounded-xl font-medium text-sm hover:bg-foreground/5 transition-colors">
+              Tam Profili Gör
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </Link>
+          </div>
         </div>
       </motion.div>
     </motion.div>
@@ -401,6 +410,7 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
 
   const [vidIdx, setVidIdx] = useState(0);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
   const currentVid = videoSources[vidIdx] ?? null;
 
   const initials = dj.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -526,9 +536,33 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
         </div>
       </button>
 
-      {/* Quick view sheet */}
+      {/* Book CTA */}
+      <button
+        onClick={() => setBookingOpen(true)}
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-foreground border-t border-border hover:bg-foreground/5 transition-colors"
+      >
+        Bu sanatçıyla planla
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+        </svg>
+      </button>
+
+      {/* Quick view + booking wizard */}
       <AnimatePresence>
-        {quickOpen && <ArtistQuickView dj={dj} onClose={() => setQuickOpen(false)} />}
+        {quickOpen && (
+          <ArtistQuickView
+            dj={dj}
+            onClose={() => setQuickOpen(false)}
+            onBooking={() => { setQuickOpen(false); setBookingOpen(true); }}
+          />
+        )}
+        {bookingOpen && (
+          <ArtistBookingWizard
+            artistId={dj.id}
+            artistName={dj.name}
+            onClose={() => setBookingOpen(false)}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

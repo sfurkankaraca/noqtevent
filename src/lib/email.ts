@@ -352,6 +352,113 @@ export async function sendRsvpConfirmation(data: {
   });
 }
 
+export async function sendArtistBookingNotification(data: {
+  name: string;
+  surname: string;
+  email: string;
+  phone: string;
+  company?: string;
+  artistName: string;
+  eventType: string;
+  eventDate?: string;
+  city?: string;
+  venueName?: string;
+  venueCapacity?: string;
+  setDuration?: string;
+  budget?: string;
+  accommodation?: string;
+  transfer?: string;
+  specialRequests?: string;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const rows: [string, string][] = [
+    ["Ad Soyad", `${data.name} ${data.surname}`],
+    ...(data.company ? [["Şirket", data.company] as [string, string]] : []),
+    ["E-posta", `<a href="mailto:${data.email}">${data.email}</a>`],
+    ["Telefon", data.phone],
+    ["Sanatçı", `<strong>${data.artistName}</strong>`],
+    ["Etkinlik Türü", data.eventType],
+    ["Tarih", data.eventDate ?? "Belirtilmedi"],
+    ["Şehir", data.city || "—"],
+    ...(data.venueName ? [["Mekân", data.venueName] as [string, string]] : []),
+    ...(data.venueCapacity ? [["Kapasite", data.venueCapacity] as [string, string]] : []),
+    ["Set Süresi", data.setDuration || "—"],
+    ["Bütçe", data.budget || "—"],
+    ...(data.accommodation ? [["Konaklama", data.accommodation === "yes" ? "Dahil" : "Dahil Değil"] as [string, string]] : []),
+    ...(data.transfer ? [["Transfer", data.transfer === "yes" ? "Dahil" : "Dahil Değil"] as [string, string]] : []),
+    ...(data.specialRequests ? [["Özel Talepler", data.specialRequests] as [string, string]] : []),
+  ];
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject: `🎤 Sanatçı Rezervasyon Talebi: ${data.artistName} — ${data.name} ${data.surname}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <h1 style="font-size:24px;margin-bottom:8px;">Yeni Sanatçı Rezervasyon Talebi</h1>
+        <p style="color:#666;margin-top:0;">NOQT sanatçı rezervasyon formu üzerinden yeni bir ön değerlendirme talebi geldi.</p>
+        <hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0;" />
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          ${rows.map(([k, v]) => `<tr><td style="padding:8px 0;color:#666;width:40%;vertical-align:top;">${k}</td><td style="padding:8px 0;font-weight:500;">${v}</td></tr>`).join("")}
+        </table>
+        <div style="margin-top:32px;">
+          <a href="${process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events"}/admin/inquiries"
+             style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">
+            Admin'de Görüntüle →
+          </a>
+        </div>
+      </div>
+    `,
+  });
+  if (error) console.error("[email] sendArtistBookingNotification failed:", error);
+}
+
+export async function sendArtistBookingConfirmation(data: {
+  name: string;
+  email: string;
+  artistName: string;
+  eventType: string;
+  eventDate?: string;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.email,
+    subject: `Rezervasyon ön değerlendirme talebiniz alındı — NOQT`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <div style="font-size:22px;font-family:Georgia,serif;font-weight:400;margin-bottom:4px;">NOQT</div>
+        <div style="font-size:11px;color:#999;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:32px;">Deneyim Stüdyosu</div>
+        <h1 style="font-size:24px;font-family:Georgia,serif;font-weight:400;margin-bottom:8px;">Merhaba ${data.name},</h1>
+        <p style="color:#555;line-height:1.7;">
+          <strong>${data.artistName}</strong> için ön değerlendirme talebiniz başarıyla alındı. NOQT ekibi müsaitlik durumunu kontrol ederek en kısa sürede sizinle iletişime geçecek.
+        </p>
+        <div style="margin:28px 0;padding:20px 24px;background:#f9f8f6;border-radius:12px;">
+          <div style="font-size:12px;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Talep Özeti</div>
+          <div style="font-size:14px;color:#333;line-height:2;">
+            <span style="color:#999;">Sanatçı:</span> <strong>${data.artistName}</strong><br/>
+            <span style="color:#999;">Etkinlik:</span> <strong>${data.eventType}</strong><br/>
+            ${data.eventDate ? `<span style="color:#999;">Tarih:</span> <strong>${new Date(data.eventDate + "T00:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</strong>` : ""}
+          </div>
+        </div>
+        <p style="color:#555;font-size:13px;line-height:1.7;background:#fff8f0;border:1px solid #ffe0b0;padding:14px 16px;border-radius:8px;">
+          Bu form rezervasyonun kesinleştiği anlamına gelmez. Müsaitlik durumu, sanatçı onayı, sözleşme imzası ve gerekli ön ödemenin alınmasına bağlıdır.
+        </p>
+        <p style="color:#555;font-size:14px;line-height:1.7;margin-top:20px;">
+          Sorularınız için <a href="mailto:hello@noqt.events" style="color:#1a1a1a;">hello@noqt.events</a> adresine yazabilirsiniz.
+        </p>
+        <div style="margin-top:40px;padding-top:24px;border-top:1px solid #e8e8e8;font-size:12px;color:#999;">
+          NOQT Deneyim Stüdyosu — noqt.events
+        </div>
+      </div>
+    `,
+  });
+}
+
 export async function sendContactNotification(msg: {
   name: string;
   email: string;
