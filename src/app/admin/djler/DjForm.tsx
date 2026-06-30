@@ -552,18 +552,44 @@ export default function DjForm({ dj }: { dj?: Dj }) {
         </div>
         <div className="space-y-2">
           {youtubeLinks.map((link, i) => (
-            <input
-              key={i}
-              type="url"
-              value={link}
-              onChange={(e) => {
-                const next = [...youtubeLinks];
-                next[i] = e.target.value;
-                setYoutubeLinks(next);
-              }}
-              placeholder={`YouTube video linki ${i + 1}`}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
-            />
+            <div key={i} className="flex items-center gap-2">
+              <div className="flex flex-col gap-0.5">
+                <button
+                  type="button"
+                  disabled={i === 0}
+                  onClick={() => setYoutubeLinks((prev) => { const a = [...prev]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a; })}
+                  className="text-muted-foreground hover:text-foreground disabled:opacity-20 leading-none"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                </button>
+                <button
+                  type="button"
+                  disabled={i === youtubeLinks.length - 1}
+                  onClick={() => setYoutubeLinks((prev) => { const a = [...prev]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a; })}
+                  className="text-muted-foreground hover:text-foreground disabled:opacity-20 leading-none"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <input
+                type="url"
+                value={link}
+                onChange={(e) => {
+                  const next = [...youtubeLinks];
+                  next[i] = e.target.value;
+                  setYoutubeLinks(next);
+                }}
+                placeholder={`YouTube video linki ${i + 1}`}
+                className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+              />
+              <button
+                type="button"
+                onClick={() => setYoutubeLinks((prev) => prev.filter((_, idx) => idx !== i))}
+                className="text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
           ))}
           <button
             type="button"
