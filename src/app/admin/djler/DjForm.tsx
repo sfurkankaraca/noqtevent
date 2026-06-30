@@ -178,7 +178,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     // Upload each file individually
     for (let i = 0; i < files.length; i++) {
       try {
-        const url = await uploadFile(files[i], "artists/photos");
+        const url = await uploadFileDirect(files[i], "artists/photos");
         setPhotos((prev) => {
           const next = [...prev];
           const idx = next.findIndex((p) => p.uploading && p.url === "");

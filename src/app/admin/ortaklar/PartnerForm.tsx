@@ -35,16 +35,25 @@ interface PhotoEntry {
 }
 
 async function uploadFile(file: File, folder: string): Promise<string> {
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("folder", folder);
-  const res = await fetch("/api/upload", { method: "POST", body: fd });
+  const res = await fetch("/api/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folder, filename: file.name, contentType: file.type }),
+  });
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new Error(json.error ?? "Upload başarısız");
+    throw new Error(json.error ?? "URL alınamadı");
   }
-  const { url } = await res.json();
-  return url;
+  const { signedUrl, publicUrl } = await res.json();
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error(`Yükleme hatası: ${xhr.status}`)));
+    xhr.onerror = () => reject(new Error("Ağ hatası"));
+    xhr.send(file);
+  });
+  return publicUrl;
 }
 
 export default function PartnerForm({ partner }: { partner?: Partner }) {
