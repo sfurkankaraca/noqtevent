@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 const SLIDE_INTERVAL = 5000;
 
@@ -146,6 +147,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
           >
             <Link
               href="/planla"
+              onClick={() => trackEvent("cta_click", { location: "hero", target: "planla" })}
               className="inline-flex items-center gap-2 bg-white lg:bg-foreground text-foreground lg:text-background px-7 py-4 rounded-full text-sm font-medium tracking-wide hover:opacity-90 transition-all duration-200 group"
             >
               Deneyimini Tasarla
@@ -169,6 +171,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               href="https://wa.me/905417997973"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackEvent("whatsapp_click", { location: "hero" })}
               className="inline-flex items-center gap-2 border border-white/30 lg:border-border text-white lg:text-foreground px-6 py-4 rounded-full text-sm font-medium tracking-wide hover:border-white/60 lg:hover:border-foreground/40 transition-colors"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -188,7 +191,32 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
           </motion.div>
         </div>
 
-        {/* Stats */}
+        {/* Stats — sosyal kanıt şeridi. 3. kutu: gerçek sanatçı sayısı/kuruluş yılı/Google puanı gelince güncelle */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.55 }}
+          className="mt-14 flex flex-wrap items-center gap-x-8 gap-y-4 text-white/80 lg:text-muted-foreground"
+        >
+          {[
+            { value: "50+", label: "Etkinlik" },
+            { value: "Kayseri & Nevşehir", label: "Hizmet bölgesi" },
+            { value: "Tek çatı altında", label: "Müzik · Mekan · Anı" }, // TODO: istenirse gerçek rakamla değiştir
+          ].map((stat, i) => (
+            <div key={i} className="flex items-center gap-8">
+              {i > 0 && <div className="hidden sm:block h-8 w-px bg-white/20 lg:bg-foreground/15" />}
+              <div>
+                <div
+                  className="text-2xl lg:text-3xl text-white lg:text-foreground leading-none"
+                  style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
+                >
+                  {stat.value}
+                </div>
+                <div className="mt-1.5 text-xs tracking-[0.15em] uppercase">{stat.label}</div>
+              </div>
+            </div>
+          ))}
+        </motion.div>
       </div>
 
       {/* Scroll indicator */}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { trackEvent } from "@/lib/analytics";
 import {
   initialData,
   type PlannerData,
@@ -58,7 +59,13 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
 
   const next = () => {
     setDirection(1);
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    setStep((s) => {
+      const target = Math.min(s + 1, TOTAL_STEPS);
+      if (target !== s) {
+        trackEvent("planner_step", { step: target, title: stepTitles[target - 1] ?? "" });
+      }
+      return target;
+    });
   };
 
   const prev = () => {
@@ -233,6 +240,12 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
                 update={update}
                 onSubmit={(warning?: boolean) => {
                   if (warning) setAvailabilityWarning(true);
+                  trackEvent("lead_submit", { source: "planner" });
+                  trackEvent("planner_complete", {
+                    eventType: data.eventType || "belirtilmedi",
+                    guestCount: data.guestCount || "belirtilmedi",
+                    availabilityWarning: Boolean(warning),
+                  });
                   setSubmitted(true);
                 }}
               />
