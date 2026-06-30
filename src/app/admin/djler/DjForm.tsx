@@ -565,15 +565,13 @@ export default function DjForm({ dj }: { dj?: Dj }) {
               className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
             />
           ))}
-          {youtubeLinks.length < 6 && (
-            <button
-              type="button"
-              onClick={() => setYoutubeLinks((prev) => [...prev, ""])}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              + Video ekle
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setYoutubeLinks((prev) => [...prev, ""])}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            + Video ekle
+          </button>
         </div>
       </div>
 
