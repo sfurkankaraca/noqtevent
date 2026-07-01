@@ -12,8 +12,6 @@ const SegmentGate = dynamic(() => import("./SegmentGate"));
 const Artists = dynamic(() => import("./Artists"));
 const FeaturedExperiences = dynamic(() => import("./FeaturedExperiences"));
 const Testimonials = dynamic(() => import("./Testimonials"));
-const HowItWorks = dynamic(() => import("./HowItWorks"));
-const JoinPlatform = dynamic(() => import("./JoinPlatform"));
 const PartnerEcosystem = dynamic(() => import("./PartnerEcosystem"));
 const HomeCTA = dynamic(() => import("./HomeCTA"));
 
@@ -32,8 +30,6 @@ export default function HomeBelowFold({ testimonials, djs, categories, logos, co
       <Artists djs={djs} />
       <FeaturedExperiences concepts={concepts} />
       <Testimonials testimonials={testimonials} />
-      <HowItWorks />
-      <JoinPlatform />
       <PartnerEcosystem categories={categories} logos={logos} />
       <HomeCTA />
     </>

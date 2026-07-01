@@ -190,32 +190,6 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
           </motion.div>
         </div>
 
-        {/* Stats — sosyal kanıt şeridi. 3. kutu: gerçek sanatçı sayısı/kuruluş yılı/Google puanı gelince güncelle */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.55 }}
-          className="mt-14 flex flex-wrap items-center gap-x-8 gap-y-4 text-white/80 lg:text-muted-foreground"
-        >
-          {[
-            { value: "50+", label: "Etkinlik" },
-            { value: "Kayseri & Nevşehir", label: "Hizmet bölgesi" },
-            { value: "Tek çatı altında", label: "Müzik · Mekan · Anı" }, // TODO: istenirse gerçek rakamla değiştir
-          ].map((stat, i) => (
-            <div key={i} className="flex items-center gap-8">
-              {i > 0 && <div className="hidden sm:block h-8 w-px bg-white/20 lg:bg-foreground/15" />}
-              <div>
-                <div
-                  className="text-2xl lg:text-3xl text-white lg:text-foreground leading-none"
-                  style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
-                >
-                  {stat.value}
-                </div>
-                <div className="mt-1.5 text-xs tracking-[0.15em] uppercase">{stat.label}</div>
-              </div>
-            </div>
-          ))}
-        </motion.div>
       </div>
 
       {/* Scroll indicator */}
