@@ -7,10 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
 const navLinks = [
-  { href: "/konseptler", label: "Konseptler" },
   { href: "/sanatcilar", label: "Sanatçılar" },
+  { href: "/paketler", label: "Paketler" },
+  { href: "/konseptler", label: "Konseptler" },
   { href: "/ortaklar", label: "Partnerler" },
-  { href: "/memory-drive", label: "Memory Drive" },
   { href: "/journal", label: "Journal" },
   { href: "/hakkimizda", label: "Hakkımızda" },
 ];
@@ -67,7 +67,7 @@ export default function Navigation() {
                 href="/planla"
                 className="hidden lg:inline-flex items-center gap-2 bg-foreground text-background text-sm px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity font-medium tracking-wide"
               >
-                Deneyimini Tasarla
+                Etkinliğimi Planla
               </Link>
               <button
                 onClick={() => setMenuOpen(true)}
@@ -134,7 +134,7 @@ export default function Navigation() {
                 onClick={() => setMenuOpen(false)}
                 className="flex items-center justify-center bg-foreground text-background text-sm px-6 py-4 rounded-full font-medium tracking-wide w-full"
               >
-                Deneyimini Tasarla
+                Etkinliğimi Planla
               </Link>
             </div>
           </motion.div>
