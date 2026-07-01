@@ -3,6 +3,7 @@ import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import ArtistsClient from "@/components/sections/ArtistsClient";
 import ArtistsPage from "@/components/sections/ArtistsPage";
+import JoinPlatform from "@/components/home/JoinPlatform";
 import { createServiceClient } from "@/lib/supabase";
 
 export const metadata: Metadata = {
@@ -52,6 +53,7 @@ export default async function Page({ searchParams }: Props) {
       <Navigation />
       <main className="pt-20">
         <ArtistsClient djs={djs} activeType={activeType} />
+        <JoinPlatform />
       </main>
       <Footer />
     </>

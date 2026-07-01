@@ -3,6 +3,7 @@ import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import PartnersClient from "@/components/sections/PartnersClient";
 import PartnersPage from "@/components/sections/PartnersPage";
+import JoinPlatform from "@/components/home/JoinPlatform";
 import { createServiceClient } from "@/lib/supabase";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default async function Page() {
       <Navigation />
       <main className="pt-20">
         {hasPartners ? <PartnersClient partners={partners} /> : <PartnersPage />}
+        <JoinPlatform />
       </main>
       <Footer />
     </>
