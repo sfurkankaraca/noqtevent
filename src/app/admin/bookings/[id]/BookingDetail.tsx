@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { updateBookingStatus, addPayment, type BookingStatus } from "../actions";
+import DeliveryManager from "./DeliveryManager";
 
 const STATUS_META: Record<string, { label: string; cls: string; dot: string }> = {
   draft:        { label: "Taslak",             cls: "bg-gray-100 text-gray-600",     dot: "bg-gray-400" },
@@ -430,6 +431,20 @@ export default function BookingDetail({ booking, payments, artists }: {
             PDF oluşturulunca müşteri ve sanatçıya otomatik e-posta gönderilir.
           </p>
         </div>
+
+        {/* Teslimat (etkinlik tamamlandıysa) */}
+        {(booking.status === "completed" || booking.status === "full_paid") && (
+          <DeliveryManager
+            bookingId={booking.id}
+            clientName={booking.client_name}
+            clientEmail={booking.client_email}
+            initialSlug={booking.delivery_slug}
+            initialPhotos={Array.isArray(booking.delivery_photos) ? booking.delivery_photos : []}
+            initialVideos={Array.isArray(booking.delivery_videos) ? booking.delivery_videos : []}
+            initialNotes={booking.delivery_notes}
+            sentAt={booking.delivery_sent_at}
+          />
+        )}
 
         {/* Hızlı linkler */}
         <div className="bg-white rounded-2xl border border-border p-5 space-y-2">

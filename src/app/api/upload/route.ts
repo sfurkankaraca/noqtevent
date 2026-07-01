@@ -24,16 +24,21 @@ const ALLOWED_FOLDERS = [
   "other",
   "invitations/covers",
   "invitations/seating",
+  "artists/riders",
+  "contracts",
+  "bookings/delivery",
 ];
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg", "image/jpg", "image/png", "image/webp",
   "image/gif", "image/avif", "image/svg+xml",
   "video/mp4", "video/webm", "video/quicktime",
+  "application/pdf",
 ];
 
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15 MB
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500 MB
+const MAX_PDF_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -76,7 +81,8 @@ export async function POST(req: NextRequest) {
 
   // Boyut kontrolü
   const isVideo = file.type.startsWith("video/");
-  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+  const isPdf = file.type === "application/pdf";
+  const maxSize = isVideo ? MAX_VIDEO_SIZE : isPdf ? MAX_PDF_SIZE : MAX_IMAGE_SIZE;
   if (file.size > maxSize) {
     const limitMb = maxSize / 1024 / 1024;
     return NextResponse.json({ error: `Dosya boyutu ${limitMb} MB limitini aşıyor.` }, { status: 400 });

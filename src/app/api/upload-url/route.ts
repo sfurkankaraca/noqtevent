@@ -22,6 +22,7 @@ const ALLOWED_FOLDERS = [
   "brands",
   "journal",
   "other",
+  "bookings/delivery",
 ];
 
 const ALLOWED_MIME_TYPES = [
