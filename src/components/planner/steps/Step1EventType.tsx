@@ -31,22 +31,10 @@ export default function Step1EventType({ data, update, onNext }: Props) {
             >
               <span className="text-2xl">{type.emoji}</span>
               <span className="flex-1 text-sm font-medium leading-snug">{type.label}</span>
-              {type.price && (
-                <span
-                  className={`text-xs font-medium tabular-nums ${
-                    selected ? "text-background/70" : "text-muted-foreground"
-                  }`}
-                >
-                  {type.price} ₺
-                </span>
-              )}
             </button>
           );
         })}
       </div>
-      <p className="mt-4 text-xs text-muted-foreground">
-        Belirtilen aralıklar tahminidir; kesin teklif etkinlik detaylarına (süre, mekan, sanatçı sayısı) göre belirlenir.
-      </p>
     </div>
   );
 }

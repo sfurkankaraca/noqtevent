@@ -93,18 +93,18 @@ export const initialData: PlannerData = {
 };
 
 export const EVENT_TYPES = [
-  { id: "wedding", label: "Düğün", emoji: "💍", price: "15.000–50.000" },
-  { id: "engagement", label: "Nişan", emoji: "💐", price: "10.000–30.000" },
-  { id: "kina-gecesi", label: "Kına Gecesi", emoji: "🔥", price: "10.000–30.000" },
-  { id: "corporate", label: "Kurumsal Etkinlik", emoji: "🏢", price: "7.500–20.000" },
-  { id: "opening", label: "Açılış Etkinliği", emoji: "🎊", price: "10.000–20.000" },
-  { id: "brand-launch", label: "Marka Lansmanı", emoji: "🚀", price: "10.000–20.000" },
-  { id: "private-party", label: "Özel Parti", emoji: "🎉", price: "15.000–50.000" },
-  { id: "cocktail", label: "Mezuniyet", emoji: "🎓", price: "10.000–20.000" },
-  { id: "birthday", label: "Doğum Günü", emoji: "🎂", price: "10.000–20.000" },
-  { id: "bride", label: "Bride / Bekarlığa Veda", emoji: "👰", price: "10.000–20.000" },
-  { id: "morning-party", label: "Morning Party / Caffeine Club", emoji: "☕", price: "7.500–15.000" },
-  { id: "after-party", label: "After Party", emoji: "🌙", price: "10.000–30.000" },
+  { id: "wedding", label: "Düğün", emoji: "💍" },
+  { id: "engagement", label: "Nişan", emoji: "💐" },
+  { id: "kina-gecesi", label: "Kına Gecesi", emoji: "🔥" },
+  { id: "corporate", label: "Kurumsal Etkinlik", emoji: "🏢" },
+  { id: "opening", label: "Açılış Etkinliği", emoji: "🎊" },
+  { id: "brand-launch", label: "Marka Lansmanı", emoji: "🚀" },
+  { id: "private-party", label: "Özel Parti", emoji: "🎉" },
+  { id: "cocktail", label: "Mezuniyet", emoji: "🎓" },
+  { id: "birthday", label: "Doğum Günü", emoji: "🎂" },
+  { id: "bride", label: "Bride / Bekarlığa Veda", emoji: "👰" },
+  { id: "morning-party", label: "Morning Party / Caffeine Club", emoji: "☕" },
+  { id: "after-party", label: "After Party", emoji: "🌙" },
 ];
 
 export const FEELINGS = [
