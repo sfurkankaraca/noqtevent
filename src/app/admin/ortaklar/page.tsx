@@ -2,10 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { createServiceClient } from "@/lib/supabase";
 import DeletePartnerButton from "./DeletePartnerButton";
-import { PARTNER_CATEGORIES } from "./PartnerForm";
+import { PARTNER_SERVICES } from "@/components/planner/PlannerStore";
 
 const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-  PARTNER_CATEGORIES.map((c) => [c.id, `${c.emoji} ${c.label}`])
+  PARTNER_SERVICES.map((s) => [s.id, s.label])
 );
 
 export default async function OrtaklarPage() {

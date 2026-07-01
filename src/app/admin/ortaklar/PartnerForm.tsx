@@ -6,19 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { upsertPartner } from "./actions";
 import FocalPointPicker, { type FocalPoint } from "@/components/admin/FocalPointPicker";
-
-export const PARTNER_CATEGORIES = [
-  { id: "venue", label: "Mekan", emoji: "🏛️" },
-  { id: "photo-video", label: "Fotoğraf & Video", emoji: "📸" },
-  { id: "decor", label: "Dekorasyon & Çiçek", emoji: "🌸" },
-  { id: "catering", label: "Catering & İkram", emoji: "🍽️" },
-  { id: "cake", label: "Pasta & Tatlı", emoji: "🎂" },
-  { id: "beauty", label: "Güzellik & Bakım", emoji: "💄" },
-  { id: "transport", label: "Ulaşım & Transfer", emoji: "🚗" },
-  { id: "invitation", label: "Davetiye & Tasarım", emoji: "✉️" },
-  { id: "dance-class", label: "Dans Kursu", emoji: "💃" },
-  { id: "planning", label: "Organizasyon & Planlama", emoji: "📋" },
-];
+import { PARTNER_SERVICES, PARTNER_SERVICE_GROUP_ORDER, PARTNER_SERVICE_GROUP_META } from "@/components/planner/PlannerStore";
 
 const CITIES = ["Kayseri", "Nevşehir", "İstanbul", "İzmir", "Ankara", "Antalya", "Bursa", "Bodrum", "Çeşme", "Muğla"];
 
@@ -266,26 +254,35 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
       </div>
 
       {/* Kategori */}
-      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
-        <h2 className="font-medium text-foreground">Hizmet Kategorileri</h2>
-        <div className="grid grid-cols-2 gap-2">
-          {PARTNER_CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => toggleCategory(cat.id)}
-              className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs transition-all ${
-                categories.includes(cat.id)
-                  ? "border-foreground bg-foreground/5 text-foreground font-medium"
-                  : "border-border text-muted-foreground hover:border-foreground/40"
-              }`}
-            >
-              <span>{cat.emoji}</span>
-              {cat.label}
-              {categories.includes(cat.id) && <span className="ml-auto">✓</span>}
-            </button>
-          ))}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+        <div>
+          <h2 className="font-medium text-foreground">Hizmet Kategorileri</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Planlayıcıdaki hizmet listesiyle birebir aynı — birden fazla seçilebilir.</p>
         </div>
+        {PARTNER_SERVICE_GROUP_ORDER.map((group) => (
+          <div key={group}>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              {PARTNER_SERVICE_GROUP_META[group].emoji} {group}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {PARTNER_SERVICES.filter((s) => s.category === group).map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => toggleCategory(s.id)}
+                  className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs transition-all ${
+                    categories.includes(s.id)
+                      ? "border-foreground bg-foreground/5 text-foreground font-medium"
+                      : "border-border text-muted-foreground hover:border-foreground/40"
+                  }`}
+                >
+                  {s.label}
+                  {categories.includes(s.id) && <span className="ml-auto">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Hizmet bölgeleri */}
