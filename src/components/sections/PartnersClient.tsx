@@ -15,19 +15,18 @@ type Partner = {
   services: string[] | null;
 };
 
+// IDs match exactly what admin PartnerForm saves to DB
 const ALL_CATEGORIES = [
-  { id: "mekan", label: "Mekan & Salon", emoji: "🏛️", desc: "Düğün salonları, açık hava alanları, villalar, butik mekanlar." },
-  { id: "otel", label: "Otel", emoji: "🏨", desc: "Konaklama ve etkinlik altyapısı sunan otel partnerleri." },
-  { id: "fotograf", label: "Fotoğraf", emoji: "📷", desc: "Düğün, nişan, portre ve etkinlik fotoğrafçıları." },
-  { id: "video", label: "Video & Film", emoji: "🎬", desc: "Sinematik düğün ve etkinlik video prodüksiyonu." },
-  { id: "cicek", label: "Çiçek & Dekorasyon", emoji: "💐", desc: "Çiçek tasarımı, masa düzeni ve mekan dekorasyonu." },
-  { id: "catering", label: "Catering & Pasta", emoji: "🍽️", desc: "Yemek hizmetleri, büfe organizasyonu, düğün pastası." },
-  { id: "gelinlik", label: "Gelinlik & Damat", emoji: "👗", desc: "Gelinlik, smokin, özel tasarım kıyafet atölyeleri." },
-  { id: "sac-makyaj", label: "Saç & Makyaj", emoji: "💄", desc: "Gelin saçı, makyaj, cilt bakımı ve güzellik hizmetleri." },
-  { id: "ulasim", label: "Ulaşım", emoji: "🚗", desc: "Gelin arabası, VIP transfer, konvoy organizasyonu." },
-  { id: "davetiye", label: "Davetiye & Tasarım", emoji: "✉️", desc: "Davetiye tasarımı, baskı, dijital davetiye çözümleri." },
-  { id: "konaklatma", label: "Konaklama & Balay", emoji: "🌙", desc: "Balayı otelleri, butik konaklamalar, seyahat organizasyonu." },
-  { id: "organizasyon", label: "Organizasyon & Planlama", emoji: "📋", desc: "Etkinlik koordinasyonu, timeline yönetimi, lojistik." },
+  { id: "venue", label: "Mekan", emoji: "🏛️", desc: "Düğün salonları, açık hava alanları, villalar, butik mekanlar." },
+  { id: "photo-video", label: "Fotoğraf & Video", emoji: "📸", desc: "Düğün, nişan ve etkinlik fotoğrafçıları; sinematik video prodüksiyonu." },
+  { id: "decor", label: "Dekorasyon & Çiçek", emoji: "🌸", desc: "Çiçek tasarımı, masa düzeni, mekan dekorasyonu." },
+  { id: "catering", label: "Catering & İkram", emoji: "🍽️", desc: "Yemek hizmetleri, büfe organizasyonu, ikram çözümleri." },
+  { id: "cake", label: "Pasta & Tatlı", emoji: "🎂", desc: "Düğün pastası, makaron kuleleri, özel tatlı tasarımı." },
+  { id: "beauty", label: "Güzellik & Bakım", emoji: "💄", desc: "Gelin saçı, makyaj, cilt bakımı ve güzellik hizmetleri." },
+  { id: "transport", label: "Ulaşım & Transfer", emoji: "🚗", desc: "Gelin arabası, VIP transfer, konvoy organizasyonu." },
+  { id: "invitation", label: "Davetiye & Tasarım", emoji: "✉️", desc: "Davetiye tasarımı, baskı ve dijital davetiye çözümleri." },
+  { id: "dance-class", label: "Dans Kursu", emoji: "💃", desc: "Düğün için waltz, vals ve sosyal dans eğitimi." },
+  { id: "planning", label: "Organizasyon & Planlama", emoji: "📋", desc: "Etkinlik koordinasyonu, timeline yönetimi, lojistik." },
 ];
 
 const BG_COLORS = [
@@ -225,26 +224,10 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
                 </div>
               ) : (
                 /* Coming soon placeholder */
-                <div className="rounded-2xl border border-dashed border-border bg-[oklch(0.975_0.006_80)] p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                  <div>
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      {cat.label} alanında partner ekliyoruz
-                    </p>
-                    <p className="text-xs text-muted-foreground max-w-md">
-                      {cat.desc} Bu kategoride yer almak ister misiniz?
-                    </p>
-                  </div>
-                  <a
-                    href="https://wa.me/905417997973?text=NOQT%20partner%20olmak%20istiyorum"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 inline-flex items-center gap-2 border border-border text-foreground px-5 py-2.5 rounded-full text-xs font-medium hover:border-foreground/40 transition-colors whitespace-nowrap"
-                  >
-                    Başvur
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </a>
+                <div className="rounded-2xl border border-dashed border-border bg-[oklch(0.975_0.006_80)] px-7 py-5">
+                  <p className="text-sm text-muted-foreground">
+                    {cat.label} alanında partnerler yakında ekleniyor.
+                  </p>
                 </div>
               )}
             </div>
