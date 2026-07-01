@@ -181,6 +181,12 @@ export default async function DjlerPage({ searchParams }: Props) {
                     >
                       Düzenle
                     </Link>
+                    <Link
+                      href={`/admin/djler/${dj.id}/presskit`}
+                      className="flex-1 text-center py-2 rounded-xl text-xs font-medium border border-border hover:bg-secondary transition-colors"
+                    >
+                      Presskit
+                    </Link>
                     <DeleteDjButton id={dj.id} name={dj.name} />
                   </div>
                 </div>

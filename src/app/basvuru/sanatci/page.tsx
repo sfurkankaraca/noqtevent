@@ -4,6 +4,7 @@ import { useState } from "react";
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import Image from "next/image";
+import RiderBuilder, { type RiderItem } from "@/components/admin/RiderBuilder";
 
 const PERFORMER_TYPES = [
   { id: "dj", label: "DJ", emoji: "🎧", desc: "Elektronik müzik, set performansı" },
@@ -97,6 +98,7 @@ export default function SanatciBasvuruPage() {
   const [spotify, setSpotify] = useState("");
   const [soundcloud, setSoundcloud] = useState("");
   const [website, setWebsite] = useState("");
+  const [riderItems, setRiderItems] = useState<RiderItem[]>([]);
   const [contactName, setContactName] = useState("");
   const [referralSource, setReferralSource] = useState("");
   const [email, setEmail] = useState("");
@@ -167,6 +169,7 @@ export default function SanatciBasvuruPage() {
       fd.set("email", email);
       fd.set("phone", phone);
       fd.set("referral_source", referralSource);
+      fd.set("rider_json", JSON.stringify(riderItems));
       const res = await fetch("/api/basvuru", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Bir hata oluştu.");
@@ -430,6 +433,17 @@ export default function SanatciBasvuruPage() {
                           <input className={inputCls} value={f.value} onChange={(e) => f.set(e.target.value)} placeholder={f.placeholder} type="text" />
                         </div>
                       ))}
+                    </div>
+
+                    {/* Teknik Rider */}
+                    <div className="space-y-3 pt-2 border-t border-border">
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">Teknik Rider</label>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Etkinlikte ihtiyaç duyduğunuz ekipmanları listeleyin. "Kim sağlar?" sorusunda <em>Organizatör</em> seçerseniz müşteriye bu ekipmanı bizim ayarlamamızı ister misiniz diye sorarız.
+                        </p>
+                      </div>
+                      <RiderBuilder value={riderItems} onChange={setRiderItems} />
                     </div>
                   </div>
                 )}

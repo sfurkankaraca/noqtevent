@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { upsertDj } from "./actions";
 import FocalPointPicker, { type FocalPoint } from "@/components/admin/FocalPointPicker";
+import RiderBuilder, { type RiderItem } from "@/components/admin/RiderBuilder";
 import { MUSIC_CONCEPTS, CONCEPT_CATEGORIES, type ConceptCategory } from "@/components/planner/PlannerStore";
 
 const CONCEPT_CATEGORY_ORDER: ConceptCategory[] = ["cocktail", "celebration", "traditional", "after-party"];
@@ -49,6 +50,9 @@ type Dj = {
   spotify_url?: string;
   website_url?: string;
   presskit_url?: string;
+  slug?: string;
+  rider_url?: string;
+  rider?: RiderItem[];
   city?: string;
   cover_cities?: string[];
   speciality?: string;
@@ -144,9 +148,30 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     (dj?.videos ?? (dj?.preview_video_url ? [dj.preview_video_url] : [])).map((url: string) => ({ url }))
   );
   const [videoUploading, setVideoUploading] = useState(false);
+  const [riderUrl, setRiderUrl] = useState<string>(dj?.rider_url ?? "");
+  const [riderUploading, setRiderUploading] = useState(false);
+  const [riderItems, setRiderItems] = useState<RiderItem[]>(
+    Array.isArray(dj?.rider) ? dj.rider : []
+  );
+  const [slug, setSlug] = useState<string>(dj?.slug ?? "");
+  const [copied, setCopied] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toSlug = (name: string) =>
+    name.toLowerCase()
+      .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
+      .replace(/ı/g, "i").replace(/ö/g, "o").replace(/ç/g, "c")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+  const copyPresskitLink = () => {
+    if (!slug) return;
+    const base = typeof window !== "undefined" ? window.location.origin : "https://www.noqt.events";
+    navigator.clipboard.writeText(`${base}/s/${slug}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const toggleEventType = (id: string) =>
     setSelectedEventTypes((prev) =>
@@ -236,6 +261,9 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     const readyVideos = videos.filter((v) => v.url && !v.uploading && !v.error).map((v) => v.url);
     fd.set("videos_json", JSON.stringify(readyVideos));
     fd.set("preview_video_url", readyVideos[0] ?? "");
+    fd.set("slug", slug);
+    fd.set("rider_url", riderUrl);
+    fd.set("rider_json", JSON.stringify(riderItems));
 
     setPending(true);
     setError(null);
@@ -501,6 +529,114 @@ export default function DjForm({ dj }: { dj?: Dj }) {
         </div>
       </div>
 
+      {/* Presskit */}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+        <div>
+          <h2 className="font-medium text-foreground">Presskit</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Slug belirlendikten sonra <code className="bg-secondary px-1 rounded">/s/[slug]</code> adresinde otomatik presskit sayfası oluşur.
+          </p>
+        </div>
+
+        {/* Slug */}
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Presskit Slug</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="ör. furkan-karaca"
+              className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40 font-mono"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const nameVal = (document.querySelector("input[name='name']") as HTMLInputElement)?.value ?? "";
+                if (nameVal) setSlug(toSlug(nameVal));
+              }}
+              className="px-3 py-2.5 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex-shrink-0"
+            >
+              İsimden Üret
+            </button>
+            {slug && (
+              <button
+                type="button"
+                onClick={copyPresskitLink}
+                className="px-3 py-2.5 rounded-xl bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity flex-shrink-0"
+              >
+                {copied ? "Kopyalandı ✓" : "Linki Kopyala"}
+              </button>
+            )}
+          </div>
+          {slug && (
+            <p className="mt-1.5 text-xs text-muted-foreground font-mono">
+              noqt.events/s/{slug}
+            </p>
+          )}
+        </div>
+
+        {/* Rider Builder */}
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">
+            Teknik Rider — Ekipman Listesi
+          </label>
+          <p className="text-xs text-muted-foreground mb-3">
+            "Organizatör sağlar" seçeneği müşteriye &ldquo;Bunu biz ayarlayalım mı?&rdquo; olarak yansır.
+          </p>
+          <RiderBuilder value={riderItems} onChange={setRiderItems} />
+        </div>
+
+        {/* Rider PDF upload */}
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Rider PDF (opsiyonel)</label>
+          {riderUrl ? (
+            <div className="flex items-center gap-3 p-3 rounded-xl border border-border bg-secondary/20">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground flex-shrink-0">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <a href={riderUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-foreground hover:underline flex-1 truncate">
+                {decodeURIComponent(riderUrl.split("/").pop() ?? "rider.pdf")}
+              </a>
+              <button
+                type="button"
+                onClick={() => setRiderUrl("")}
+                className="text-xs text-red-500 hover:text-red-700 flex-shrink-0"
+              >
+                Kaldır
+              </button>
+            </div>
+          ) : (
+            <label className={`flex items-center gap-3 cursor-pointer border border-dashed border-border rounded-xl px-4 py-3 hover:border-foreground/40 transition-colors ${riderUploading ? "opacity-50 pointer-events-none" : ""}`}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <span className="text-sm text-muted-foreground">{riderUploading ? "Yükleniyor…" : "Rider PDF Yükle"}</span>
+              <input
+                type="file"
+                accept="application/pdf"
+                className="sr-only"
+                disabled={riderUploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  e.target.value = "";
+                  setRiderUploading(true);
+                  try {
+                    const url = await uploadFile(file, "artists/riders");
+                    setRiderUrl(url);
+                  } catch (err) {
+                    setError("Rider yüklenemedi: " + (err instanceof Error ? err.message : String(err)));
+                  } finally {
+                    setRiderUploading(false);
+                  }
+                }}
+              />
+            </label>
+          )}
+        </div>
+      </div>
+
       {/* Links */}
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
         <h2 className="font-medium text-foreground">Bağlantılar</h2>
@@ -511,7 +647,6 @@ export default function DjForm({ dj }: { dj?: Dj }) {
           { name: "instagram_url", label: "Instagram", placeholder: "https://instagram.com/…" },
           { name: "spotify_url", label: "Spotify", placeholder: "https://open.spotify.com/…" },
           { name: "website_url", label: "Website", placeholder: "https://…" },
-          { name: "presskit_url", label: "Press Kit (EPK)", placeholder: "https://… (PDF veya link)" },
         ].map((field) => (
           <div key={field.name}>
             <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">{field.label}</label>

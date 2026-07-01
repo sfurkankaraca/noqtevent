@@ -14,6 +14,8 @@ export async function upsertDj(formData: FormData) {
     (formData.get("focal_points_json") as string) || "{}"
   );
 
+  const rider: unknown[] = (() => { try { return JSON.parse(formData.get("rider_json") as string ?? "[]"); } catch { return []; } })();
+
   const concept_tags = (formData.get("concept_tags") as string)
     .split(",").map((t) => t.trim()).filter(Boolean);
   const busy_dates = (formData.get("busy_dates") as string)
@@ -33,6 +35,9 @@ export async function upsertDj(formData: FormData) {
     instagram_url: (formData.get("instagram_url") as string) || null,
     spotify_url: (formData.get("spotify_url") as string) || null,
     website_url: (formData.get("website_url") as string) || null,
+    slug: (formData.get("slug") as string) || null,
+    rider_url: (formData.get("rider_url") as string) || null,
+    rider,
     application_status: (formData.get("application_status") as string) || "approved",
     repertoire: (formData.get("repertoire") as string) || null,
     email: (formData.get("email") as string) || null,

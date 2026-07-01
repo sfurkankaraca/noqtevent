@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     const performer_type = VALID_PERFORMER_TYPES.includes(performer_type_raw) ? performer_type_raw : "dj";
+    const rider = (() => { try { return JSON.parse((fd.get("rider_json") as string) ?? "[]"); } catch { return []; } })();
     const photos = parseJsonArray(fd.get("photos"), 10);
     const videos = parseJsonArray(fd.get("videos_json"), 20);
     const youtube_links = parseJsonArray(fd.get("youtube_links"), 10);
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
       is_active: false,
       concept_tags: [],
       busy_dates: [],
+      rider,
     });
 
     if (error) {
