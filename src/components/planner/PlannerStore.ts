@@ -1029,6 +1029,24 @@ export const CONCERNS = [
 
 // Legacy aliases
 export const SERVICES = PARTNER_SERVICES;
+
+// Planlayıcıdaki hizmet grupları — partner kategorileri bu listeyle birebir eşleşir
+export const PARTNER_SERVICE_GROUP_ORDER = [
+  "Mekan", "Müzik & Teknik", "Görsel", "Yeme & İçme", "Dekorasyon",
+  "Deneyim", "Stil", "Lojistik", "Dijital",
+] as const;
+
+export const PARTNER_SERVICE_GROUP_META: Record<string, { emoji: string; desc: string }> = {
+  "Mekan": { emoji: "🏛️", desc: "Düğün salonları, açık hava alanları, oteller, villalar, restoranlar." },
+  "Müzik & Teknik": { emoji: "🎧", desc: "DJ, canlı müzik, ses sistemi, ışık ve sahne tasarımı." },
+  "Görsel": { emoji: "📸", desc: "Fotoğraf, video ve içerik üretimi." },
+  "Yeme & İçme": { emoji: "🍽️", desc: "Catering ve kokteyl bar hizmetleri." },
+  "Dekorasyon": { emoji: "🌸", desc: "Çiçek tasarımı ve mekan dekorasyonu." },
+  "Deneyim": { emoji: "💃", desc: "Düğün dansı ve özel kurslar." },
+  "Stil": { emoji: "👗", desc: "Gelinlik, damat takımı, saç ve makyaj." },
+  "Lojistik": { emoji: "🚗", desc: "Ulaşım, konaklama ve balayı planlaması." },
+  "Dijital": { emoji: "✉️", desc: "Dijital davetiye ve dijital anı çözümleri." },
+};
 export const CONCEPTS = MUSIC_CONCEPTS.map((c) => ({
   id: c.id,
   title: c.name,

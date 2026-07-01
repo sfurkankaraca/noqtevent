@@ -4,24 +4,7 @@ import { useState } from "react";
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import Image from "next/image";
-
-const PARTNER_CATEGORIES = [
-  { id: "photo-video", label: "Fotoğraf & Video", emoji: "📸" },
-  { id: "decor", label: "Dekorasyon & Çiçek", emoji: "🌸" },
-  { id: "catering", label: "Catering & İkram", emoji: "🍽️" },
-  { id: "venue", label: "Mekan", emoji: "🏛️" },
-  { id: "transport", label: "Ulaşım & Transfer", emoji: "🚗" },
-  { id: "beauty", label: "Güzellik & Bakım", emoji: "💄" },
-  { id: "light-sound", label: "Işık & Ses Sistemi", emoji: "🔊" },
-  { id: "dance-class", label: "Dans Kursu", emoji: "💃" },
-  { id: "planning", label: "Organizasyon & Planlama", emoji: "📋" },
-  { id: "cake", label: "Pasta & Tatlı", emoji: "🎂" },
-  { id: "invitation", label: "Davetiye & Tasarım", emoji: "✉️" },
-  { id: "social-media", label: "Sosyal Medya Ajansı", emoji: "📱" },
-  { id: "content-creator", label: "İçerik Üretici", emoji: "🎬" },
-  { id: "influencer", label: "Influencer", emoji: "⭐" },
-  { id: "other", label: "Diğer", emoji: "✨" },
-];
+import { PARTNER_SERVICES, PARTNER_SERVICE_GROUP_ORDER, PARTNER_SERVICE_GROUP_META } from "@/components/planner/PlannerStore";
 
 const CITIES = ["Kayseri", "Nevşehir", "İstanbul", "İzmir", "Ankara", "Antalya", "Bursa", "Bodrum", "Çeşme", "Muğla"];
 
@@ -296,14 +279,22 @@ export default function PartnerBasvuruPage() {
                   <div>
                     <h2 className="font-semibold text-foreground mb-1">Hangi alanda hizmet veriyorsunuz?</h2>
                     <p className="text-sm text-muted-foreground mb-6">Birden fazla seçebilirsiniz. <span className="text-red-500">*</span></p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {PARTNER_CATEGORIES.map((cat) => (
-                        <button key={cat.id} type="button" onClick={() => toggleCategory(cat.id)}
-                          className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${selectedCategories.includes(cat.id) ? "border-foreground bg-foreground/5" : "border-border hover:border-foreground/40"}`}>
-                          <span className="text-2xl">{cat.emoji}</span>
-                          <span className="text-sm font-medium text-foreground">{cat.label}</span>
-                          {selectedCategories.includes(cat.id) && <span className="ml-auto text-foreground text-xs">✓</span>}
-                        </button>
+                    <div className="space-y-5">
+                      {PARTNER_SERVICE_GROUP_ORDER.map((group) => (
+                        <div key={group}>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                            {PARTNER_SERVICE_GROUP_META[group].emoji} {group}
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {PARTNER_SERVICES.filter((s) => s.category === group).map((s) => (
+                              <button key={s.id} type="button" onClick={() => toggleCategory(s.id)}
+                                className={`flex items-center gap-2 p-3 rounded-xl border text-left text-sm transition-all ${selectedCategories.includes(s.id) ? "border-foreground bg-foreground/5 font-medium" : "border-border hover:border-foreground/40"}`}>
+                                {s.label}
+                                {selectedCategories.includes(s.id) && <span className="ml-auto text-foreground text-xs">✓</span>}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>

@@ -5,24 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { upsertPartner } from "./actions";
-
-const PARTNER_CATEGORIES = [
-  { id: "photo-video", label: "Fotoğraf & Video", emoji: "📸" },
-  { id: "decor", label: "Dekorasyon & Çiçek", emoji: "🌸" },
-  { id: "catering", label: "Catering & İkram", emoji: "🍽️" },
-  { id: "venue", label: "Mekan", emoji: "🏛️" },
-  { id: "transport", label: "Ulaşım & Transfer", emoji: "🚗" },
-  { id: "beauty", label: "Güzellik & Bakım", emoji: "💄" },
-  { id: "light-sound", label: "Işık & Ses Sistemi", emoji: "🔊" },
-  { id: "dance-class", label: "Dans Kursu", emoji: "💃" },
-  { id: "planning", label: "Organizasyon & Planlama", emoji: "📋" },
-  { id: "cake", label: "Pasta & Tatlı", emoji: "🎂" },
-  { id: "invitation", label: "Davetiye & Tasarım", emoji: "✉️" },
-  { id: "social-media", label: "Sosyal Medya Ajansı", emoji: "📱" },
-  { id: "content-creator", label: "İçerik Üretici", emoji: "🎬" },
-  { id: "influencer", label: "Influencer", emoji: "⭐" },
-  { id: "other", label: "Diğer", emoji: "✨" },
-];
+import { PARTNER_SERVICES, PARTNER_SERVICE_GROUP_ORDER, PARTNER_SERVICE_GROUP_META } from "@/components/planner/PlannerStore";
 
 const EVENT_TYPES = [
   { id: "wedding", label: "Düğün / Nikah" },
@@ -203,17 +186,27 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
       </div>
 
       {/* Categories */}
-      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
-        <h2 className="font-medium text-foreground">Kategoriler</h2>
-        <div className="grid grid-cols-2 gap-2">
-          {PARTNER_CATEGORIES.map((cat) => (
-            <button key={cat.id} type="button" onClick={() => toggleCategory(cat.id)}
-              className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs transition-all ${categories.includes(cat.id) ? "border-foreground bg-foreground/5 text-foreground font-medium" : "border-border text-muted-foreground hover:border-foreground/40"}`}>
-              <span>{cat.emoji}</span>{cat.label}
-              {categories.includes(cat.id) && <span className="ml-auto">✓</span>}
-            </button>
-          ))}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+        <div>
+          <h2 className="font-medium text-foreground">Kategoriler</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Planlayıcıdaki hizmet listesiyle birebir aynı — birden fazla seçilebilir.</p>
         </div>
+        {PARTNER_SERVICE_GROUP_ORDER.map((group) => (
+          <div key={group}>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              {PARTNER_SERVICE_GROUP_META[group].emoji} {group}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {PARTNER_SERVICES.filter((s) => s.category === group).map((s) => (
+                <button key={s.id} type="button" onClick={() => toggleCategory(s.id)}
+                  className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs transition-all ${categories.includes(s.id) ? "border-foreground bg-foreground/5 text-foreground font-medium" : "border-border text-muted-foreground hover:border-foreground/40"}`}>
+                  {s.label}
+                  {categories.includes(s.id) && <span className="ml-auto">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Services */}

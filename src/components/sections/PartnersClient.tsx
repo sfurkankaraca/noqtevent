@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
+import { PARTNER_SERVICES, PARTNER_SERVICE_GROUP_ORDER, PARTNER_SERVICE_GROUP_META } from "@/components/planner/PlannerStore";
 
 type Partner = {
   id: string;
@@ -15,19 +16,19 @@ type Partner = {
   services: string[] | null;
 };
 
-// IDs match exactly what admin PartnerForm saves to DB
-const ALL_CATEGORIES = [
-  { id: "venue", label: "Mekan", emoji: "🏛️", desc: "Düğün salonları, açık hava alanları, villalar, butik mekanlar." },
-  { id: "photo-video", label: "Fotoğraf & Video", emoji: "📸", desc: "Düğün, nişan ve etkinlik fotoğrafçıları; sinematik video prodüksiyonu." },
-  { id: "decor", label: "Dekorasyon & Çiçek", emoji: "🌸", desc: "Çiçek tasarımı, masa düzeni, mekan dekorasyonu." },
-  { id: "catering", label: "Catering & İkram", emoji: "🍽️", desc: "Yemek hizmetleri, büfe organizasyonu, ikram çözümleri." },
-  { id: "cake", label: "Pasta & Tatlı", emoji: "🎂", desc: "Düğün pastası, makaron kuleleri, özel tatlı tasarımı." },
-  { id: "beauty", label: "Güzellik & Bakım", emoji: "💄", desc: "Gelin saçı, makyaj, cilt bakımı ve güzellik hizmetleri." },
-  { id: "transport", label: "Ulaşım & Transfer", emoji: "🚗", desc: "Gelin arabası, VIP transfer, konvoy organizasyonu." },
-  { id: "invitation", label: "Davetiye & Tasarım", emoji: "✉️", desc: "Davetiye tasarımı, baskı ve dijital davetiye çözümleri." },
-  { id: "dance-class", label: "Dans Kursu", emoji: "💃", desc: "Düğün için waltz, vals ve sosyal dans eğitimi." },
-  { id: "planning", label: "Organizasyon & Planlama", emoji: "📋", desc: "Etkinlik koordinasyonu, timeline yönetimi, lojistik." },
-];
+// Planlayıcıdaki hizmet gruplarıyla birebir aynı — partner.category alanı bu
+// gruplardaki servis id'lerini (dj, photography, floral, vb.) içerir.
+const ALL_CATEGORIES = PARTNER_SERVICE_GROUP_ORDER.map((group) => ({
+  id: group,
+  label: group,
+  emoji: PARTNER_SERVICE_GROUP_META[group].emoji,
+  desc: PARTNER_SERVICE_GROUP_META[group].desc,
+  serviceIds: PARTNER_SERVICES.filter((s) => s.category === group).map((s) => s.id),
+}));
+
+const SERVICE_LABELS: Record<string, string> = Object.fromEntries(
+  PARTNER_SERVICES.map((s) => [s.id, s.label])
+);
 
 const BG_COLORS = [
   "bg-[oklch(0.88_0.05_75)]",
@@ -141,7 +142,7 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
       <div className="space-y-16">
         {visibleCategories.map((cat, catIdx) => {
           const catPartners = partners.filter((p) =>
-            (p.category ?? []).some((c) => c.toLowerCase().trim() === cat.id)
+            (p.category ?? []).some((c) => cat.serviceIds.includes(c.toLowerCase().trim()))
           );
 
           return (
@@ -197,7 +198,9 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
                           )}
                           <div className="p-5">
                             {categories.length > 0 && (
-                              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{categories[0]}</span>
+                              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                {SERVICE_LABELS[categories[0]] ?? categories[0]}
+                              </span>
                             )}
                             <h3 className="font-medium text-foreground mt-0.5">{partner.business_name}</h3>
                             {partner.description && (
