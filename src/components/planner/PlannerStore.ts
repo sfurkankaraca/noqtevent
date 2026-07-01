@@ -1,5 +1,3 @@
-"use client";
-
 export type ConceptCategory =
   | "cocktail"      // Kokteyl & Karşılama
   | "celebration"   // Ana Kutlama (Modern)
