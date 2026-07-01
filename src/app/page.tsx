@@ -1,7 +1,6 @@
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
-import FeaturedExperiences from "@/components/home/FeaturedExperiences";
 import HomeBelowFold from "@/components/home/HomeBelowFold";
 import { createServiceClient } from "@/lib/supabase";
 
@@ -138,12 +137,12 @@ export default async function Home() {
       <Navigation />
       <main>
         <Hero heroImages={heroImages} />
-        <FeaturedExperiences concepts={concepts ?? []} />
         <HomeBelowFold
           testimonials={testimonials}
           djs={djs ?? []}
           categories={categories}
           logos={partnerLogos}
+          concepts={concepts ?? []}
         />
       </main>
       <Footer />

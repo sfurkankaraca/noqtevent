@@ -5,13 +5,15 @@ import type { ComponentProps } from "react";
 import type ArtistsComponent from "./Artists";
 import type TestimonialsComponent from "./Testimonials";
 import type PartnerEcosystemComponent from "./PartnerEcosystem";
+import type FeaturedExperiencesComponent from "./FeaturedExperiences";
 
-// Ekran altı bölümler — client wrapper içinde dynamic() ile kod-bölme.
-// ssr varsayılan olarak true: içerik HTML'de kalır (SEO korunur), JS ayrı
-// chunk'lara bölünür ve ilk yük (First Load JS) küçülür.
-const HowItWorks = dynamic(() => import("./HowItWorks"));
-const Testimonials = dynamic(() => import("./Testimonials"));
+// Below-fold sections — code-split via dynamic(), SSR stays on by default.
+const SegmentGate = dynamic(() => import("./SegmentGate"));
 const Artists = dynamic(() => import("./Artists"));
+const FeaturedExperiences = dynamic(() => import("./FeaturedExperiences"));
+const Testimonials = dynamic(() => import("./Testimonials"));
+const HowItWorks = dynamic(() => import("./HowItWorks"));
+const JoinPlatform = dynamic(() => import("./JoinPlatform"));
 const PartnerEcosystem = dynamic(() => import("./PartnerEcosystem"));
 const HomeCTA = dynamic(() => import("./HomeCTA"));
 
@@ -20,14 +22,18 @@ type Props = {
   djs: ComponentProps<typeof ArtistsComponent>["djs"];
   categories: ComponentProps<typeof PartnerEcosystemComponent>["categories"];
   logos: ComponentProps<typeof PartnerEcosystemComponent>["logos"];
+  concepts: ComponentProps<typeof FeaturedExperiencesComponent>["concepts"];
 };
 
-export default function HomeBelowFold({ testimonials, djs, categories, logos }: Props) {
+export default function HomeBelowFold({ testimonials, djs, categories, logos, concepts }: Props) {
   return (
     <>
-      <HowItWorks />
-      <Testimonials testimonials={testimonials} />
+      <SegmentGate />
       <Artists djs={djs} />
+      <FeaturedExperiences concepts={concepts} />
+      <Testimonials testimonials={testimonials} />
+      <HowItWorks />
+      <JoinPlatform />
       <PartnerEcosystem categories={categories} logos={logos} />
       <HomeCTA />
     </>
