@@ -38,6 +38,7 @@ export async function upsertDj(formData: FormData) {
     slug: (formData.get("slug") as string) || null,
     rider_url: (formData.get("rider_url") as string) || null,
     rider,
+    media_drive_url: (formData.get("media_drive_url") as string) || null,
     application_status: (formData.get("application_status") as string) || "approved",
     repertoire: (formData.get("repertoire") as string) || null,
     email: (formData.get("email") as string) || null,

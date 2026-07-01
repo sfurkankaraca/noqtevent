@@ -2,21 +2,28 @@
 
 import { useState } from "react";
 
+// Her rider satırı bir "ihtiyaç kategorisi"dir (ör. "DJ Player").
+// options içindeki alternatiflerden HERHANGİ BİRİ kabul edilir — hepsi ayrı ayrı istenmiyor.
 export type RiderItem = {
-  item: string;
+  category: string;
+  options: string[];
   qty: number;
   provided_by: "organizer" | "artist";
   notes: string;
 };
 
 const CATEGORY_PRESETS: Record<string, string[]> = {
-  "🎧 DJ / Playback": [
+  "🎧 DJ Player": [
     "Pioneer CDJ-3000",
     "Pioneer CDJ-2000NXS2",
-    "Pioneer DJM-900NXS2",
-    "Pioneer DJM-V10",
     "Rane Seventy-Two",
     "Denon SC6000",
+  ],
+  "🎚️ DJ Mixer": [
+    "Pioneer DJM-900NXS2",
+    "Pioneer DJM-V10",
+    "Rane Seventy-Two Mixer",
+    "Allen & Heath Xone",
   ],
   "🎹 Klavye / Synth": [
     "Nord Stage 4",
@@ -25,24 +32,35 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
     "Yamaha CP88",
     "Arturia MiniFreak",
   ],
-  "🎸 Enstrüman": [
+  "🎸 Enstrüman Amfisi": [
     "Elektro Gitar Amplifikatörü",
     "Bas Amplifikatörü",
     "Akustik Gitar DI Box",
-    "Davul Seti (akustik)",
-    "Elektrik Davul Seti",
-    "Keman Stand + DI",
   ],
-  "🔊 Ses Sistemi": [
+  "🥁 Davul Seti": [
+    "Akustik Davul Seti",
+    "Elektrik Davul Seti",
+    "Cajon",
+  ],
+  "🎤 Vokal Mikrofon": [
+    "Shure SM58",
+    "Shure Beta 58A",
+    "Sennheiser e935",
+  ],
+  "🎙️ Enstrüman Mikrofonu / DI": [
+    "Condenser Mikrofon",
+    "DI Box",
+    "Keman/Violin DI",
+  ],
+  "🔊 Ses Sistemi (PA)": [
     "Line Array (sol/sağ)",
     "Subwoofer (2x)",
-    "Monitoring Hoparlör (2x)",
+    "Monitör Hoparlör (2x)",
     "In-Ear Monitor Sistemi",
-    "Vocal Mikrofon (SM58)",
-    "Condenser Mikrofon",
-    "Mikrofon Stand",
-    "DI Box",
-    "Mixer (32ch+)",
+  ],
+  "🎛️ Mixer (FOH)": [
+    "Dijital Mixer (32ch+)",
+    "Analog Mixer (16-24ch)",
   ],
   "💡 Sahne & Işık": [
     "DJ Booth / Sahne Masası",
@@ -50,10 +68,8 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
     "Moving Head (4x)",
     "Haze Makinesi",
     "Laser Sistemi",
-    "Projeksiyon",
-    "LED Ekran",
   ],
-  "🔌 Teknik": [
+  "🔌 Teknik Altyapı": [
     "Power Strip (çoklu priz)",
     "Ethernet / Internet bağlantısı",
     "Soyunma Odası",
@@ -62,7 +78,7 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
 };
 
 function blankItem(): RiderItem {
-  return { item: "", qty: 1, provided_by: "organizer", notes: "" };
+  return { category: "", options: [], qty: 1, provided_by: "organizer", notes: "" };
 }
 
 type Props = {
@@ -72,8 +88,7 @@ type Props = {
 };
 
 export default function RiderBuilder({ value, onChange, compact = false }: Props) {
-  const [showPresets, setShowPresets] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [customOptionInput, setCustomOptionInput] = useState<Record<number, string>>({});
 
   const update = (idx: number, patch: Partial<RiderItem>) => {
     onChange(value.map((item, i) => (i === idx ? { ...item, ...patch } : item)));
@@ -81,45 +96,50 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
 
   const remove = (idx: number) => onChange(value.filter((_, i) => i !== idx));
 
-  const addPreset = (name: string) => {
-    if (value.some((v) => v.item === name)) return;
-    onChange([...value, { item: name, qty: 1, provided_by: "organizer", notes: "" }]);
+  const toggleOption = (idx: number, option: string) => {
+    const current = value[idx].options;
+    update(idx, {
+      options: current.includes(option) ? current.filter((o) => o !== option) : [...current, option],
+    });
   };
 
-  const labelCls = "block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-1.5";
-  const inputCls = "w-full px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40";
+  const addCustomOption = (idx: number) => {
+    const text = (customOptionInput[idx] ?? "").trim();
+    if (!text) return;
+    const current = value[idx].options;
+    if (!current.includes(text)) update(idx, { options: [...current, text] });
+    setCustomOptionInput((p) => ({ ...p, [idx]: "" }));
+  };
+
+  const addCategoryRow = (category = "") => {
+    onChange([...value, { ...blankItem(), category }]);
+  };
+
+  const inputCls = "px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40";
 
   return (
-    <div className="space-y-4">
-      {/* Mevcut rider listesi */}
-      {value.length > 0 && (
-        <div className="space-y-2">
-          {value.map((item, idx) => (
-            <div
-              key={idx}
-              className="grid gap-2 p-3 rounded-xl border border-border bg-secondary/10"
-              style={{ gridTemplateColumns: compact ? "1fr auto auto" : "1fr 60px 1fr auto" }}
-            >
-              {/* Ekipman adı */}
-              <input
-                value={item.item}
-                onChange={(e) => update(idx, { item: e.target.value })}
-                placeholder="Ekipman adı"
-                className={inputCls}
-              />
+    <div className="space-y-3">
+      {value.map((item, idx) => {
+        const presetOptions = CATEGORY_PRESETS[item.category] ?? [];
+        const customOptions = item.options.filter((o) => !presetOptions.includes(o));
 
-              {/* Adet */}
+        return (
+          <div key={idx} className="rounded-xl border border-border bg-secondary/10 p-3 space-y-3">
+            {/* Kategori adı + adet + kim sağlar + sil */}
+            <div className="grid gap-2" style={{ gridTemplateColumns: compact ? "1fr auto auto" : "1fr 60px 1fr auto" }}>
               <input
-                type="number"
-                min={1}
-                max={99}
+                value={item.category}
+                onChange={(e) => update(idx, { category: e.target.value })}
+                placeholder="Kategori adı (ör. DJ Player)"
+                className={`${inputCls} font-medium`}
+              />
+              <input
+                type="number" min={1} max={99}
                 value={item.qty}
                 onChange={(e) => update(idx, { qty: Math.max(1, Number(e.target.value)) })}
                 className={`${inputCls} text-center`}
                 style={{ width: compact ? 56 : undefined }}
               />
-
-              {/* Kim sağlıyor */}
               {!compact && (
                 <select
                   value={item.provided_by}
@@ -130,108 +150,103 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
                   <option value="artist">Sanatçı getirir</option>
                 </select>
               )}
-
-              {/* Sil */}
-              <button
-                type="button"
-                onClick={() => remove(idx)}
-                className="p-2 text-muted-foreground hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
-              >
+              <button type="button" onClick={() => remove(idx)}
+                className="p-2 text-muted-foreground hover:text-red-500 transition-colors rounded-lg hover:bg-red-50">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
               </button>
+            </div>
 
-              {/* Not (compact'ta gizli) */}
-              {!compact && (
-                <div className="col-span-4">
-                  <input
-                    value={item.notes}
-                    onChange={(e) => update(idx, { notes: e.target.value })}
-                    placeholder="Not (opsiyonel — ör. 'siyah kablolu', 'kapalı alanda')"
-                    className={`${inputCls} text-xs`}
-                  />
+            {/* Kabul edilebilir alternatifler */}
+            <div className="pl-1">
+              <p className="text-[11px] text-muted-foreground mb-1.5">
+                Kabul edilebilir alternatifler <span className="opacity-70">(birden fazla seçilebilir — herhangi biri yeterli)</span>
+              </p>
+
+              {presetOptions.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {presetOptions.map((opt) => {
+                    const selected = item.options.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => toggleOption(idx, opt)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                          selected
+                            ? "bg-foreground text-background border-foreground"
+                            : "border-border text-foreground hover:border-foreground/40"
+                        }`}
+                      >
+                        {selected ? "✓ " : ""}{opt}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
+
+              {customOptions.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {customOptions.map((opt) => (
+                    <span key={opt} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-foreground text-background">
+                      {opt}
+                      <button type="button" onClick={() => toggleOption(idx, opt)} className="opacity-70 hover:opacity-100 leading-none">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-1.5">
+                <input
+                  value={customOptionInput[idx] ?? ""}
+                  onChange={(e) => setCustomOptionInput((p) => ({ ...p, [idx]: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomOption(idx); } }}
+                  placeholder="Listede yoksa kendi alternatifini yaz…"
+                  className={`${inputCls} flex-1 text-xs py-1.5`}
+                />
+                <button type="button" onClick={() => addCustomOption(idx)}
+                  className="text-xs px-3 py-1.5 rounded-xl border border-border text-foreground hover:bg-secondary transition-colors">
+                  Ekle
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Header satırı */}
-      {value.length > 0 && !compact && (
-        <div
-          className="grid gap-2 px-3"
-          style={{ gridTemplateColumns: "1fr 60px 1fr auto" }}
-        >
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Ekipman</span>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Adet</span>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Kim sağlar?</span>
-        </div>
-      )}
+            {/* Not */}
+            {!compact && (
+              <input
+                value={item.notes}
+                onChange={(e) => update(idx, { notes: e.target.value })}
+                placeholder="Not (opsiyonel — ör. 'siyah kablolu', 'kapalı alanda')"
+                className={`${inputCls} w-full text-xs`}
+              />
+            )}
+          </div>
+        );
+      })}
 
-      {/* Aksiyon butonları */}
+      {/* Yeni kategori ekle */}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => onChange([...value, blankItem()])}
+          onClick={() => addCategoryRow()}
           className="text-xs px-4 py-2 border border-dashed border-border rounded-full text-foreground hover:border-foreground/50 transition-colors"
         >
-          + Ekipman Ekle
+          + Kategori Ekle
         </button>
-        <button
-          type="button"
-          onClick={() => setShowPresets((p) => !p)}
-          className="text-xs px-4 py-2 border border-border rounded-full text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors"
-        >
-          {showPresets ? "Kapat" : "Hazır Listeden Seç"}
-        </button>
+        {Object.keys(CATEGORY_PRESETS)
+          .filter((cat) => !value.some((v) => v.category === cat))
+          .map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => addCategoryRow(cat)}
+              className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+            >
+              + {cat}
+            </button>
+          ))}
       </div>
-
-      {/* Preset panel */}
-      {showPresets && (
-        <div className="rounded-xl border border-border bg-white p-4 space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {Object.keys(CATEGORY_PRESETS).map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                  activeCategory === cat
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border text-muted-foreground hover:border-foreground/40"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {activeCategory && (
-            <div className="flex flex-wrap gap-2">
-              {CATEGORY_PRESETS[activeCategory].map((preset) => {
-                const already = value.some((v) => v.item === preset);
-                return (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => addPreset(preset)}
-                    disabled={already}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                      already
-                        ? "border-border text-muted-foreground opacity-40 cursor-default"
-                        : "border-border text-foreground hover:bg-foreground hover:text-background"
-                    }`}
-                  >
-                    {already ? "✓ " : "+ "}{preset}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

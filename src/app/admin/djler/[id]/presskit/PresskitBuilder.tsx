@@ -41,6 +41,7 @@ export default function PresskitBuilder({ dj }: { dj: Record<string, any> }) {
     Array.isArray(dj.rider) ? dj.rider : []
   );
   const [riderUrl, setRiderUrl] = useState<string>(dj.rider_url ?? "");
+  const [mediaDriveUrl, setMediaDriveUrl] = useState<string>(dj.media_drive_url ?? "");
   const [photoOrder, setPhotoOrder] = useState<string[]>(photos);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -84,6 +85,7 @@ export default function PresskitBuilder({ dj }: { dj: Record<string, any> }) {
           website_url: website || null,
           rider: riderItems,
           rider_url: riderUrl || null,
+          media_drive_url: mediaDriveUrl || null,
           photos: photoOrder,
         });
         setSaved(true);
@@ -277,6 +279,21 @@ export default function PresskitBuilder({ dj }: { dj: Record<string, any> }) {
                   }} />
               </label>
             )}
+          </div>
+
+          {/* Foto & Video Drive Linki */}
+          <div>
+            <label className={labelCls}>Fotoğraf & Video Drive Linki</label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Booking sonrası organizasyon şirketinin yüksek çözünürlüklü materyal indirebileceği Google Drive / WeTransfer klasör linki.
+            </p>
+            <input
+              value={mediaDriveUrl}
+              onChange={(e) => setMediaDriveUrl(e.target.value)}
+              placeholder="https://drive.google.com/drive/folders/…"
+              type="url"
+              className={inputCls}
+            />
           </div>
         </div>
 

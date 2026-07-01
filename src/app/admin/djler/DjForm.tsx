@@ -53,6 +53,7 @@ type Dj = {
   slug?: string;
   rider_url?: string;
   rider?: RiderItem[];
+  media_drive_url?: string;
   city?: string;
   cover_cities?: string[];
   speciality?: string;
@@ -634,6 +635,23 @@ export default function DjForm({ dj }: { dj?: Dj }) {
               />
             </label>
           )}
+        </div>
+
+        {/* Foto & Video Drive Linki */}
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">
+            Fotoğraf & Video Drive Linki
+          </label>
+          <p className="text-xs text-muted-foreground mb-2">
+            Organizasyon şirketlerinin booking sonrası yüksek çözünürlüklü materyal indirebileceği Google Drive / WeTransfer vb. klasör linki.
+          </p>
+          <input
+            type="url"
+            name="media_drive_url"
+            defaultValue={dj?.media_drive_url ?? ""}
+            placeholder="https://drive.google.com/drive/folders/…"
+            className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+          />
         </div>
       </div>
 

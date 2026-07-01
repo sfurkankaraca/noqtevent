@@ -78,8 +78,19 @@ export default async function PresskitPage({ params }: Props) {
   const eventTypes: string[] = Array.isArray(dj.event_types) ? dj.event_types : [];
   const conceptTags: string[] = Array.isArray(dj.concept_tags) ? dj.concept_tags : [];
   const coverCities: string[] = Array.isArray(dj.cover_cities) ? dj.cover_cities : [];
-  type RiderItem = { item: string; qty: number; provided_by: "organizer" | "artist"; notes?: string };
-  const riderItems: RiderItem[] = Array.isArray(dj.rider) ? dj.rider : [];
+  type RiderItem = {
+    category?: string; item?: string; options?: string[];
+    qty: number; provided_by: "organizer" | "artist"; notes?: string;
+  };
+  const riderItemsRaw: RiderItem[] = Array.isArray(dj.rider) ? dj.rider : [];
+  // Eski format {item} ile yeni format {category, options} arasında uyum
+  const riderItems = riderItemsRaw.map((r) => ({
+    label: r.category || r.item || "",
+    options: r.options && r.options.length > 0 ? r.options : r.item ? [r.item] : [],
+    qty: r.qty,
+    provided_by: r.provided_by,
+    notes: r.notes ?? "",
+  }));
 
   const socialLinks = SOCIAL_LINKS.map((s) => ({
     label: s.label,
@@ -104,6 +115,16 @@ export default async function PresskitPage({ params }: Props) {
           noqt.events
         </a>
         <div className="flex items-center gap-3">
+          {dj.media_drive_url && (
+            <a
+              href={dj.media_drive_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs px-4 py-1.5 border border-border rounded-full text-foreground hover:bg-foreground hover:text-background transition-all"
+            >
+              📁 Fotoğraf & Video Arşivi ↗
+            </a>
+          )}
           {dj.rider_url && (
             <a
               href={dj.rider_url}
@@ -246,18 +267,26 @@ export default async function PresskitPage({ params }: Props) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-secondary/30">
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Ekipman</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Kategori</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Kabul Edilen Alternatifler</th>
                     <th className="text-center px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Adet</th>
                     <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Sağlayan</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Not</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {riderItems.map((r, i) => (
                     <tr key={i} className={i % 2 === 0 ? "" : "bg-secondary/10"}>
-                      <td className="px-4 py-2.5 font-medium text-foreground">{r.item}</td>
-                      <td className="px-4 py-2.5 text-center text-muted-foreground tabular-nums">{r.qty}</td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 font-medium text-foreground align-top">{r.label}</td>
+                      <td className="px-4 py-2.5 align-top">
+                        <div className="flex flex-wrap gap-1.5">
+                          {r.options.map((opt) => (
+                            <span key={opt} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-foreground">{opt}</span>
+                          ))}
+                        </div>
+                        {r.notes && <p className="text-xs text-muted-foreground mt-1.5">{r.notes}</p>}
+                      </td>
+                      <td className="px-4 py-2.5 text-center text-muted-foreground tabular-nums align-top">{r.qty}</td>
+                      <td className="px-4 py-2.5 align-top">
                         <span className={`text-xs px-2.5 py-1 rounded-full border ${
                           r.provided_by === "organizer"
                             ? "border-amber-200 bg-amber-50 text-amber-700"
@@ -266,11 +295,13 @@ export default async function PresskitPage({ params }: Props) {
                           {r.provided_by === "organizer" ? "Organizatör" : "Sanatçı"}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.notes ?? ""}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              <p className="text-xs text-muted-foreground px-4 py-2.5 bg-secondary/10 border-t border-border">
+                Bir kategoride birden fazla alternatif listeleniyorsa, bunlardan yalnızca biri sağlanması yeterlidir.
+              </p>
             </div>
           </div>
         )}
@@ -301,6 +332,26 @@ export default async function PresskitPage({ params }: Props) {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Foto & Video Arşivi (Drive) */}
+        {dj.media_drive_url && (
+          <div className="mb-14 rounded-2xl border border-border bg-secondary/10 p-6 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-1">Yüksek Çözünürlüklü Fotoğraf & Video Arşivi</p>
+              <p className="text-xs text-muted-foreground">
+                Booking sonrası kullanım için tüm görsel materyaller bu klasörde.
+              </p>
+            </div>
+            <a
+              href={dj.media_drive_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="no-print inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity flex-shrink-0"
+            >
+              📁 Arşivi Aç ↗
+            </a>
           </div>
         )}
 

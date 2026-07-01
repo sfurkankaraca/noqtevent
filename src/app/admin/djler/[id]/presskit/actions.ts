@@ -20,6 +20,7 @@ type PresskitPayload = {
   website_url: string | null;
   rider: RiderItem[];
   rider_url: string | null;
+  media_drive_url: string | null;
   photos: string[];
 };
 
