@@ -523,6 +523,143 @@ export async function sendArtistBookingConfirmation(data: {
   });
 }
 
+export async function sendBookingContractEmails(data: {
+  clientName: string;
+  clientEmail: string | null;
+  artistName: string;
+  artistEmail: string | null;
+  eventType: string | null;
+  eventDate: string | null;
+  venueName: string | null;
+  fee: number;
+  depositAmount: number;
+  contractUrl: string | null;
+  bookingId: string;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const fmtMoney = (n: number) => n.toLocaleString("tr-TR") + " ₺";
+  const fmtDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }) : "—";
+
+  const contractBtn = data.contractUrl
+    ? `<p style="margin-top:20px;"><a href="${data.contractUrl}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Sözleşmeyi İndir (PDF) ↓</a></p>`
+    : "";
+
+  const baseHtml = (title: string, body: string) => `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+      <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">NOQT Experience</p>
+      <h1 style="font-size:22px;font-weight:700;margin-bottom:24px;">${title}</h1>
+      ${body}
+      <p style="margin-top:32px;font-size:12px;color:#999;">Sorularınız için <a href="mailto:${ADMIN_EMAIL}" style="color:#1a1a1a;">${ADMIN_EMAIL}</a></p>
+    </div>`;
+
+  const detailTable = `
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+      <tr><td style="padding:8px 0;color:#666;width:140px;">Etkinlik Türü</td><td style="padding:8px 0;font-weight:600;">${data.eventType ?? "—"}</td></tr>
+      <tr><td style="padding:8px 0;color:#666;">Tarih</td><td style="padding:8px 0;font-weight:600;">${fmtDate(data.eventDate)}</td></tr>
+      <tr><td style="padding:8px 0;color:#666;">Mekan</td><td style="padding:8px 0;font-weight:600;">${data.venueName ?? "—"}</td></tr>
+      <tr><td style="padding:8px 0;color:#666;">Sanatçı</td><td style="padding:8px 0;font-weight:600;">${data.artistName}</td></tr>
+      <tr style="border-top:1px solid #eee;"><td style="padding:10px 0;color:#666;">Toplam Ücret</td><td style="padding:10px 0;font-weight:700;font-size:16px;">${fmtMoney(data.fee)}</td></tr>
+      <tr><td style="padding:8px 0;color:#666;">Kapora (şimdi ödenecek)</td><td style="padding:8px 0;font-weight:600;color:#b45309;">${fmtMoney(data.depositAmount)}</td></tr>
+    </table>`;
+
+  // Müşteriye
+  if (data.clientEmail) {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.clientEmail,
+      subject: `Booking Onayı — ${data.artistName} · NOQT`,
+      html: baseHtml(
+        `Booking onaylandı, ${data.clientName.split(" ")[0]}! 🎉`,
+        `<p style="font-size:15px;color:#444;line-height:1.6;">
+          <strong>${data.artistName}</strong> ile booking'iniz onaylanmıştır.
+          Sözleşmeyi inceleyip kapora ödemesini gerçekleştirdiğinizde rezervasyonunuz kesinleşecek.
+        </p>
+        ${detailTable}
+        ${contractBtn}
+        <p style="margin-top:20px;font-size:13px;color:#666;">
+          Kapora ödemesi için lütfen ekibimizle iletişime geçin veya banka bilgilerini bekleyin.
+        </p>`
+      ),
+    });
+  }
+
+  // Sanatçıya
+  if (data.artistEmail) {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.artistEmail,
+      subject: `Yeni Booking — ${data.clientName} · ${fmtDate(data.eventDate)}`,
+      html: baseHtml(
+        "Yeni bir booking onaylandı",
+        `<p style="font-size:15px;color:#444;line-height:1.6;">
+          <strong>${data.clientName}</strong> için etkinlik booking'iniz oluşturuldu.
+          Aşağıda etkinlik detaylarını bulabilirsiniz.
+        </p>
+        ${detailTable}
+        ${contractBtn}
+        <p style="margin-top:20px;font-size:13px;color:#666;">
+          Etkinlik detayları veya rider konusunda herhangi bir sorunuz varsa lütfen iletişime geçin.
+        </p>`
+      ),
+    });
+  }
+
+  // Admin bildirimi
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject: `✅ Sözleşme oluşturuldu — ${data.clientName} / ${data.artistName}`,
+    html: baseHtml(
+      "Sözleşme oluşturuldu",
+      `${detailTable}
+      <p><a href="${BASE}/admin/bookings/${data.bookingId}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Booking'i Görüntüle →</a></p>`
+    ),
+  });
+}
+
+export async function sendBookingDeliveryEmail(data: {
+  clientName: string;
+  clientEmail: string | null;
+  artistName: string;
+  deliveryUrl: string;
+  photoCount: number;
+  videoCount: number;
+}) {
+  const resend = getResend();
+  if (!resend || !data.clientEmail) return;
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.clientEmail,
+    subject: `Etkinlik Teslim Raporunuz Hazır — NOQT`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">NOQT Experience</p>
+        <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">Etkinliğiniz için teşekkürler, ${data.clientName.split(" ")[0]}! 🎉</h1>
+        <p style="font-size:15px;color:#444;line-height:1.6;">
+          <strong>${data.artistName}</strong> ile gerçekleşen etkinliğinizin fotoğraf ve videolarını
+          aşağıdaki linkten görüntüleyip indirebilirsiniz.
+        </p>
+        <p style="font-size:14px;color:#666;margin-top:12px;">
+          ${data.photoCount} fotoğraf${data.videoCount ? ` · ${data.videoCount} video` : ""}
+        </p>
+        <p style="margin-top:24px;">
+          <a href="${data.deliveryUrl}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">
+            Teslim Raporunu Görüntüle →
+          </a>
+        </p>
+        <p style="margin-top:32px;font-size:12px;color:#999;">
+          Deneyiminizle ilgili görüşlerinizi bizimle paylaşmak isterseniz her zaman buradayız.
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendContactNotification(msg: {
   name: string;
   email: string;
