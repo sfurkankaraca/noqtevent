@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import PartnersClient from "@/components/sections/PartnersClient";
-import PartnersPage from "@/components/sections/PartnersPage";
 import JoinPlatform from "@/components/home/JoinPlatform";
 import { createServiceClient } from "@/lib/supabase";
 
 export const metadata: Metadata = {
-  title: "Ortak Ekosistemi",
-  description: "NOQT'un özenle seçilmiş partner ağı — mekanlar, fotoğrafçılar, dekoratörler ve daha fazlası.",
+  title: "Partner Ağı — Mekan, Fotoğraf, Dekorasyon & Daha Fazlası | NOQT",
+  description: "NOQT partner ekosistemi — mekanlar, fotoğrafçılar, çiçek tasarımcıları, catering ve daha fazlası. Etkinliğinizin her detayı için titizlikle seçilmiş partnerler.",
 };
 
 export default async function Page() {
@@ -20,13 +19,11 @@ export default async function Page() {
     .eq("application_status", "approved")
     .order("created_at", { ascending: true });
 
-  const hasPartners = partners && partners.length > 0;
-
   return (
     <>
       <Navigation />
       <main className="pt-20">
-        {hasPartners ? <PartnersClient partners={partners} /> : <PartnersPage />}
+        <PartnersClient partners={partners ?? []} />
         <JoinPlatform />
       </main>
       <Footer />
