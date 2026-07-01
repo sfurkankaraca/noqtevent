@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
-import PartnerForm from "../../PartnerForm";
+import PartnerToolkitBuilder from "./PartnerToolkitBuilder";
 
-export default async function EditPartnerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PartnerToolkitPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = createServiceClient();
   const { data: partner } = await supabase.from("partner_profiles").select("*").eq("id", id).single();
@@ -11,15 +11,20 @@ export default async function EditPartnerPage({ params }: { params: Promise<{ id
   if (!partner) notFound();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-full">
       <div className="flex items-center gap-3">
         <Link href="/admin/ortaklar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           ← Ortaklar
         </Link>
         <span className="text-muted-foreground/40">/</span>
-        <h1 className="text-2xl font-semibold text-foreground">{partner.business_name}</h1>
+        <Link href={`/admin/ortaklar/${id}/edit`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          {partner.business_name}
+        </Link>
+        <span className="text-muted-foreground/40">/</span>
+        <h1 className="text-sm font-medium text-foreground">Toolkit</h1>
       </div>
-      <PartnerForm partner={partner} />
+
+      <PartnerToolkitBuilder partner={partner} />
     </div>
   );
 }

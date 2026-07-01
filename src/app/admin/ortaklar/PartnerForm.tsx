@@ -7,25 +7,39 @@ import Link from "next/link";
 import { upsertPartner } from "./actions";
 import FocalPointPicker, { type FocalPoint } from "@/components/admin/FocalPointPicker";
 
-const SERVICE_CATEGORIES = [
-  "Mekan", "Müzik & Teknik", "Görsel & Video", "Stil & Güzellik",
-  "Çiçek & Dekor", "Yiyecek & İçecek", "Lojistik & Ulaşım", "Dijital & Baskı", "Diğer",
+export const PARTNER_CATEGORIES = [
+  { id: "venue", label: "Mekan", emoji: "🏛️" },
+  { id: "photo-video", label: "Fotoğraf & Video", emoji: "📸" },
+  { id: "decor", label: "Dekorasyon & Çiçek", emoji: "🌸" },
+  { id: "catering", label: "Catering & İkram", emoji: "🍽️" },
+  { id: "cake", label: "Pasta & Tatlı", emoji: "🎂" },
+  { id: "beauty", label: "Güzellik & Bakım", emoji: "💄" },
+  { id: "transport", label: "Ulaşım & Transfer", emoji: "🚗" },
+  { id: "invitation", label: "Davetiye & Tasarım", emoji: "✉️" },
+  { id: "dance-class", label: "Dans Kursu", emoji: "💃" },
+  { id: "planning", label: "Organizasyon & Planlama", emoji: "📋" },
 ];
 
-type Service = { name: string; price_range: string };
+const CITIES = ["Kayseri", "Nevşehir", "İstanbul", "İzmir", "Ankara", "Antalya", "Bursa", "Bodrum", "Çeşme", "Muğla"];
 
 type Partner = {
   id?: string;
-  company_name?: string;
+  business_name?: string;
   description?: string;
   logo_url?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  service_category?: string;
-  services?: Service[];
-  portfolio_images?: string[];
+  email?: string;
+  phone?: string;
+  contact_name?: string;
+  category?: string[];
+  services?: string[];
+  city?: string;
+  cover_cities?: string[];
+  instagram_url?: string;
+  website_url?: string;
+  photos?: string[];
   focal_points?: Record<string, FocalPoint>;
   is_active?: boolean;
+  application_status?: string;
 };
 
 interface PhotoEntry {
@@ -61,26 +75,34 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
   const [logoUrl, setLogoUrl] = useState<string | null>(partner?.logo_url ?? null);
   const [logoUploading, setLogoUploading] = useState(false);
 
-  const initPhotos: PhotoEntry[] = (partner?.portfolio_images ?? []).map((url) => ({ url }));
+  const initPhotos: PhotoEntry[] = (partner?.photos ?? []).map((url) => ({ url }));
   const [photos, setPhotos] = useState<PhotoEntry[]>(initPhotos);
   const [focalPoints, setFocalPoints] = useState<Record<string, FocalPoint>>(
     partner?.focal_points ?? {}
   );
 
-  const [services, setServices] = useState<Service[]>(partner?.services ?? []);
-  const [serviceInput, setServiceInput] = useState({ name: "", price_range: "" });
+  const [categories, setCategories] = useState<string[]>(partner?.category ?? []);
+  const [services, setServices] = useState<string[]>(partner?.services ?? []);
+  const [serviceInput, setServiceInput] = useState("");
+  const [coverCities, setCoverCities] = useState<string[]>(partner?.cover_cities ?? []);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isUploading = logoUploading || photos.some((p) => p.uploading);
 
+  const toggleCategory = (id: string) =>
+    setCategories((p) => (p.includes(id) ? p.filter((c) => c !== id) : [...p, id]));
+  const toggleCity = (city: string) =>
+    setCoverCities((p) => (p.includes(city) ? p.filter((c) => c !== city) : [...p, city]));
+
   const addService = () => {
-    if (!serviceInput.name) return;
-    setServices((p) => [...p, { ...serviceInput }]);
-    setServiceInput({ name: "", price_range: "" });
+    const s = serviceInput.trim();
+    if (!s || services.includes(s)) return;
+    setServices((p) => [...p, s]);
+    setServiceInput("");
   };
-  const removeService = (i: number) => setServices((p) => p.filter((_, idx) => idx !== i));
+  const removeService = (s: string) => setServices((p) => p.filter((x) => x !== s));
 
   const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -136,11 +158,13 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
     setFocalPoints((prev) => ({ ...prev, [url]: fp }));
 
   const handleAction = async (fd: FormData) => {
+    fd.set("category_json", JSON.stringify(categories));
     fd.set("services_json", JSON.stringify(services));
+    fd.set("cover_cities_json", JSON.stringify(coverCities));
     if (logoUrl) fd.set("logo_url", logoUrl);
 
     const readyPhotos = photos.filter((p) => p.url && !p.uploading && !p.error);
-    fd.set("portfolio_json", JSON.stringify(readyPhotos.map((p) => p.url)));
+    fd.set("photos_json", JSON.stringify(readyPhotos.map((p) => p.url)));
 
     const fpPayload: Record<string, FocalPoint> = {};
     readyPhotos.forEach((ph) => { fpPayload[ph.url] = getFocalPoint(ph.url); });
@@ -157,6 +181,9 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
     }
   };
 
+  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40";
+  const labelCls = "block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2";
+
   return (
     <form action={handleAction} className="space-y-6 max-w-2xl">
       {partner?.id && <input type="hidden" name="id" value={partner.id} />}
@@ -170,53 +197,61 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
         <h2 className="font-medium text-foreground">Firma Bilgileri</h2>
 
         <div>
-          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Firma Adı</label>
-          <input type="text" name="company_name" defaultValue={partner?.company_name} required placeholder="Firma Adı"
-            className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
+          <label className={labelCls}>Firma Adı</label>
+          <input type="text" name="business_name" defaultValue={partner?.business_name} required placeholder="Firma Adı"
+            className={inputCls} />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Açıklama</label>
+          <label className={labelCls}>Açıklama</label>
           <textarea name="description" defaultValue={partner?.description ?? ""} rows={3}
             placeholder="Firma hakkında kısa bir tanıtım…"
-            className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40 resize-none" />
+            className={`${inputCls} resize-none`} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Hizmet Kategorisi</label>
-            <select name="service_category" defaultValue={partner?.service_category ?? ""} required
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40">
-              <option value="">Seç…</option>
-              {SERVICE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <label className={labelCls}>Şehir</label>
+            <input type="text" name="city" defaultValue={partner?.city ?? ""} placeholder="ör. Kayseri" className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Aktif</label>
-            <select name="is_active" defaultValue={partner?.is_active !== false ? "true" : "false"}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40">
+            <label className={labelCls}>Aktif</label>
+            <select name="is_active" defaultValue={partner?.is_active !== false ? "true" : "false"} className={inputCls}>
               <option value="true">Evet</option>
               <option value="false">Hayır</option>
             </select>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">E-posta</label>
-            <input type="email" name="contact_email" defaultValue={partner?.contact_email ?? ""} placeholder="firma@example.com"
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
+            <label className={labelCls}>Yetkili</label>
+            <input type="text" name="contact_name" defaultValue={partner?.contact_name ?? ""} placeholder="Ad Soyad" className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Telefon</label>
-            <input type="tel" name="contact_phone" defaultValue={partner?.contact_phone ?? ""} placeholder="+90 5xx xxx xx xx"
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
+            <label className={labelCls}>E-posta</label>
+            <input type="email" name="email" defaultValue={partner?.email ?? ""} placeholder="firma@example.com" className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Telefon</label>
+            <input type="tel" name="phone" defaultValue={partner?.phone ?? ""} placeholder="+90 5xx xxx xx xx" className={inputCls} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Instagram</label>
+            <input type="url" name="instagram_url" defaultValue={partner?.instagram_url ?? ""} placeholder="https://instagram.com/…" className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Website</label>
+            <input type="url" name="website_url" defaultValue={partner?.website_url ?? ""} placeholder="https://…" className={inputCls} />
           </div>
         </div>
 
         {/* Logo */}
         <div>
-          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Logo</label>
+          <label className={labelCls}>Logo</label>
           <div className="flex items-center gap-4">
             {logoUrl && (
               <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-border bg-secondary/30 flex-shrink-0">
@@ -230,30 +265,70 @@ export default function PartnerForm({ partner }: { partner?: Partner }) {
         </div>
       </div>
 
+      {/* Kategori */}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
+        <h2 className="font-medium text-foreground">Hizmet Kategorileri</h2>
+        <div className="grid grid-cols-2 gap-2">
+          {PARTNER_CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => toggleCategory(cat.id)}
+              className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs transition-all ${
+                categories.includes(cat.id)
+                  ? "border-foreground bg-foreground/5 text-foreground font-medium"
+                  : "border-border text-muted-foreground hover:border-foreground/40"
+              }`}
+            >
+              <span>{cat.emoji}</span>
+              {cat.label}
+              {categories.includes(cat.id) && <span className="ml-auto">✓</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Hizmet bölgeleri */}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
+        <h2 className="font-medium text-foreground">Hizmet Verilen Şehirler</h2>
+        <div className="flex flex-wrap gap-2">
+          {CITIES.map((city) => (
+            <button
+              key={city}
+              type="button"
+              onClick={() => toggleCity(city)}
+              className={`px-3 py-1.5 rounded-full text-xs border transition-all ${
+                coverCities.includes(city)
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border text-foreground hover:border-foreground/40"
+              }`}
+            >
+              {city}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Services */}
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
         <h2 className="font-medium text-foreground">Hizmetler</h2>
         {services.length > 0 && (
-          <div className="space-y-2">
-            {services.map((s, i) => (
-              <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl bg-secondary/40 text-sm">
-                <span className="font-medium text-foreground">{s.name}</span>
-                <div className="flex items-center gap-3">
-                  {s.price_range && <span className="text-xs text-muted-foreground">{s.price_range}</span>}
-                  <button type="button" onClick={() => removeService(i)} className="text-xs text-red-500 hover:text-red-700 transition-colors">Kaldır</button>
-                </div>
-              </div>
+          <div className="flex flex-wrap gap-2">
+            {services.map((s) => (
+              <span key={s} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-secondary text-foreground">
+                {s}
+                <button type="button" onClick={() => removeService(s)} className="opacity-60 hover:opacity-100 transition-opacity leading-none">×</button>
+              </span>
             ))}
           </div>
         )}
         <div className="flex gap-2">
-          <input type="text" value={serviceInput.name} onChange={(e) => setServiceInput((p) => ({ ...p, name: e.target.value }))}
-            placeholder="Hizmet adı (ör. DJ Set)"
-            className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
-          <input type="text" value={serviceInput.price_range} onChange={(e) => setServiceInput((p) => ({ ...p, price_range: e.target.value }))}
-            placeholder="Fiyat aralığı" className="w-36 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40" />
-          <button type="button" onClick={addService} disabled={!serviceInput.name}
-            className="px-4 py-2.5 rounded-xl border border-border text-sm text-foreground hover:bg-secondary transition-colors disabled:opacity-40">
+          <input type="text" value={serviceInput} onChange={(e) => setServiceInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addService(); } }}
+            placeholder="Hizmet adı yaz ve Enter'a bas (ör. Gelin Arabası)"
+            className={inputCls} />
+          <button type="button" onClick={addService} disabled={!serviceInput.trim()}
+            className="px-4 py-2.5 rounded-xl border border-border text-sm text-foreground hover:bg-secondary transition-colors disabled:opacity-40 flex-shrink-0">
             Ekle
           </button>
         </div>

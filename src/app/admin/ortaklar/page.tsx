@@ -2,6 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { createServiceClient } from "@/lib/supabase";
 import DeletePartnerButton from "./DeletePartnerButton";
+import { PARTNER_CATEGORIES } from "./PartnerForm";
+
+const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  PARTNER_CATEGORIES.map((c) => [c.id, `${c.emoji} ${c.label}`])
+);
 
 export default async function OrtaklarPage() {
   const supabase = createServiceClient();
@@ -10,10 +15,11 @@ export default async function OrtaklarPage() {
     .select("*")
     .order("created_at", { ascending: false });
 
-  // Group by service_category
+  // Group by first category
   const grouped: Record<string, typeof partners> = {};
   for (const p of partners ?? []) {
-    const cat = p.service_category ?? "Diğer";
+    const cats: string[] = Array.isArray(p.category) && p.category.length > 0 ? p.category : ["diger"];
+    const cat = cats[0];
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat]!.push(p);
   }
@@ -49,7 +55,9 @@ export default async function OrtaklarPage() {
       {Object.entries(grouped).map(([category, items]) => (
         <section key={category} className="space-y-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-sm font-semibold text-foreground tracking-wide uppercase">{category}</h2>
+            <h2 className="text-sm font-semibold text-foreground tracking-wide uppercase">
+              {CATEGORY_LABELS[category] ?? category}
+            </h2>
             <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{items?.length}</span>
           </div>
 
@@ -58,8 +66,8 @@ export default async function OrtaklarPage() {
               <div key={partner.id} className="bg-white rounded-2xl border border-border overflow-hidden">
                 {/* Portfolio cover or placeholder */}
                 <div className="relative h-36 bg-secondary/30">
-                  {partner.portfolio_images?.[0] ? (
-                    <Image src={partner.portfolio_images[0]} alt={partner.company_name} fill className="object-cover" unoptimized />
+                  {partner.photos?.[0] ? (
+                    <Image src={partner.photos[0]} alt={partner.business_name} fill className="object-cover" unoptimized />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-4xl">🤝</div>
                   )}
@@ -77,29 +85,26 @@ export default async function OrtaklarPage() {
                 </div>
 
                 <div className="p-4 space-y-2">
-                  <h3 className="font-semibold text-foreground text-sm">{partner.company_name}</h3>
+                  <h3 className="font-semibold text-foreground text-sm">{partner.business_name}</h3>
 
                   {partner.description && (
                     <p className="text-xs text-muted-foreground line-clamp-2">{partner.description}</p>
                   )}
 
                   {partner.services?.length > 0 && (
-                    <div className="space-y-1">
-                      {partner.services.slice(0, 3).map((s: { name: string; price_range: string }, i: number) => (
-                        <div key={i} className="flex items-center justify-between text-xs">
-                          <span className="text-foreground">{s.name}</span>
-                          {s.price_range && <span className="text-muted-foreground">{s.price_range}</span>}
-                        </div>
+                    <div className="flex flex-wrap gap-1">
+                      {partner.services.slice(0, 3).map((s: string, i: number) => (
+                        <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-foreground">{s}</span>
                       ))}
                       {partner.services.length > 3 && (
-                        <p className="text-xs text-muted-foreground">+{partner.services.length - 3} hizmet daha</p>
+                        <span className="text-[10px] text-muted-foreground">+{partner.services.length - 3}</span>
                       )}
                     </div>
                   )}
 
-                  {(partner.contact_email || partner.contact_phone) && (
+                  {(partner.email || partner.phone) && (
                     <p className="text-xs text-muted-foreground">
-                      {partner.contact_email ?? partner.contact_phone}
+                      {partner.email ?? partner.phone}
                     </p>
                   )}
 
@@ -108,7 +113,11 @@ export default async function OrtaklarPage() {
                       className="flex-1 text-center py-2 rounded-xl text-xs font-medium border border-border hover:bg-secondary transition-colors">
                       Düzenle
                     </Link>
-                    <DeletePartnerButton id={partner.id} name={partner.company_name} />
+                    <Link href={`/admin/ortaklar/${partner.id}/toolkit`}
+                      className="flex-1 text-center py-2 rounded-xl text-xs font-medium border border-border hover:bg-secondary transition-colors">
+                      Toolkit
+                    </Link>
+                    <DeletePartnerButton id={partner.id} name={partner.business_name} />
                   </div>
                 </div>
               </div>

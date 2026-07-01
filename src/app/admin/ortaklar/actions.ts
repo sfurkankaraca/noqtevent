@@ -9,26 +9,30 @@ export async function upsertPartner(formData: FormData) {
   const id = formData.get("id") as string | null;
 
   const logo_url = (formData.get("logo_url") as string) || null;
-  const portfolio_images: string[] = JSON.parse((formData.get("portfolio_json") as string) || "[]");
+  const photos: string[] = JSON.parse((formData.get("photos_json") as string) || "[]");
   const focal_points: Record<string, FocalPoint> = JSON.parse(
     (formData.get("focal_points_json") as string) || "{}"
   );
-
-  let services: { name: string; price_range: string }[] = [];
-  try {
-    services = JSON.parse((formData.get("services_json") as string) || "[]");
-  } catch {}
+  const category: string[] = JSON.parse((formData.get("category_json") as string) || "[]");
+  const services: string[] = JSON.parse((formData.get("services_json") as string) || "[]");
+  const cover_cities: string[] = JSON.parse((formData.get("cover_cities_json") as string) || "[]");
 
   const payload = {
-    company_name: formData.get("company_name") as string,
+    business_name: formData.get("business_name") as string,
     description: (formData.get("description") as string) || null,
-    contact_email: (formData.get("contact_email") as string) || null,
-    contact_phone: (formData.get("contact_phone") as string) || null,
-    service_category: formData.get("service_category") as string,
+    category,
     services,
-    portfolio_images,
-    focal_points,
+    city: (formData.get("city") as string) || null,
+    cover_cities,
+    contact_name: (formData.get("contact_name") as string) || null,
+    email: (formData.get("email") as string) || null,
+    phone: (formData.get("phone") as string) || null,
+    instagram_url: (formData.get("instagram_url") as string) || null,
+    website_url: (formData.get("website_url") as string) || null,
+    application_status: (formData.get("application_status") as string) || "approved",
     is_active: formData.get("is_active") === "true",
+    photos,
+    focal_points,
     ...(logo_url ? { logo_url } : {}),
   };
 
@@ -76,16 +80,16 @@ export async function removePortfolioImage(partnerId: string, url: string) {
   const supabase = createServiceClient();
   const { data: partner } = await supabase
     .from("partner_profiles")
-    .select("portfolio_images, focal_points")
+    .select("photos, focal_points")
     .eq("id", partnerId)
     .single();
   if (!partner) return;
-  const updated = (partner.portfolio_images as string[]).filter((u: string) => u !== url);
+  const updated = (partner.photos as string[]).filter((u: string) => u !== url);
   const fp = { ...(partner.focal_points as Record<string, FocalPoint> ?? {}) };
   delete fp[url];
   await supabase
     .from("partner_profiles")
-    .update({ portfolio_images: updated, focal_points: fp })
+    .update({ photos: updated, focal_points: fp })
     .eq("id", partnerId);
   revalidatePath("/admin/ortaklar");
 }

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { createServiceClient } from "@/lib/supabase";
+import PrintButton from "@/components/PrintButton";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -113,12 +114,9 @@ export default async function PresskitPage({ params }: Props) {
               Rider İndir ↓
             </a>
           )}
-          <button
-            onClick={() => window.print()}
-            className="text-xs px-4 py-1.5 bg-foreground text-background rounded-full hover:opacity-90 transition-opacity"
-          >
+          <PrintButton className="text-xs px-4 py-1.5 bg-foreground text-background rounded-full hover:opacity-90 transition-opacity">
             PDF Olarak Kaydet
-          </button>
+          </PrintButton>
         </div>
       </div>
 
