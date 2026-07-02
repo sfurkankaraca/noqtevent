@@ -18,6 +18,8 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
   "🎧 DJ Player": [
     "Pioneer CDJ-3000",
     "Pioneer CDJ-2000NXS2",
+    "Pioneer XDJ-RX3",
+    "Pioneer XDJ-AZ",
     "Rane Seventy-Two",
     "Denon SC6000",
   ],
