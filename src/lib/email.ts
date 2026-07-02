@@ -658,6 +658,79 @@ export async function sendBookingDeliveryEmail(data: {
   });
 }
 
+export async function sendOfferEmail(data: {
+  clientName: string;
+  clientEmail: string;
+  artistName: string;
+  offerUrl: string;
+  eventType: string | null;
+  eventDate: string | null;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const fmtDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }) : "—";
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.clientEmail,
+    subject: `Teklifiniz Hazır — ${data.artistName} · NOQT`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">NOQT Experience</p>
+        <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">Teklifiniz hazır, ${data.clientName.split(" ")[0]}!</h1>
+        <p style="font-size:15px;color:#444;line-height:1.6;">
+          <strong>${data.artistName}</strong> için hazırladığımız teklifi, ödeme seçeneklerini ve
+          koşulları aşağıdaki linkten inceleyip onaylayabilirsiniz.
+        </p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+          <tr><td style="padding:8px 0;color:#666;width:140px;">Etkinlik Türü</td><td style="padding:8px 0;font-weight:600;">${data.eventType ?? "—"}</td></tr>
+          <tr><td style="padding:8px 0;color:#666;">Tarih</td><td style="padding:8px 0;font-weight:600;">${fmtDate(data.eventDate)}</td></tr>
+        </table>
+        <p style="margin-top:20px;">
+          <a href="${data.offerUrl}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">
+            Teklifi İncele →
+          </a>
+        </p>
+        <p style="margin-top:32px;font-size:12px;color:#999;">Sorularınız için ${ADMIN_EMAIL}</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendPaymentClaimNotification(data: {
+  clientName: string;
+  bookingId: string;
+  plan: "cash" | "prepay";
+  amount: number;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject: `💳 Ödeme bildirimi — ${data.clientName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <h1 style="font-size:20px;font-weight:700;margin-bottom:16px;">Müşteri ödeme yaptığını bildirdi</h1>
+        <p style="font-size:14px;color:#444;">
+          <strong>${data.clientName}</strong> — ${data.plan === "cash" ? "Peşin" : "Ön Ödemeli"} plan —
+          ${data.amount.toLocaleString("tr-TR")} ₺
+        </p>
+        <p style="font-size:13px;color:#666;">Banka hesap hareketlerini kontrol edip booking'i güncelleyin.</p>
+        <p style="margin-top:20px;">
+          <a href="${BASE}/admin/bookings/${data.bookingId}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">
+            Booking'i Aç →
+          </a>
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendContactNotification(msg: {
   name: string;
   email: string;

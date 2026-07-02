@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { updateBookingStatus, addPayment, type BookingStatus } from "../actions";
 import DeliveryManager from "./DeliveryManager";
+import OfferManager from "./OfferManager";
 
 const STATUS_META: Record<string, { label: string; cls: string; dot: string }> = {
   draft:        { label: "Taslak",             cls: "bg-gray-100 text-gray-600",     dot: "bg-gray-400" },
@@ -406,6 +407,16 @@ export default function BookingDetail({ booking, payments, artists }: {
             </div>
           </div>
         )}
+
+        {/* Teklif & Ödeme */}
+        <OfferManager
+          bookingId={booking.id}
+          clientName={booking.client_name}
+          clientEmail={booking.client_email}
+          fee={booking.fee ?? 0}
+          initialSlug={booking.offer_slug}
+          paymentPlan={booking.payment_plan}
+        />
 
         {/* Sözleşme */}
         <div className="bg-white rounded-2xl border border-border p-5 space-y-3">

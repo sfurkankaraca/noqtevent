@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { normalizeRiderItems, type RiderItem } from "@/lib/riderTypes";
+import { normalizeRiderItems, RIDER_TEMPLATES, type RiderItem } from "@/lib/riderTypes";
 
 export type { RiderItem };
 export { normalizeRiderItems };
@@ -117,10 +117,33 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
     onChange([...value, { ...blankItem(), category }]);
   };
 
+  const applyTemplate = (key: string) => {
+    const template = RIDER_TEMPLATES[key];
+    if (!template) return;
+    if (value.length > 0 && !window.confirm(`Mevcut rider listesi silinip "${template.label}" şablonu ile değiştirilecek. Devam edilsin mi?`)) return;
+    onChange(template.items.map((item) => ({ ...item, options: [...item.options] })));
+  };
+
   const inputCls = "px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40";
 
   return (
     <div className="space-y-3">
+      {!compact && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] text-muted-foreground">Hızlı başla:</span>
+          {Object.entries(RIDER_TEMPLATES).map(([key, tpl]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => applyTemplate(key)}
+              className="text-xs px-3 py-1.5 rounded-full border border-dashed border-border text-foreground hover:border-foreground/50 transition-colors"
+            >
+              {tpl.emoji} {tpl.label} Uygula
+            </button>
+          ))}
+        </div>
+      )}
+
       {value.map((item, idx) => {
         const presetOptions = CATEGORY_PRESETS[item.category] ?? [];
         const itemOptions = item.options ?? [];

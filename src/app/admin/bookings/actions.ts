@@ -2,7 +2,7 @@
 
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
-import { sendBookingDeliveryEmail } from "@/lib/email";
+import { sendBookingDeliveryEmail, sendOfferEmail as sendOfferEmailLib, sendPaymentClaimNotification } from "@/lib/email";
 
 export type BookingStatus =
   | "draft" | "offer_sent" | "confirmed" | "contracted"
@@ -110,6 +110,54 @@ export async function sendDelivery(bookingId: string) {
 
   await supabase.from("bookings").update({ delivery_sent_at: new Date().toISOString() }).eq("id", bookingId);
   revalidatePath(`/admin/bookings/${bookingId}`);
+}
+
+export async function generateOfferLink(bookingId: string, slug: string) {
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("bookings").update({ offer_slug: slug }).eq("id", bookingId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath(`/teklif/${slug}`);
+}
+
+export async function sendOfferEmail(bookingId: string) {
+  const supabase = createServiceClient();
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("*, dj_profiles(name)")
+    .eq("id", bookingId)
+    .single();
+  if (error || !booking) throw new Error(error?.message ?? "Booking bulunamadı");
+  if (!booking.offer_slug) throw new Error("Önce teklif linkini oluşturun");
+  if (!booking.client_email) throw new Error("Müşteri e-postası yok");
+
+  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  await sendOfferEmailLib({
+    clientName: booking.client_name,
+    clientEmail: booking.client_email,
+    artistName: booking.dj_profiles?.name ?? "—",
+    offerUrl: `${BASE}/teklif/${booking.offer_slug}`,
+    eventType: booking.event_type,
+    eventDate: booking.event_date,
+  });
+
+  if (booking.status === "draft") {
+    await supabase.from("bookings").update({ status: "offer_sent" }).eq("id", bookingId);
+  }
+  revalidatePath(`/admin/bookings/${bookingId}`);
+}
+
+export async function notifyPaymentClaim(bookingId: string, data: { plan: "cash" | "prepay"; amount: number }) {
+  const supabase = createServiceClient();
+  const { data: booking, error } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
+  if (error || !booking) throw new Error(error?.message ?? "Booking bulunamadı");
+
+  await sendPaymentClaimNotification({
+    clientName: booking.client_name,
+    bookingId: booking.id,
+    plan: data.plan,
+    amount: data.amount,
+  });
 }
 
 export async function deleteBooking(id: string) {
