@@ -37,6 +37,12 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           // Permissions policy
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // CSP — script/style kısıtlaması yok (Next inline script kullanır);
+          // yalnızca kırılma riski olmayan direktifler
+          {
+            key: "Content-Security-Policy",
+            value: "object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+          },
         ],
       },
       {

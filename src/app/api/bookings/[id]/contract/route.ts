@@ -61,19 +61,29 @@ export async function POST(
   try {
     const pdfBuffer = await generateContractPdf(contractData);
 
-    // Supabase Storage'a yükle (görseller de bu "images" bucket'ında tutuluyor)
-    const fileName = `contracts/${booking.id}/sozlesme-${Date.now()}.pdf`;
+    // Sözleşmeler PII içerdiği için private bucket'ta tutulur; erişim imzalı URL ile
+    const bucket = "contracts";
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (!buckets?.some((b) => b.name === bucket)) {
+      await supabase.storage.createBucket(bucket, { public: false });
+    }
+
+    const fileName = `${booking.id}/sozlesme-${Date.now()}.pdf`;
     const { error: uploadError } = await supabase.storage
-      .from("images")
+      .from(bucket)
       .upload(fileName, pdfBuffer, { contentType: "application/pdf", upsert: true });
 
     let contractUrl: string | null = null;
     if (!uploadError) {
-      const { data: urlData } = supabase.storage.from("images").getPublicUrl(fileName);
-      contractUrl = urlData.publicUrl;
-
-      // Booking'e kaydet
-      await supabase.from("bookings").update({ contract_url: contractUrl }).eq("id", booking.id);
+      const { data: signed, error: signError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 yıl
+      if (!signError && signed) {
+        contractUrl = signed.signedUrl;
+        await supabase.from("bookings").update({ contract_url: contractUrl }).eq("id", booking.id);
+      } else {
+        console.error("Contract sign-url error:", signError?.message);
+      }
     } else {
       console.error("Contract upload error:", uploadError.message);
     }

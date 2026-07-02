@@ -25,7 +25,6 @@ const ALLOWED_FOLDERS = [
   "invitations/covers",
   "invitations/seating",
   "artists/riders",
-  "contracts",
   "bookings/delivery",
 ];
 

@@ -5,6 +5,19 @@ import Link from "next/link";
 
 type UploadedFile = { url: string; type: "image" | "video"; name: string };
 
+// Bazı tarayıcılar (özellikle HEIC/MOV için) file.type'ı boş bırakır — uzantıdan tamamla
+const EXT_MIME: Record<string, string> = {
+  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
+  heic: "image/heic", heif: "image/heif",
+  mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm",
+};
+
+function mimeFor(file: File): string {
+  if (file.type) return file.type;
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  return EXT_MIME[ext] ?? "";
+}
+
 export default function MemoryUploadClient({
   event,
 }: {
@@ -15,30 +28,90 @@ export default function MemoryUploadClient({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [total, setTotal] = useState(0);
+  const [percent, setPercent] = useState(0);
+  const [errors, setErrors] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Dosyalar tarayıcıdan doğrudan R2'ye yüklenir (presigned URL) —
+  // sunucu üzerinden geçirmek Vercel'in ~4.5MB body limitine takılıyordu.
   async function uploadFiles(fileList: FileList | File[]) {
     const arr = Array.from(fileList);
     if (!arr.length) return;
     setTotal(arr.length);
     setProgress(0);
+    setPercent(0);
+    setErrors([]);
     setUploading(true);
 
+    const totalBytes = arr.reduce((sum, f) => sum + f.size, 0);
+    let doneBytes = 0;
     const results: UploadedFile[] = [];
-    for (const file of arr) {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("event_slug", event.slug);
-      if (name.trim()) fd.append("uploader_name", name.trim());
+    const failed: string[] = [];
 
-      const res = await fetch("/api/memory/upload", { method: "POST", body: fd });
-      const json = await res.json();
-      if (json.url) results.push({ url: json.url, type: json.type, name: file.name });
+    for (const file of arr) {
+      try {
+        const contentType = mimeFor(file);
+        const presignRes = await fetch("/api/memory/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event_slug: event.slug,
+            filename: file.name,
+            contentType,
+            size: file.size,
+          }),
+        });
+        const presign = await presignRes.json();
+        if (!presignRes.ok || !presign.signedUrl) {
+          throw new Error(presign.error || "Yükleme başlatılamadı");
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", presign.signedUrl);
+          xhr.setRequestHeader("Content-Type", contentType);
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable && totalBytes > 0) {
+              setPercent(Math.min(100, Math.round(((doneBytes + e.loaded) / totalBytes) * 100)));
+            }
+          };
+          xhr.onload = () =>
+            xhr.status >= 200 && xhr.status < 300
+              ? resolve()
+              : reject(new Error(`Yükleme hatası (${xhr.status})`));
+          xhr.onerror = () => reject(new Error("Bağlantı hatası — tekrar deneyin"));
+          xhr.send(file);
+        });
+
+        const confirmRes = await fetch("/api/memory/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event_slug: event.slug,
+            path: presign.path,
+            file_name: file.name,
+            file_size: file.size,
+            file_type: presign.type,
+            uploader_name: name.trim() || undefined,
+          }),
+        });
+        if (!confirmRes.ok) {
+          const j = await confirmRes.json().catch(() => ({}));
+          throw new Error(j.error || "Kayıt oluşturulamadı");
+        }
+
+        results.push({ url: presign.publicUrl, type: presign.type, name: file.name });
+      } catch (err) {
+        failed.push(`${file.name}: ${err instanceof Error ? err.message : "Bilinmeyen hata"}`);
+      }
+      doneBytes += file.size;
+      setPercent(totalBytes > 0 ? Math.min(100, Math.round((doneBytes / totalBytes) * 100)) : 0);
       setProgress((p) => p + 1);
     }
 
     setFiles((f) => [...f, ...results]);
+    setErrors(failed);
     setUploading(false);
   }
 
@@ -95,11 +168,11 @@ export default function MemoryUploadClient({
           {uploading ? (
             <div className="space-y-3">
               <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white animate-spin mx-auto" />
-              <p className="text-white/60 text-sm">{progress} / {total} yüklendi</p>
+              <p className="text-white/60 text-sm">{progress} / {total} dosya · %{percent}</p>
               <div className="w-full bg-white/10 rounded-full h-1.5">
                 <div
                   className="bg-white h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${total > 0 ? (progress / total) * 100 : 0}%` }}
+                  style={{ width: `${percent}%` }}
                 />
               </div>
             </div>
@@ -118,6 +191,16 @@ export default function MemoryUploadClient({
             </>
           )}
         </div>
+
+        {/* Yüklenemeyenler */}
+        {errors.length > 0 && (
+          <div className="rounded-xl border border-red-400/30 bg-red-400/10 p-4 space-y-1">
+            <p className="text-red-300 text-xs font-medium">Yüklenemeyen dosyalar — lütfen tekrar deneyin:</p>
+            {errors.map((e, i) => (
+              <p key={i} className="text-red-200/70 text-xs break-all">{e}</p>
+            ))}
+          </div>
+        )}
 
         {/* Yüklenenler */}
         {files.length > 0 && (
