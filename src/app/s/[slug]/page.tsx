@@ -64,18 +64,25 @@ export default async function PresskitPage({ params }: Props) {
   const focalPoints: Record<string, { x: number; y: number }> = dj.focal_points ?? {};
   const coverCities: string[] = Array.isArray(dj.cover_cities) ? dj.cover_cities : [];
   type RiderItem = {
-    category?: string; item?: string; options?: string[];
+    category?: string; item?: string; options?: string[]; preferredOption?: string;
+    brandMatters?: boolean; required?: boolean;
     qty: number; provided_by: "organizer" | "artist"; notes?: string;
   };
   const riderItemsRaw: RiderItem[] = Array.isArray(dj.rider) ? dj.rider : [];
   // Eski format {item} ile yeni format {category, options} arasında uyum
-  const riderItems = riderItemsRaw.map((r) => ({
-    label: r.category || r.item || "",
-    options: r.options && r.options.length > 0 ? r.options : r.item ? [r.item] : [],
-    qty: r.qty,
-    provided_by: r.provided_by,
-    notes: r.notes ?? "",
-  }));
+  const riderItems = riderItemsRaw.map((r) => {
+    const options = r.options && r.options.length > 0 ? r.options : r.item ? [r.item] : [];
+    return {
+      label: r.category || r.item || "",
+      options,
+      preferredOption: r.preferredOption && options.includes(r.preferredOption) ? r.preferredOption : undefined,
+      brandMatters: r.brandMatters ?? false,
+      required: r.required ?? true,
+      qty: r.qty,
+      provided_by: r.provided_by,
+      notes: r.notes ?? "",
+    };
+  });
 
   const socialLinks = SOCIAL_LINKS.map((s) => ({
     label: s.label,
@@ -212,35 +219,58 @@ export default async function PresskitPage({ params }: Props) {
             <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium mb-4">
               Teknik Rider
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {riderItems.map((r, i) => (
-                <div key={i} className="rounded-xl border border-border p-4">
-                  <div className="flex items-center justify-between gap-3 mb-2.5">
-                    <span className="font-medium text-foreground text-sm">
-                      {r.label}
-                      {r.qty > 1 && <span className="text-muted-foreground font-normal"> × {r.qty}</span>}
-                    </span>
-                    <span className={`text-xs px-2.5 py-1 rounded-full border shrink-0 ${
-                      r.provided_by === "organizer"
-                        ? "border-amber-200 bg-amber-50 text-amber-700"
-                        : "border-green-200 bg-green-50 text-green-700"
-                    }`}>
-                      {r.provided_by === "organizer" ? "Organizatör" : "Sanatçı"}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mb-2">Kabul edilen ekipmanlar:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {r.options.map((opt) => (
-                      <span key={opt} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-foreground">{opt}</span>
-                    ))}
-                  </div>
-                  {r.notes && <p className="text-xs text-muted-foreground mt-2">{r.notes}</p>}
-                </div>
-              ))}
+            <div className="rounded-xl border border-border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-secondary/30">
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Kategori</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Kabul Edilen Ekipmanlar</th>
+                    <th className="text-center px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Adet</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Marka</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Sağlayan</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {riderItems.map((r, i) => (
+                    <tr key={i} className={i % 2 === 0 ? "" : "bg-secondary/10"}>
+                      <td className="px-4 py-2.5 align-top">
+                        <span className="font-medium text-foreground">{r.label}</span>
+                        {r.required && (
+                          <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 align-middle">Zorunlu</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 align-top">
+                        <p className="text-foreground">
+                          {r.options.map((opt, oi) => (
+                            <span key={opt}>
+                              {oi > 0 && <span className="text-muted-foreground"> / </span>}
+                              {opt === r.preferredOption ? <strong>{opt} ★</strong> : opt}
+                            </span>
+                          ))}
+                        </p>
+                        {r.notes && <p className="text-xs text-muted-foreground mt-1">{r.notes}</p>}
+                      </td>
+                      <td className="px-4 py-2.5 text-center text-muted-foreground tabular-nums align-top">{r.qty}</td>
+                      <td className="px-4 py-2.5 align-top text-muted-foreground">
+                        {r.brandMatters ? "Önemli" : "Önemli değil"}
+                      </td>
+                      <td className="px-4 py-2.5 align-top">
+                        <span className={`text-xs px-2.5 py-1 rounded-full border ${
+                          r.provided_by === "organizer"
+                            ? "border-amber-200 bg-amber-50 text-amber-700"
+                            : "border-green-200 bg-green-50 text-green-700"
+                        }`}>
+                          {r.provided_by === "organizer" ? "Organizatör" : "Sanatçı"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-xs text-muted-foreground px-4 py-2.5 bg-secondary/10 border-t border-border">
+                ★ birincil tercihi gösterir. Bir kategoride birden fazla ekipman listeleniyorsa, bunlardan yalnızca biri sağlanması yeterlidir.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              Her kategoride listelenen ekipmanlardan yalnızca biri sağlanması yeterlidir.
-            </p>
           </div>
         )}
 

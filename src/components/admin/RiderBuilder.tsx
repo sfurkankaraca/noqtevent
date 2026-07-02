@@ -7,6 +7,9 @@ import { useState } from "react";
 export type RiderItem = {
   category: string;
   options: string[];
+  preferredOption?: string; // alternatifler arasında birincil tercih
+  brandMatters: boolean;    // tam olarak bu marka/model mi, yoksa dengi mi kabul edilir
+  required: boolean;        // zorunlu mu, opsiyonel mi
   qty: number;
   provided_by: "organizer" | "artist";
   notes: string;
@@ -78,7 +81,7 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
 };
 
 function blankItem(): RiderItem {
-  return { category: "", options: [], qty: 1, provided_by: "organizer", notes: "" };
+  return { category: "", options: [], preferredOption: undefined, brandMatters: false, required: true, qty: 1, provided_by: "organizer", notes: "" };
 }
 
 // Eski format {item, qty, provided_by, notes} ile yeni format {category, options}
@@ -86,13 +89,17 @@ function blankItem(): RiderItem {
 export function normalizeRiderItems(raw: unknown[]): RiderItem[] {
   return raw.map((r) => {
     const item = r as Partial<RiderItem> & { item?: string };
+    const options = Array.isArray(item.options) && item.options.length > 0
+      ? item.options
+      : item.item
+      ? [item.item]
+      : [];
     return {
       category: item.category || item.item || "",
-      options: Array.isArray(item.options) && item.options.length > 0
-        ? item.options
-        : item.item
-        ? [item.item]
-        : [],
+      options,
+      preferredOption: item.preferredOption && options.includes(item.preferredOption) ? item.preferredOption : undefined,
+      brandMatters: item.brandMatters ?? false,
+      required: item.required ?? true,
       qty: item.qty ?? 1,
       provided_by: item.provided_by ?? "organizer",
       notes: item.notes ?? "",
@@ -117,9 +124,11 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
 
   const toggleOption = (idx: number, option: string) => {
     const current = value[idx].options ?? [];
-    update(idx, {
-      options: current.includes(option) ? current.filter((o) => o !== option) : [...current, option],
-    });
+    const removing = current.includes(option);
+    const nextOptions = removing ? current.filter((o) => o !== option) : [...current, option];
+    const patch: Partial<RiderItem> = { options: nextOptions };
+    if (removing && value[idx].preferredOption === option) patch.preferredOption = undefined;
+    update(idx, patch);
   };
 
   const addCustomOption = (idx: number) => {
@@ -128,6 +137,10 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
     const current = value[idx].options ?? [];
     if (!current.includes(text)) update(idx, { options: [...current, text] });
     setCustomOptionInput((p) => ({ ...p, [idx]: "" }));
+  };
+
+  const setPreferred = (idx: number, option: string) => {
+    update(idx, { preferredOption: value[idx].preferredOption === option ? undefined : option });
   };
 
   const addCategoryRow = (category = "") => {
@@ -141,7 +154,6 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
       {value.map((item, idx) => {
         const presetOptions = CATEGORY_PRESETS[item.category] ?? [];
         const itemOptions = item.options ?? [];
-        const customOptions = itemOptions.filter((o) => !presetOptions.includes(o));
 
         return (
           <div key={idx} className="rounded-xl border border-border bg-secondary/10 p-3 space-y-3">
@@ -178,41 +190,81 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
               </button>
             </div>
 
+            {/* Zorunlu / Marka önemli mi */}
+            {!compact && (
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => update(idx, { required: !item.required })}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                    item.required
+                      ? "border-red-200 bg-red-50 text-red-700"
+                      : "border-border text-muted-foreground hover:border-foreground/40"
+                  }`}
+                >
+                  {item.required ? "Zorunlu" : "Opsiyonel"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => update(idx, { brandMatters: !item.brandMatters })}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                    item.brandMatters
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-border text-muted-foreground hover:border-foreground/40"
+                  }`}
+                >
+                  {item.brandMatters ? "Marka önemli" : "Marka önemli değil (dengi olur)"}
+                </button>
+              </div>
+            )}
+
             {/* Kabul edilebilir alternatifler */}
             <div className="pl-1">
-              <p className="text-[11px] text-muted-foreground mb-1.5">
-                Kabul edilebilir alternatifler <span className="opacity-70">(birden fazla seçilebilir — herhangi biri yeterli)</span>
-              </p>
-
-              {presetOptions.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {presetOptions.map((opt) => {
-                    const selected = itemOptions.includes(opt);
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => toggleOption(idx, opt)}
-                        className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                          selected
-                            ? "bg-foreground text-background border-foreground"
-                            : "border-border text-foreground hover:border-foreground/40"
-                        }`}
-                      >
-                        {selected ? "✓ " : ""}{opt}
-                      </button>
-                    );
-                  })}
-                </div>
+              {itemOptions.length > 0 && (
+                <>
+                  <p className="text-[11px] text-muted-foreground mb-1.5">
+                    Seçili ekipmanlar <span className="opacity-70">(★ ile birincil tercihi işaretle)</span>
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {itemOptions.map((opt) => {
+                      const preferred = item.preferredOption === opt;
+                      return (
+                        <span key={opt} className={`inline-flex items-center gap-1.5 text-xs pl-1 pr-2.5 py-1 rounded-full ${
+                          preferred ? "bg-foreground text-background" : "bg-secondary text-foreground"
+                        }`}>
+                          <button
+                            type="button"
+                            onClick={() => setPreferred(idx, opt)}
+                            title={preferred ? "Birincil tercih" : "Birincil tercih yap"}
+                            className={`leading-none ${preferred ? "opacity-100" : "opacity-40 hover:opacity-80"}`}
+                          >
+                            {preferred ? "★" : "☆"}
+                          </button>
+                          {opt}
+                          <button type="button" onClick={() => toggleOption(idx, opt)} className="opacity-60 hover:opacity-100 leading-none">×</button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </>
               )}
 
-              {customOptions.length > 0 && (
+              <p className="text-[11px] text-muted-foreground mb-1.5">
+                {itemOptions.length > 0 ? "Ekle:" : "Kabul edilebilir alternatifler"}{" "}
+                <span className="opacity-70">(birden fazla seçilebilir — herhangi biri yeterli)</span>
+              </p>
+
+              {presetOptions.filter((o) => !itemOptions.includes(o)).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  {customOptions.map((opt) => (
-                    <span key={opt} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-foreground text-background">
-                      {opt}
-                      <button type="button" onClick={() => toggleOption(idx, opt)} className="opacity-70 hover:opacity-100 leading-none">×</button>
-                    </span>
+                  {presetOptions.filter((o) => !itemOptions.includes(o)).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => toggleOption(idx, opt)}
+                      className="text-xs px-2.5 py-1 rounded-full border border-border text-foreground hover:border-foreground/40 transition-all"
+                    >
+                      + {opt}
+                    </button>
                   ))}
                 </div>
               )}
