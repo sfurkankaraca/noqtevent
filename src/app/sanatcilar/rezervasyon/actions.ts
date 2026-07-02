@@ -1,6 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
 import { createServiceClient } from "@/lib/supabase";
+import { rateLimit } from "@/lib/rateLimit";
 import { sendArtistBookingNotification, sendArtistBookingConfirmation } from "@/lib/email";
 import { normalizeRiderItems, type RiderItem } from "@/lib/riderTypes";
 import type { ArtistBookingData } from "@/components/artist-booking/ArtistBookingWizard";
@@ -33,7 +35,17 @@ const BOOKING_EVENT_LABELS: Record<string, string> = {
   "kina-gecesi": "Kına Gecesi",
 };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function submitArtistBooking(data: ArtistBookingData): Promise<void> {
+  const headersList = await headers();
+  const ip = headersList.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const { ok } = rateLimit(ip, "artist-booking", { max: 5, windowMs: 60 * 60_000 });
+  if (!ok) throw new Error("Çok fazla istek. Lütfen daha sonra tekrar deneyin.");
+
+  if (!data.name?.trim()) throw new Error("Ad zorunludur.");
+  if (!data.email || !EMAIL_RE.test(data.email.trim())) throw new Error("Geçerli bir e-posta adresi girin.");
+
   const supabase = createServiceClient();
 
   const { error } = await supabase.from("inquiries").insert({

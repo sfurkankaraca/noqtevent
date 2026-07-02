@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { isAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { r2, R2_PUBLIC_URL } from "@/lib/r2";
@@ -62,13 +62,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Desteklenmeyen dosya türü." }, { status: 400 });
   }
 
-  // Auth check for non-public folders
+  // Auth check for non-public folders — yalnızca admin
   const isPublic = PUBLIC_FOLDERS.some((f) => folder.startsWith(f));
-  if (!isPublic) {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
-    }
+  if (!isPublic && !(await isAdmin())) {
+    return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
   }
 
   const ext = filename.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";

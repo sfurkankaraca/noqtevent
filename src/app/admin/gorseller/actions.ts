@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
@@ -14,6 +15,7 @@ export async function saveAssetRecord({
   publicUrl: string;
   filePath: string;
 }) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const { error } = await supabase.from("site_assets").insert({
     category,
@@ -27,6 +29,7 @@ export async function saveAssetRecord({
 }
 
 export async function deleteAsset(id: string, filePath: string) {
+  await requireAdmin();
   const supabase = createServiceClient();
 
   await supabase.storage.from("images").remove([filePath]);

@@ -1,9 +1,11 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase";
 
 export async function upsertConcept(formData: FormData) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const id = formData.get("id") as string | null;
 
@@ -58,6 +60,7 @@ export async function upsertConcept(formData: FormData) {
 }
 
 export async function deleteConcept(formData: FormData) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const id = formData.get("id") as string;
   await supabase.from("concepts").delete().eq("id", id);

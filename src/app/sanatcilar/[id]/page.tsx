@@ -59,7 +59,7 @@ export default async function DjDetailPage({ params }: Props) {
   const focalPoints: Record<string, { x: number; y: number }> = dj.focal_points ?? {};
 
   // Person schema — sanatçının sosyal profillerini Google'a bağlar (knowledge/rich sonuç adayı)
-  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
   const sameAs = [
     dj.instagram_url,
     dj.spotify_url,

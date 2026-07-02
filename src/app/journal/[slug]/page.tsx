@@ -8,7 +8,7 @@ import { createServiceClient } from "@/lib/supabase";
 
 type Props = { params: Promise<{ slug: string }> };
 
-const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

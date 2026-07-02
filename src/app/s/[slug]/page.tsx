@@ -88,7 +88,7 @@ export default async function PresskitPage({ params }: Props) {
     url: (dj as Record<string, string | null>)[s.key] ?? null,
   })).filter((s) => s.url);
 
-  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
   return (
     <div className="min-h-screen bg-white text-foreground">

@@ -49,7 +49,7 @@ export default async function DeliveryPage({ params }: Props) {
       `}</style>
 
       <div className="no-print border-b border-border px-6 py-3 flex items-center justify-between max-w-4xl mx-auto">
-        <a href={process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <a href={process.env.NEXT_PUBLIC_URL || "https://www.noqt.events"} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
           noqt.events
         </a>
         {booking.contract_url && (
@@ -166,7 +166,7 @@ export default async function DeliveryPage({ params }: Props) {
 
         <div className="mt-16 pt-8 border-t border-border">
           <p className="text-xs text-muted-foreground">
-            Bu rapor <a href={process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events"} className="hover:text-foreground transition-colors">noqt.events</a> tarafından oluşturulmuştur.
+            Bu rapor <a href={process.env.NEXT_PUBLIC_URL || "https://www.noqt.events"} className="hover:text-foreground transition-colors">noqt.events</a> tarafından oluşturulmuştur.
           </p>
         </div>
       </main>

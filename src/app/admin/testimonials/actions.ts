@@ -1,9 +1,11 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
 export async function upsertTestimonial(formData: FormData) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const id = formData.get("id") as string | null;
 
@@ -33,6 +35,7 @@ export async function upsertTestimonial(formData: FormData) {
 }
 
 export async function deleteTestimonial(formData: FormData) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const id = formData.get("id") as string;
   const { error } = await supabase.from("testimonials").delete().eq("id", id);

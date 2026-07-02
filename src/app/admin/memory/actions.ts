@@ -1,10 +1,12 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { deleteFromR2 } from "@/lib/r2";
 import { redirect } from "next/navigation";
 
 export async function upsertMemoryEvent(formData: FormData) {
+  await requireAdmin();
   const id = formData.get("id") as string | null;
   const payload = {
     slug: (formData.get("slug") as string).trim().toLowerCase(),
@@ -24,12 +26,14 @@ export async function upsertMemoryEvent(formData: FormData) {
 }
 
 export async function deleteMemoryEvent(id: string) {
+  await requireAdmin();
   const supabase = createServiceClient();
   await supabase.from("memory_events").delete().eq("id", id);
   redirect("/admin/memory");
 }
 
 export async function deleteUpload(id: string, filePath: string) {
+  await requireAdmin();
   const supabase = createServiceClient();
   await deleteFromR2(filePath);
   await supabase.from("memory_uploads").delete().eq("id", id);

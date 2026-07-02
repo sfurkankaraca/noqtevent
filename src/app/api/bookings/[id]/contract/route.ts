@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { isAdmin } from "@/lib/adminAuth";
 import { generateContractPdf, type ContractData } from "@/lib/generateContractPdf";
 import { sendBookingContractEmails } from "@/lib/email";
 
@@ -7,6 +8,10 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+  }
+
   const { id } = await params;
   const supabase = createServiceClient();
 

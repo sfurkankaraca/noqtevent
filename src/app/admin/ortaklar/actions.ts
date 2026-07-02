@@ -1,10 +1,12 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import type { FocalPoint } from "@/components/admin/FocalPointPicker";
 
 export async function upsertPartner(formData: FormData) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const id = formData.get("id") as string | null;
 
@@ -70,6 +72,7 @@ export async function upsertPartner(formData: FormData) {
 }
 
 export async function deletePartner(formData: FormData) {
+  await requireAdmin();
   const id = formData.get("id") as string;
   const supabase = createServiceClient();
   await supabase.from("partner_profiles").delete().eq("id", id);
@@ -77,6 +80,7 @@ export async function deletePartner(formData: FormData) {
 }
 
 export async function removePortfolioImage(partnerId: string, url: string) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const { data: partner } = await supabase
     .from("partner_profiles")

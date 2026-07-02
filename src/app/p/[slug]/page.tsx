@@ -59,7 +59,7 @@ export default async function PartnerToolkitPage({ params }: Props) {
   const specs: Spec[] = Array.isArray(partner.tool_data?.specs) ? partner.tool_data.specs : [];
   const packages: Pkg[] = Array.isArray(partner.tool_data?.packages) ? partner.tool_data.packages : [];
 
-  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
   return (
     <div className="min-h-screen bg-white text-foreground">

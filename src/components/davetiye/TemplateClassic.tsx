@@ -1,7 +1,7 @@
 import Image from "next/image";
 import RsvpForm from "./RsvpForm";
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function TemplateClassic({ inv }: { inv: Record<string, any> }) {

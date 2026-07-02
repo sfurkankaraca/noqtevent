@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const page = getEventPage(slug);
   if (!page) return { title: "Sayfa Bulunamadı" };
-  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
   return {
     title: page.metaTitle,
     description: page.metaDescription,
@@ -39,7 +39,7 @@ export default async function EventLandingPage({ params }: Props) {
   const page = getEventPage(slug);
   if (!page) notFound();
 
-  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
   const serviceSchema = {
     "@context": "https://schema.org",

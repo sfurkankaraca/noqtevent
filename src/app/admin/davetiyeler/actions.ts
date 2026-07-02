@@ -1,9 +1,11 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 
 export async function upsertInvitation(formData: FormData) {
+  await requireAdmin();
   const id = formData.get("id") as string | null;
   const payload = {
     slug: (formData.get("slug") as string).trim().toLowerCase(),
@@ -56,6 +58,7 @@ export async function upsertInvitation(formData: FormData) {
 }
 
 export async function deleteInvitation(id: string) {
+  await requireAdmin();
   const supabase = createServiceClient();
   await supabase.from("invitations").delete().eq("id", id);
   redirect("/admin/davetiyeler");

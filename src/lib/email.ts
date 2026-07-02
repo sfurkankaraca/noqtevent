@@ -53,7 +53,7 @@ export async function sendInquiryNotification(inquiry: {
           <ul style="margin:0;padding-left:20px;">${serviceList}</ul>
         </div>
         <div style="margin-top:32px;">
-          <a href="${process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000"}/admin/inquiries"
+          <a href="${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/admin/inquiries"
              style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">
             Admin'de Görüntüle →
           </a>
@@ -156,7 +156,7 @@ export async function sendArtistApplicationReceived(artist: {
             <tr><td style="padding:8px 0;color:#666;">Tür</td><td style="padding:8px 0;">${typeLabel}</td></tr>
           </table>
           <div style="margin-top:24px;">
-            <a href="${process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events"}/admin/djler"
+            <a href="${process.env.NEXT_PUBLIC_URL || "https://www.noqt.events"}/admin/djler"
                style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">
               Admin'de İncele →
             </a>
@@ -240,7 +240,7 @@ export async function sendPartnerApplicationReceived(partner: {
             <tr><td style="padding:8px 0;color:#666;">E-posta</td><td style="padding:8px 0;"><a href="mailto:${partner.email}">${partner.email}</a></td></tr>
           </table>
           <div style="margin-top:24px;">
-            <a href="${process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events"}/admin/partnerler"
+            <a href="${process.env.NEXT_PUBLIC_URL || "https://www.noqt.events"}/admin/partnerler"
                style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">
               Admin'de İncele →
             </a>
@@ -466,7 +466,7 @@ export async function sendArtistBookingNotification(data: {
           ${tableContent}
         </table>
         <div style="margin-top:28px;">
-          <a href="${process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events"}/admin/inquiries"
+          <a href="${process.env.NEXT_PUBLIC_URL || "https://www.noqt.events"}/admin/inquiries"
              style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">
             Admin'de Görüntüle →
           </a>
@@ -537,7 +537,7 @@ export async function sendBookingContractEmails(data: {
   const resend = getResend();
   if (!resend) return;
 
-  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
   const fmtMoney = (n: number) => n.toLocaleString("tr-TR") + " ₺";
   const fmtDate = (d: string | null) =>
     d ? new Date(d).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }) : "—";
@@ -708,7 +708,7 @@ export async function sendPaymentClaimNotification(data: {
   const resend = getResend();
   if (!resend) return;
 
-  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
   await resend.emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,

@@ -1,9 +1,11 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase";
 
 export async function upsertPost(formData: FormData) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const id = formData.get("id") as string | null;
 
@@ -37,6 +39,7 @@ export async function upsertPost(formData: FormData) {
 }
 
 export async function deletePost(formData: FormData) {
+  await requireAdmin();
   const supabase = createServiceClient();
   await supabase.from("journal_posts").delete().eq("id", formData.get("id") as string);
   revalidatePath("/admin/journal");

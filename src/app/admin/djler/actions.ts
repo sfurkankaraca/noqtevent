@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import type { FocalPoint } from "@/components/admin/FocalPointPicker";
@@ -7,6 +8,7 @@ import { sendArtistApprovalNotification } from "@/lib/email";
 import { RIDER_TEMPLATES } from "@/lib/riderTypes";
 
 export async function upsertDj(formData: FormData) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const id = formData.get("id") as string | null;
 
@@ -107,6 +109,7 @@ export async function upsertDj(formData: FormData) {
 }
 
 export async function deleteDj(formData: FormData) {
+  await requireAdmin();
   const id = formData.get("id") as string;
   const supabase = createServiceClient();
   await supabase.from("dj_profiles").delete().eq("id", id);
@@ -118,6 +121,7 @@ export async function deleteDj(formData: FormData) {
 export async function applyRiderTemplateToAll(
   performerType: "dj" | "artist"
 ): Promise<{ updated: number; skipped: number; names: string[] }> {
+  await requireAdmin();
   const template = RIDER_TEMPLATES[performerType];
   if (!template) throw new Error("Şablon bulunamadı");
 

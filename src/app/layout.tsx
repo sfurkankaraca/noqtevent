@@ -12,7 +12,7 @@ const inter = Inter({
   display: "swap",
 });
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
 export const metadata: Metadata = {
   title: {

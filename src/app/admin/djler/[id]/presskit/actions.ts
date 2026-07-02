@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import type { RiderItem } from "@/components/admin/RiderBuilder";
@@ -25,6 +26,7 @@ type PresskitPayload = {
 };
 
 export async function savePresskitAction(payload: PresskitPayload) {
+  await requireAdmin();
   const supabase = createServiceClient();
 
   const { id, photos, rider, ...rest } = payload;

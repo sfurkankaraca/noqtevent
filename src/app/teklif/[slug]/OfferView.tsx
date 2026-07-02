@@ -5,8 +5,7 @@ import {
   calcCashPrice, calcPrepayPrice, isPrepayAvailable, daysUntil,
   TERMS_TEXT, PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_DEADLINE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
 } from "@/lib/bookingTerms";
-import { acceptOffer } from "./actions";
-import { notifyPaymentClaim } from "@/app/admin/bookings/actions";
+import { acceptOffer, notifyPaymentClaim } from "./actions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Booking = Record<string, any>;
@@ -45,8 +44,8 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
     startTransition(async () => {
       try {
         await acceptOffer({
-          bookingId: booking.id, slug, name: name.trim(), email: email.trim() || null,
-          plan: selectedPlan, agreedPrice,
+          slug, name: name.trim(), email: email.trim() || null,
+          plan: selectedPlan,
         });
         setAccepted(true);
       } catch (e) {
@@ -58,7 +57,7 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
   const handleClaimPayment = async () => {
     setClaiming(true);
     try {
-      await notifyPaymentClaim(booking.id, { plan: selectedPlan, amount: agreedPrice });
+      await notifyPaymentClaim(slug, selectedPlan);
       setPaymentClaimed(true);
     } catch {
       // sessizce yut, kullanıcıya yine de teşekkür göster

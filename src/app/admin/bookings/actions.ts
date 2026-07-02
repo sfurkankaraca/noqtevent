@@ -1,8 +1,9 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
-import { sendBookingDeliveryEmail, sendOfferEmail as sendOfferEmailLib, sendPaymentClaimNotification } from "@/lib/email";
+import { sendBookingDeliveryEmail, sendOfferEmail as sendOfferEmailLib } from "@/lib/email";
 
 export type BookingStatus =
   | "draft" | "offer_sent" | "confirmed" | "contracted"
@@ -33,6 +34,7 @@ export type BookingPayload = {
 };
 
 export async function upsertBooking(payload: BookingPayload) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const { id, ...data } = payload;
 
@@ -47,6 +49,7 @@ export async function upsertBooking(payload: BookingPayload) {
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const extra: Record<string, unknown> = {};
   if (status === "contracted") extra.contract_signed_at = new Date().toISOString();
@@ -59,6 +62,7 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
 export async function addPayment(bookingId: string, data: {
   type: string; amount: number; direction: string; description?: string;
 }) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const { error } = await supabase.from("booking_payments").insert({
     booking_id: bookingId,
@@ -76,6 +80,7 @@ export async function saveDelivery(bookingId: string, data: {
   videos: string[];
   notes?: string | null;
 }) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const { error } = await supabase.from("bookings").update({
     delivery_slug: data.slug,
@@ -89,6 +94,7 @@ export async function saveDelivery(bookingId: string, data: {
 }
 
 export async function sendDelivery(bookingId: string) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const { data: booking, error } = await supabase
     .from("bookings")
@@ -98,7 +104,7 @@ export async function sendDelivery(bookingId: string) {
   if (error || !booking) throw new Error(error?.message ?? "Booking bulunamadı");
   if (!booking.delivery_slug) throw new Error("Önce teslimat linkini oluşturun");
 
-  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
   await sendBookingDeliveryEmail({
     clientName: booking.client_name,
     clientEmail: booking.client_email,
@@ -113,6 +119,7 @@ export async function sendDelivery(bookingId: string) {
 }
 
 export async function generateOfferLink(bookingId: string, slug: string) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const { error } = await supabase.from("bookings").update({ offer_slug: slug }).eq("id", bookingId);
   if (error) throw new Error(error.message);
@@ -121,6 +128,7 @@ export async function generateOfferLink(bookingId: string, slug: string) {
 }
 
 export async function sendOfferEmail(bookingId: string) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const { data: booking, error } = await supabase
     .from("bookings")
@@ -131,7 +139,7 @@ export async function sendOfferEmail(bookingId: string) {
   if (!booking.offer_slug) throw new Error("Önce teklif linkini oluşturun");
   if (!booking.client_email) throw new Error("Müşteri e-postası yok");
 
-  const BASE = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
   await sendOfferEmailLib({
     clientName: booking.client_name,
     clientEmail: booking.client_email,
@@ -147,20 +155,8 @@ export async function sendOfferEmail(bookingId: string) {
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
-export async function notifyPaymentClaim(bookingId: string, data: { plan: "cash" | "prepay"; amount: number }) {
-  const supabase = createServiceClient();
-  const { data: booking, error } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
-  if (error || !booking) throw new Error(error?.message ?? "Booking bulunamadı");
-
-  await sendPaymentClaimNotification({
-    clientName: booking.client_name,
-    bookingId: booking.id,
-    plan: data.plan,
-    amount: data.amount,
-  });
-}
-
 export async function deleteBooking(id: string) {
+  await requireAdmin();
   const supabase = createServiceClient();
   await supabase.from("bookings").delete().eq("id", id);
   revalidatePath("/admin/bookings");

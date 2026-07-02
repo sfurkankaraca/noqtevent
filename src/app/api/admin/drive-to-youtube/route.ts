@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
+import { isAdmin } from "@/lib/adminAuth";
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
@@ -23,6 +24,10 @@ function extractFileId(link: string): string | null {
 }
 
 export async function POST(req: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+  }
+
   const missing = [
     !CLIENT_ID && "GOOGLE_CLIENT_ID",
     !CLIENT_SECRET && "GOOGLE_CLIENT_SECRET",

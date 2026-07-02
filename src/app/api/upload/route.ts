@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { isAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { uploadToR2 } from "@/lib/r2";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
@@ -63,11 +63,9 @@ export async function POST(req: NextRequest) {
   }
 
   const isPublicFolder = PUBLIC_FOLDERS.some((f) => folder.startsWith(f));
-  if (!isPublicFolder) {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
-    }
+  const admin = await isAdmin();
+  if (!isPublicFolder && !admin) {
+    return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
   }
 
   if (!file || file.size === 0) {
@@ -77,6 +75,11 @@ export async function POST(req: NextRequest) {
   // MIME type kontrolü
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
     return NextResponse.json({ error: "Desteklenmeyen dosya türü. Yalnızca resim ve video yüklenebilir." }, { status: 400 });
+  }
+
+  // SVG script içerebilir (stored XSS) — yalnızca admin yükleyebilir
+  if (file.type === "image/svg+xml" && !admin) {
+    return NextResponse.json({ error: "SVG yüklemek için yetki gerekli." }, { status: 403 });
   }
 
   // Boyut kontrolü

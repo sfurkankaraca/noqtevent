@@ -1,13 +1,25 @@
 "use server";
 
+import { headers } from "next/headers";
 import { createServiceClient } from "@/lib/supabase";
 import { type PlannerData } from "@/components/planner/PlannerStore";
 import { sendInquiryNotification, sendInquiryConfirmation } from "@/lib/email";
 import { eventTypeLabel } from "@/lib/eventTypeLabels";
+import { rateLimit } from "@/lib/rateLimit";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function submitInquiry(
   data: PlannerData
 ): Promise<{ availabilityWarning: boolean }> {
+  const headersList = await headers();
+  const ip = headersList.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const { ok } = rateLimit(ip, "inquiry", { max: 5, windowMs: 60 * 60_000 });
+  if (!ok) throw new Error("Çok fazla istek. Lütfen daha sonra tekrar deneyin.");
+
+  if (!data.name?.trim()) throw new Error("Ad zorunludur.");
+  if (!data.email || !EMAIL_RE.test(data.email.trim())) throw new Error("Geçerli bir e-posta adresi girin.");
+
   const supabase = createServiceClient();
 
   const { error } = await supabase.from("inquiries").insert({

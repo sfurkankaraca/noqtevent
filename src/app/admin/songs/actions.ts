@@ -1,10 +1,12 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function deleteSong(formData: FormData) {
+  await requireAdmin();
   const id = formData.get("id") as string;
   const supabase = createServiceClient();
   await supabase.from("songs").delete().eq("id", id);
@@ -12,6 +14,7 @@ export async function deleteSong(formData: FormData) {
 }
 
 export async function upsertSong(formData: FormData) {
+  await requireAdmin();
   const supabase = createServiceClient();
 
   const id = formData.get("id") as string | null;

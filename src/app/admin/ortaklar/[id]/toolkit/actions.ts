@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
@@ -14,6 +15,7 @@ type ToolkitPayload = {
 };
 
 export async function savePartnerToolkit(payload: ToolkitPayload) {
+  await requireAdmin();
   const supabase = createServiceClient();
   const { error } = await supabase
     .from("partner_profiles")
