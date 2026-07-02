@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import Image from "next/image";
-import RiderBuilder, { type RiderItem } from "@/components/admin/RiderBuilder";
+import RiderBuilder, { normalizeRiderItems, type RiderItem } from "@/components/admin/RiderBuilder";
 import { savePresskitAction } from "./actions";
 
 const PERFORMER_LABELS: Record<string, string> = {
@@ -38,7 +38,7 @@ export default function PresskitBuilder({ dj }: { dj: Record<string, any> }) {
   const [youtube, setYoutube] = useState<string>(dj.youtube_url ?? "");
   const [website, setWebsite] = useState<string>(dj.website_url ?? "");
   const [riderItems, setRiderItems] = useState<RiderItem[]>(
-    Array.isArray(dj.rider) ? dj.rider : []
+    Array.isArray(dj.rider) ? normalizeRiderItems(dj.rider) : []
   );
   const [riderUrl, setRiderUrl] = useState<string>(dj.rider_url ?? "");
   const [mediaDriveUrl, setMediaDriveUrl] = useState<string>(dj.media_drive_url ?? "");

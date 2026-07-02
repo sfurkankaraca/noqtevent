@@ -81,6 +81,25 @@ function blankItem(): RiderItem {
   return { category: "", options: [], qty: 1, provided_by: "organizer", notes: "" };
 }
 
+// Eski format {item, qty, provided_by, notes} ile yeni format {category, options}
+// arasında uyum — DB'de eski şekilde kayıtlı rider verisi bu bileşene güvenle geçsin.
+export function normalizeRiderItems(raw: unknown[]): RiderItem[] {
+  return raw.map((r) => {
+    const item = r as Partial<RiderItem> & { item?: string };
+    return {
+      category: item.category || item.item || "",
+      options: Array.isArray(item.options) && item.options.length > 0
+        ? item.options
+        : item.item
+        ? [item.item]
+        : [],
+      qty: item.qty ?? 1,
+      provided_by: item.provided_by ?? "organizer",
+      notes: item.notes ?? "",
+    };
+  });
+}
+
 type Props = {
   value: RiderItem[];
   onChange: (items: RiderItem[]) => void;
@@ -97,7 +116,7 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
   const remove = (idx: number) => onChange(value.filter((_, i) => i !== idx));
 
   const toggleOption = (idx: number, option: string) => {
-    const current = value[idx].options;
+    const current = value[idx].options ?? [];
     update(idx, {
       options: current.includes(option) ? current.filter((o) => o !== option) : [...current, option],
     });
@@ -106,7 +125,7 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
   const addCustomOption = (idx: number) => {
     const text = (customOptionInput[idx] ?? "").trim();
     if (!text) return;
-    const current = value[idx].options;
+    const current = value[idx].options ?? [];
     if (!current.includes(text)) update(idx, { options: [...current, text] });
     setCustomOptionInput((p) => ({ ...p, [idx]: "" }));
   };
@@ -121,7 +140,8 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
     <div className="space-y-3">
       {value.map((item, idx) => {
         const presetOptions = CATEGORY_PRESETS[item.category] ?? [];
-        const customOptions = item.options.filter((o) => !presetOptions.includes(o));
+        const itemOptions = item.options ?? [];
+        const customOptions = itemOptions.filter((o) => !presetOptions.includes(o));
 
         return (
           <div key={idx} className="rounded-xl border border-border bg-secondary/10 p-3 space-y-3">
@@ -167,7 +187,7 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
               {presetOptions.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {presetOptions.map((opt) => {
-                    const selected = item.options.includes(opt);
+                    const selected = itemOptions.includes(opt);
                     return (
                       <button
                         key={opt}

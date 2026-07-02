@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { upsertDj } from "./actions";
 import FocalPointPicker, { type FocalPoint } from "@/components/admin/FocalPointPicker";
-import RiderBuilder, { type RiderItem } from "@/components/admin/RiderBuilder";
+import RiderBuilder, { normalizeRiderItems, type RiderItem } from "@/components/admin/RiderBuilder";
 import { MUSIC_CONCEPTS, CONCEPT_CATEGORIES, type ConceptCategory } from "@/components/planner/PlannerStore";
 
 const CONCEPT_CATEGORY_ORDER: ConceptCategory[] = ["cocktail", "celebration", "traditional", "after-party"];
@@ -152,7 +152,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   const [riderUrl, setRiderUrl] = useState<string>(dj?.rider_url ?? "");
   const [riderUploading, setRiderUploading] = useState(false);
   const [riderItems, setRiderItems] = useState<RiderItem[]>(
-    Array.isArray(dj?.rider) ? dj.rider : []
+    Array.isArray(dj?.rider) ? normalizeRiderItems(dj.rider) : []
   );
   const [slug, setSlug] = useState<string>(dj?.slug ?? "");
   const [copied, setCopied] = useState(false);
