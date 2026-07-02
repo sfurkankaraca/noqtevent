@@ -2,7 +2,18 @@
 
 import { createServiceClient } from "@/lib/supabase";
 import { sendArtistBookingNotification, sendArtistBookingConfirmation } from "@/lib/email";
+import { normalizeRiderItems, type RiderItem } from "@/lib/riderTypes";
 import type { ArtistBookingData } from "@/components/artist-booking/ArtistBookingWizard";
+
+export async function getArtistRider(artistId: string): Promise<RiderItem[]> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("dj_profiles")
+    .select("rider")
+    .eq("id", artistId)
+    .single();
+  return normalizeRiderItems(Array.isArray(data?.rider) ? data.rider : []);
+}
 
 // Human-readable labels for booking event types
 const BOOKING_EVENT_LABELS: Record<string, string> = {
@@ -52,10 +63,9 @@ export async function submitArtistBooking(data: ArtistBookingData): Promise<void
         closingDj: data.closingDj,
         otherPerformers: data.otherPerformers,
         // Step 3
-        mixerModel: data.mixerModel,
-        cdjModel: data.cdjModel,
-        soundSystem: data.soundSystem,
-        hasMonitor: data.hasMonitor,
+        technicalConfirmed: data.technicalConfirmed,
+        wantsNoqtEquipment: data.wantsNoqtEquipment,
+        equipmentNotes: data.equipmentNotes,
         // Step 4
         budget: data.budget,
         accommodation: data.accommodation,
@@ -106,10 +116,9 @@ export async function submitArtistBooking(data: ArtistBookingData): Promise<void
       openingDj: data.openingDj,
       closingDj: data.closingDj,
       otherPerformers: data.otherPerformers,
-      mixerModel: data.mixerModel,
-      cdjModel: data.cdjModel,
-      soundSystem: data.soundSystem,
-      hasMonitor: data.hasMonitor,
+      technicalConfirmed: data.technicalConfirmed,
+      wantsNoqtEquipment: data.wantsNoqtEquipment,
+      equipmentNotes: data.equipmentNotes,
       budget: data.budget,
       accommodation: data.accommodation,
       transfer: data.transfer,

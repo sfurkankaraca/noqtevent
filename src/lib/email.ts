@@ -377,10 +377,9 @@ export async function sendArtistBookingNotification(data: {
   openingDj?: string;
   closingDj?: string;
   otherPerformers?: string;
-  mixerModel?: string;
-  cdjModel?: string;
-  soundSystem?: string;
-  hasMonitor?: string;
+  technicalConfirmed?: boolean;
+  wantsNoqtEquipment?: string;
+  equipmentNotes?: string;
   budget?: string;
   accommodation?: string;
   transfer?: string;
@@ -440,10 +439,9 @@ export async function sendArtistBookingNotification(data: {
     ].join("")),
 
     section("Teknik", [
-      row("Mikser", data.mixerModel),
-      row("CDJ / Player", data.cdjModel),
-      row("Ses Sistemi", data.soundSystem),
-      row("Monitör", data.hasMonitor === "yes" ? "Mevcut" : data.hasMonitor === "no" ? "Yok" : ""),
+      row("Ekipman Onayı", data.technicalConfirmed ? "Müşteri, rider ekipmanlarının hazır olacağını onayladı" : "Onaylanmadı"),
+      row("NOQT Ekipman Sağlasın mı?", data.wantsNoqtEquipment === "yes" ? "Evet" : data.wantsNoqtEquipment === "no" ? "Hayır" : ""),
+      row("Ekipman Notu", data.equipmentNotes),
     ].join("")),
 
     section("Bütçe & Lojistik", [

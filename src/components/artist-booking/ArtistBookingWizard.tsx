@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/analytics";
-import { submitArtistBooking } from "@/app/sanatcilar/rezervasyon/actions";
+import { submitArtistBooking, getArtistRider } from "@/app/sanatcilar/rezervasyon/actions";
+import type { RiderItem } from "@/lib/riderTypes";
 
 // Kulüp / festival önde, düğün / aile geride
 const BOOKING_EVENT_TYPES = [
@@ -47,10 +48,9 @@ export type ArtistBookingData = {
   closingDj: string;
   otherPerformers: string;
   // Step 3 – Teknik
-  mixerModel: string;
-  cdjModel: string;
-  soundSystem: string;
-  hasMonitor: string;
+  technicalConfirmed: boolean;
+  wantsNoqtEquipment: string; // "yes" | "no" | ""
+  equipmentNotes: string;
   // Step 4 – Mali
   budget: string;
   accommodation: string;
@@ -467,95 +467,90 @@ function Step2Performance({
 function Step3Technical({
   data,
   update,
+  artistRider,
+  riderLoading,
   onNext,
 }: {
   data: ArtistBookingData;
   update: (p: Partial<ArtistBookingData>) => void;
+  artistRider: RiderItem[];
+  riderLoading: boolean;
   onNext: () => void;
 }) {
-  const mixerOptions = [
-    "Pioneer DJM-900NXS2",
-    "Pioneer DJM-V10",
-    "Rane MP2015",
-    "Allen & Heath Xone:96",
-    "Diğer",
-    "Bilmiyorum",
-  ];
-  const cdjOptions = [
-    "Pioneer CDJ-2000NXS2",
-    "Pioneer CDJ-3000",
-    "Denon SC6000",
-    "Rekordbox (laptop)",
-    "Serato DJ (laptop)",
-    "Diğer",
-    "Bilmiyorum",
-  ];
-
-  function EquipmentGrid({
-    options,
-    value,
-    onChange,
-  }: {
-    options: string[];
-    value: string;
-    onChange: (v: string) => void;
-  }) {
-    return (
-      <div className="grid grid-cols-2 gap-2">
-        {options.map((opt) => {
-          const sel = value === opt;
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => onChange(sel ? "" : opt)}
-              className={`px-3 py-2.5 rounded-xl text-xs font-medium border transition-all text-left ${
-                sel
-                  ? "bg-foreground text-background border-foreground"
-                  : "border-border text-foreground hover:border-foreground/40"
-              }`}
-            >
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
+  const hasRider = artistRider.length > 0;
+  const canProceed = riderLoading || !hasRider || data.technicalConfirmed;
 
   return (
     <div className="space-y-6">
-      <Field label="Mikser" hint="Mevcut ekipman">
-        <EquipmentGrid
-          options={mixerOptions}
-          value={data.mixerModel}
-          onChange={(v) => update({ mixerModel: v })}
-        />
+      {riderLoading ? (
+        <div className="bg-white rounded-xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
+          Teknik rider yükleniyor…
+        </div>
+      ) : hasRider ? (
+        <>
+          <Field label="Sanatçının Teknik Rider'ı" hint="Etkinlik gününde bu ekipmanların hazır olması gerekiyor.">
+            <div className="rounded-xl border border-border overflow-hidden bg-white">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-border">
+                  {artistRider.map((r, i) => (
+                    <tr key={i}>
+                      <td className="px-3 py-2.5 align-top w-2/5">
+                        <span className="font-medium text-foreground">{r.category}</span>
+                        {r.required && (
+                          <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 align-middle">Zorunlu</span>
+                        )}
+                        {r.qty > 1 && <span className="text-xs text-muted-foreground ml-1">× {r.qty}</span>}
+                      </td>
+                      <td className="px-3 py-2.5 align-top text-foreground text-xs">
+                        {r.options.map((opt, oi) => (
+                          <span key={opt}>
+                            {oi > 0 && <span className="text-muted-foreground"> / </span>}
+                            {opt === r.preferredOption ? <strong>{opt} ★</strong> : opt}
+                          </span>
+                        ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Field>
+
+          <label className="flex items-start gap-3 bg-white rounded-xl border border-border px-4 py-3.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={data.technicalConfirmed}
+              onChange={(e) => update({ technicalConfirmed: e.target.checked })}
+              className="mt-0.5 w-4 h-4 accent-foreground shrink-0"
+            />
+            <span className="text-sm text-foreground">
+              Yukarıdaki ekipmanların etkinlik günü hazır ve çalışır durumda olacağını onaylıyorum.
+            </span>
+          </label>
+        </>
+      ) : (
+        <div className="bg-white rounded-xl border border-border px-4 py-4 text-sm text-muted-foreground">
+          Bu sanatçı için henüz teknik rider tanımlanmamış. Ekibimiz sizinle etkinlik detaylarını görüşecek.
+        </div>
+      )}
+
+      <Field label="Bu ekipmanları NOQT'un sağlamasını ister misiniz?" hint="İstemezseniz ekipmanların mekan/organizasyon tarafından sağlanması beklenir.">
+        <YesNo value={data.wantsNoqtEquipment} onChange={(v) => update({ wantsNoqtEquipment: v })} />
       </Field>
 
-      <Field label="CDJ / Media Player" hint="Mevcut ekipman">
-        <EquipmentGrid
-          options={cdjOptions}
-          value={data.cdjModel}
-          onChange={(v) => update({ cdjModel: v })}
-        />
-      </Field>
+      {data.wantsNoqtEquipment === "yes" && (
+        <Field label="Hangi ekipmanlar için?" hint="Opsiyonel — belirli kategorileri belirtebilirsiniz">
+          <textarea
+            className={inputCls + " resize-none"}
+            rows={2}
+            placeholder="ör. Ses sistemi ve DJ Player'ı NOQT sağlasın…"
+            value={data.equipmentNotes}
+            onChange={(e) => update({ equipmentNotes: e.target.value })}
+          />
+        </Field>
+      )}
 
-      <Field label="Ses Sistemi Markası" hint="Opsiyonel">
-        <input
-          type="text"
-          className={inputCls}
-          placeholder="QSC, L-Acoustics, D&B, Funktion-One…"
-          value={data.soundSystem}
-          onChange={(e) => update({ soundSystem: e.target.value })}
-        />
-      </Field>
-
-      <Field label="Monitör Sistemi Mevcut mu?">
-        <YesNo value={data.hasMonitor} onChange={(v) => update({ hasMonitor: v })} />
-      </Field>
-
-      <NextBtn onClick={onNext} />
+      <NextBtn onClick={onNext} disabled={!canProceed} />
     </div>
   );
 }
@@ -721,10 +716,9 @@ function makeInitial(artistId: string, artistName: string): ArtistBookingData {
     openingDj: "",
     closingDj: "",
     otherPerformers: "",
-    mixerModel: "",
-    cdjModel: "",
-    soundSystem: "",
-    hasMonitor: "",
+    technicalConfirmed: false,
+    wantsNoqtEquipment: "",
+    equipmentNotes: "",
     budget: "",
     accommodation: "",
     transfer: "",
@@ -751,6 +745,17 @@ export default function ArtistBookingWizard({
   const [direction, setDirection] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [artistRider, setArtistRider] = useState<RiderItem[]>([]);
+  const [riderLoading, setRiderLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getArtistRider(artistId)
+      .then((r) => { if (!cancelled) setArtistRider(r); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setRiderLoading(false); });
+    return () => { cancelled = true; };
+  }, [artistId]);
 
   const update = (partial: Partial<ArtistBookingData>) =>
     setData((d) => ({ ...d, ...partial }));
@@ -939,7 +944,13 @@ export default function ArtistBookingWizard({
               <Step2Performance data={data} update={update} onNext={next} />
             )}
             {step === 3 && (
-              <Step3Technical data={data} update={update} onNext={next} />
+              <Step3Technical
+                data={data}
+                update={update}
+                artistRider={artistRider}
+                riderLoading={riderLoading}
+                onNext={next}
+              />
             )}
             {step === 4 && (
               <Step4Budget data={data} update={update} onNext={next} />

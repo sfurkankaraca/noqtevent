@@ -1,18 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { normalizeRiderItems, type RiderItem } from "@/lib/riderTypes";
 
-// Her rider satırı bir "ihtiyaç kategorisi"dir (ör. "DJ Player").
-// options içindeki alternatiflerden HERHANGİ BİRİ kabul edilir — hepsi ayrı ayrı istenmiyor.
-export type RiderItem = {
-  category: string;
-  options: string[];
-  preferredOption?: string; // alternatifler arasında birincil tercih
-  required: boolean;        // zorunlu mu, opsiyonel mi
-  qty: number;
-  provided_by: "organizer" | "artist";
-  notes: string;
-};
+export type { RiderItem };
+export { normalizeRiderItems };
 
 const CATEGORY_PRESETS: Record<string, string[]> = {
   "🎧 DJ Player": [
@@ -83,28 +75,6 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
 
 function blankItem(): RiderItem {
   return { category: "", options: [], preferredOption: undefined, required: true, qty: 1, provided_by: "organizer", notes: "" };
-}
-
-// Eski format {item, qty, provided_by, notes} ile yeni format {category, options}
-// arasında uyum — DB'de eski şekilde kayıtlı rider verisi bu bileşene güvenle geçsin.
-export function normalizeRiderItems(raw: unknown[]): RiderItem[] {
-  return raw.map((r) => {
-    const item = r as Partial<RiderItem> & { item?: string };
-    const options = Array.isArray(item.options) && item.options.length > 0
-      ? item.options
-      : item.item
-      ? [item.item]
-      : [];
-    return {
-      category: item.category || item.item || "",
-      options,
-      preferredOption: item.preferredOption && options.includes(item.preferredOption) ? item.preferredOption : undefined,
-      required: item.required ?? true,
-      qty: item.qty ?? 1,
-      provided_by: item.provided_by ?? "organizer",
-      notes: item.notes ?? "",
-    };
-  });
 }
 
 type Props = {
