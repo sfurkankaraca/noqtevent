@@ -33,19 +33,6 @@ const PERFORMER_LABELS: Record<string, string> = {
   moderator: "Moderatör",
 };
 
-const EVENT_LABELS: Record<string, string> = {
-  wedding: "Düğün / Nikah",
-  kina: "Kına Gecesi",
-  graduation: "Mezuniyet",
-  birthday: "Doğum Günü",
-  bride: "Bekarlığa Veda",
-  "morning-party": "Morning Party",
-  corporate: "Kurumsal Etkinlik",
-  "after-party": "After Party",
-  cocktail: "Kokteyl / Resepsiyon",
-  festival: "Festival / Açık Hava",
-};
-
 const SOCIAL_LINKS = [
   { key: "instagram_url", label: "Instagram" },
   { key: "spotify_url", label: "Spotify" },
@@ -75,8 +62,6 @@ export default async function PresskitPage({ params }: Props) {
       : [];
 
   const focalPoints: Record<string, { x: number; y: number }> = dj.focal_points ?? {};
-  const eventTypes: string[] = Array.isArray(dj.event_types) ? dj.event_types : [];
-  const conceptTags: string[] = Array.isArray(dj.concept_tags) ? dj.concept_tags : [];
   const coverCities: string[] = Array.isArray(dj.cover_cities) ? dj.cover_cities : [];
   type RiderItem = {
     category?: string; item?: string; options?: string[];
@@ -188,74 +173,38 @@ export default async function PresskitPage({ params }: Props) {
         </div>
 
         {/* Details grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-14">
-          {/* Etkinlik tipleri */}
-          {eventTypes.length > 0 && (
-            <div>
-              <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium mb-4">
-                Etkinlik Tipleri
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {eventTypes.map((et) => (
-                  <span
-                    key={et}
-                    className="text-xs px-3 py-1.5 border border-border rounded-full text-foreground"
-                  >
-                    {EVENT_LABELS[et] ?? et}
-                  </span>
-                ))}
+        {(coverCities.length > 0 || dj.repertoire) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-14">
+            {/* Hizmet verilen şehirler */}
+            {coverCities.length > 0 && (
+              <div>
+                <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium mb-4">
+                  Hizmet Bölgeleri
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {coverCities.map((city) => (
+                    <span
+                      key={city}
+                      className="text-xs px-3 py-1.5 border border-border rounded-full text-foreground"
+                    >
+                      {city}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Hizmet verilen şehirler */}
-          {coverCities.length > 0 && (
-            <div>
-              <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium mb-4">
-                Hizmet Bölgeleri
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {coverCities.map((city) => (
-                  <span
-                    key={city}
-                    className="text-xs px-3 py-1.5 border border-border rounded-full text-foreground"
-                  >
-                    {city}
-                  </span>
-                ))}
+            {/* Repertuar */}
+            {dj.repertoire && (
+              <div>
+                <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium mb-4">
+                  Repertuar
+                </p>
+                <p className="text-sm text-foreground leading-relaxed">{dj.repertoire}</p>
               </div>
-            </div>
-          )}
-
-          {/* Konseptler */}
-          {conceptTags.length > 0 && (
-            <div>
-              <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium mb-4">
-                Konseptler
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {conceptTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-xs px-3 py-1.5 bg-foreground/5 border border-foreground/10 rounded-full text-foreground"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Repertuar */}
-          {dj.repertoire && (
-            <div>
-              <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium mb-4">
-                Repertuar
-              </p>
-              <p className="text-sm text-foreground leading-relaxed">{dj.repertoire}</p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Teknik Rider */}
         {riderItems.length > 0 && (
@@ -263,46 +212,35 @@ export default async function PresskitPage({ params }: Props) {
             <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium mb-4">
               Teknik Rider
             </p>
-            <div className="rounded-xl border border-border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-secondary/30">
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Kategori</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Kabul Edilen Alternatifler</th>
-                    <th className="text-center px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Adet</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Sağlayan</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {riderItems.map((r, i) => (
-                    <tr key={i} className={i % 2 === 0 ? "" : "bg-secondary/10"}>
-                      <td className="px-4 py-2.5 font-medium text-foreground align-top">{r.label}</td>
-                      <td className="px-4 py-2.5 align-top">
-                        <div className="flex flex-wrap gap-1.5">
-                          {r.options.map((opt) => (
-                            <span key={opt} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-foreground">{opt}</span>
-                          ))}
-                        </div>
-                        {r.notes && <p className="text-xs text-muted-foreground mt-1.5">{r.notes}</p>}
-                      </td>
-                      <td className="px-4 py-2.5 text-center text-muted-foreground tabular-nums align-top">{r.qty}</td>
-                      <td className="px-4 py-2.5 align-top">
-                        <span className={`text-xs px-2.5 py-1 rounded-full border ${
-                          r.provided_by === "organizer"
-                            ? "border-amber-200 bg-amber-50 text-amber-700"
-                            : "border-green-200 bg-green-50 text-green-700"
-                        }`}>
-                          {r.provided_by === "organizer" ? "Organizatör" : "Sanatçı"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="text-xs text-muted-foreground px-4 py-2.5 bg-secondary/10 border-t border-border">
-                Bir kategoride birden fazla alternatif listeleniyorsa, bunlardan yalnızca biri sağlanması yeterlidir.
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {riderItems.map((r, i) => (
+                <div key={i} className="rounded-xl border border-border p-4">
+                  <div className="flex items-center justify-between gap-3 mb-2.5">
+                    <span className="font-medium text-foreground text-sm">
+                      {r.label}
+                      {r.qty > 1 && <span className="text-muted-foreground font-normal"> × {r.qty}</span>}
+                    </span>
+                    <span className={`text-xs px-2.5 py-1 rounded-full border shrink-0 ${
+                      r.provided_by === "organizer"
+                        ? "border-amber-200 bg-amber-50 text-amber-700"
+                        : "border-green-200 bg-green-50 text-green-700"
+                    }`}>
+                      {r.provided_by === "organizer" ? "Organizatör" : "Sanatçı"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mb-2">Kabul edilen ekipmanlar:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {r.options.map((opt) => (
+                      <span key={opt} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-foreground">{opt}</span>
+                    ))}
+                  </div>
+                  {r.notes && <p className="text-xs text-muted-foreground mt-2">{r.notes}</p>}
+                </div>
+              ))}
             </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Her kategoride listelenen ekipmanlardan yalnızca biri sağlanması yeterlidir.
+            </p>
           </div>
         )}
 
