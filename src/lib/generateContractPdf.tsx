@@ -3,8 +3,17 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import React from "react";
+import { ROBOTO_REGULAR, ROBOTO_BOLD } from "./pdfFonts";
+import { TERMS_TEXT } from "./bookingTerms";
 
-// Türkçe karakter desteği için varsayılan font kullan
+// Built-in Helvetica Türkçe glifleri (ğ, ş, İ, ı, ₺) içermez — Unicode font şart
+Font.register({
+  family: "Roboto",
+  fonts: [
+    { src: ROBOTO_REGULAR, fontWeight: 400 },
+    { src: ROBOTO_BOLD, fontWeight: 700 },
+  ],
+});
 Font.registerHyphenationCallback((word) => [word]);
 
 const palette = {
@@ -19,7 +28,7 @@ const palette = {
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: "Helvetica",
+    fontFamily: "Roboto",
     fontSize: 10,
     color: palette.black,
     paddingTop: 60,
@@ -30,14 +39,14 @@ const styles = StyleSheet.create({
 
   // Header
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 },
-  logo: { fontSize: 16, fontFamily: "Helvetica-Bold", letterSpacing: 2, color: palette.black },
+  logo: { fontSize: 16, fontFamily: "Roboto", fontWeight: 700, letterSpacing: 2, color: palette.black },
   headerMeta: { alignItems: "flex-end" },
   headerMetaText: { fontSize: 9, color: palette.gray },
 
   // Title
   titleBlock: { marginBottom: 36, paddingBottom: 20, borderBottom: `1 solid ${palette.border}` },
   titleLabel: { fontSize: 8, color: palette.gray, letterSpacing: 2, marginBottom: 6, textTransform: "uppercase" },
-  title: { fontSize: 22, fontFamily: "Helvetica-Bold", color: palette.black },
+  title: { fontSize: 22, fontFamily: "Roboto", fontWeight: 700, color: palette.black },
 
   // Section
   section: { marginBottom: 24 },
@@ -46,19 +55,19 @@ const styles = StyleSheet.create({
   // Grid
   row: { flexDirection: "row", marginBottom: 5 },
   rowLabel: { width: 140, color: palette.gray, fontSize: 9 },
-  rowValue: { flex: 1, color: palette.black, fontSize: 9, fontFamily: "Helvetica-Bold" },
+  rowValue: { flex: 1, color: palette.black, fontSize: 9, fontFamily: "Roboto", fontWeight: 700 },
 
   // Financial box
   finBox: { backgroundColor: palette.lightGray, borderRadius: 6, padding: 16, marginBottom: 20 },
   finRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 5 },
   finLabel: { fontSize: 9, color: palette.gray },
-  finValue: { fontSize: 9, fontFamily: "Helvetica-Bold", color: palette.black },
-  finValueGreen: { fontSize: 9, fontFamily: "Helvetica-Bold", color: palette.green },
-  finValueAmber: { fontSize: 9, fontFamily: "Helvetica-Bold", color: palette.amber },
+  finValue: { fontSize: 9, fontFamily: "Roboto", fontWeight: 700, color: palette.black },
+  finValueGreen: { fontSize: 9, fontFamily: "Roboto", fontWeight: 700, color: palette.green },
+  finValueAmber: { fontSize: 9, fontFamily: "Roboto", fontWeight: 700, color: palette.amber },
   finDivider: { borderBottom: `0.5 solid ${palette.border}`, marginVertical: 6 },
   finTotal: { flexDirection: "row", justifyContent: "space-between", marginTop: 4 },
-  finTotalLabel: { fontSize: 10, fontFamily: "Helvetica-Bold", color: palette.black },
-  finTotalValue: { fontSize: 10, fontFamily: "Helvetica-Bold", color: palette.black },
+  finTotalLabel: { fontSize: 10, fontFamily: "Roboto", fontWeight: 700, color: palette.black },
+  finTotalValue: { fontSize: 10, fontFamily: "Roboto", fontWeight: 700, color: palette.black },
 
   // Terms
   termsText: { fontSize: 8.5, color: palette.gray, lineHeight: 1.6, marginBottom: 6 },
@@ -68,7 +77,7 @@ const styles = StyleSheet.create({
   signBox: { flex: 1 },
   signLine: { borderBottom: `1 solid ${palette.black}`, marginBottom: 6, paddingBottom: 20 },
   signLabel: { fontSize: 8, color: palette.gray },
-  signName: { fontSize: 9, fontFamily: "Helvetica-Bold", color: palette.black, marginBottom: 2 },
+  signName: { fontSize: 9, fontFamily: "Roboto", fontWeight: 700, color: palette.black, marginBottom: 2 },
 
   // Footer
   footer: { position: "absolute", bottom: 30, left: 56, right: 56, flexDirection: "row", justifyContent: "space-between" },
@@ -98,6 +107,16 @@ export type ContractData = {
     accommodationRequired?: boolean;
   };
   notes?: string | null;
+  // Müşteri teklifi dijital onayladıysa (click-wrap) — ıslak imza yerine geçer
+  agreement?: {
+    acceptedName: string;
+    acceptedEmail?: string | null;
+    plan: "cash" | "prepay";
+    agreedPrice: number;
+    acceptedAt: string; // ISO timestamp
+    termsVersion: string;
+    ip?: string | null;
+  } | null;
 };
 
 function fmt(n: number): string {
@@ -105,11 +124,17 @@ function fmt(n: number): string {
 }
 
 function ContractDocument({ data }: { data: ContractData }) {
-  const fee = data.financial.fee;
-  const commission = fee * (data.financial.commissionRate / 100);
-  const artistNet = fee - commission;
+  const agreement = data.agreement ?? null;
+  // Dijital onay varsa müşterinin kabul ettiği plan fiyatı esas alınır
+  const fee = agreement ? agreement.agreedPrice : data.financial.fee;
   const deposit = fee * (data.financial.depositRate / 100);
   const remaining = fee - deposit;
+
+  const acceptedAtStr = agreement
+    ? new Date(agreement.acceptedAt).toLocaleString("tr-TR", {
+        day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+      })
+    : null;
 
   const eventDateStr = data.event.date
     ? new Date(data.event.date).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
@@ -219,6 +244,14 @@ function ContractDocument({ data }: { data: ContractData }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ödeme Planı</Text>
           <View style={styles.finBox}>
+            {agreement && (
+              <View style={styles.finRow}>
+                <Text style={styles.finLabel}>Seçilen Ödeme Planı</Text>
+                <Text style={styles.finValueGreen}>
+                  {agreement.plan === "cash" ? "Peşin Ödeme" : "Ön Ödemeli (vade farkı dahil)"}
+                </Text>
+              </View>
+            )}
             <View style={styles.finRow}>
               <Text style={styles.finLabel}>Toplam Hizmet Bedeli</Text>
               <Text style={styles.finValue}>{fmt(fee)}</Text>
@@ -248,9 +281,17 @@ function ContractDocument({ data }: { data: ContractData }) {
           </View>
         </View>
 
-        {/* Koşullar */}
+        {/* Koşullar — dijital onayda müşterinin kabul ettiği metin basılır */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Genel Koşullar</Text>
+          <Text style={styles.sectionTitle}>
+            Genel Koşullar{agreement ? ` (${agreement.termsVersion})` : ""}
+          </Text>
+          {agreement ? (
+            TERMS_TEXT.split("\n\n").map((p, i) => (
+              <Text key={i} style={styles.termsText}>{p.trim()}</Text>
+            ))
+          ) : (
+            <>
           <Text style={styles.termsText}>
             1. Kapora ödemesi yapılmadan booking rezervasyonu kesinleşmez. Kapora iadesi, etkinlik tarihinden 30 günden az süre kala yapılan iptallerde gerçekleştirilmez.
           </Text>
@@ -266,26 +307,62 @@ function ContractDocument({ data }: { data: ContractData }) {
           <Text style={styles.termsText}>
             5. Sanatçı, belirlenen süre ve koşullarda performans gerçekleştirmeyi kabul eder. Süre uzatımı ek ücrete tabidir.
           </Text>
+            </>
+          )}
           {data.notes && (
-            <Text style={[styles.termsText, { marginTop: 8, fontFamily: "Helvetica-Bold" }]}>
+            <Text style={[styles.termsText, { marginTop: 8, fontFamily: "Roboto", fontWeight: 700 }]}>
               Özel Not: {data.notes}
             </Text>
           )}
         </View>
 
-        {/* İmza */}
-        <View style={styles.signBlock}>
-          <View style={styles.signBox}>
-            <Text style={styles.signName}>{data.client.name}</Text>
-            <View style={styles.signLine} />
-            <Text style={styles.signLabel}>Müşteri İmzası / Tarih</Text>
+        {/* İmza / Dijital Onay */}
+        {agreement ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Elektronik Onay</Text>
+            <View style={styles.finBox}>
+              <View style={styles.finRow}>
+                <Text style={styles.finLabel}>Onaylayan</Text>
+                <Text style={styles.finValue}>{agreement.acceptedName}</Text>
+              </View>
+              {agreement.acceptedEmail && (
+                <View style={styles.finRow}>
+                  <Text style={styles.finLabel}>E-posta</Text>
+                  <Text style={styles.finValue}>{agreement.acceptedEmail}</Text>
+                </View>
+              )}
+              <View style={styles.finRow}>
+                <Text style={styles.finLabel}>Onay Tarihi</Text>
+                <Text style={styles.finValue}>{acceptedAtStr}</Text>
+              </View>
+              {agreement.ip && (
+                <View style={styles.finRow}>
+                  <Text style={styles.finLabel}>IP Adresi</Text>
+                  <Text style={styles.finValue}>{agreement.ip}</Text>
+                </View>
+              )}
+              <View style={styles.finDivider} />
+              <Text style={styles.termsText}>
+                Bu sözleşme, yukarıda belirtilen tarihte noqt.events üzerinden elektronik ortamda
+                onaylanmıştır. Elektronik onay, 6098 sayılı TBK ve 6563 sayılı ETK kapsamında
+                tarafları bağlayıcı irade beyanı niteliğindedir; ayrıca ıslak imza gerekmez.
+              </Text>
+            </View>
           </View>
-          <View style={styles.signBox}>
-            <Text style={styles.signName}>NOQT Experience</Text>
-            <View style={styles.signLine} />
-            <Text style={styles.signLabel}>Yetkili İmzası / Tarih</Text>
+        ) : (
+          <View style={styles.signBlock}>
+            <View style={styles.signBox}>
+              <Text style={styles.signName}>{data.client.name}</Text>
+              <View style={styles.signLine} />
+              <Text style={styles.signLabel}>Müşteri İmzası / Tarih</Text>
+            </View>
+            <View style={styles.signBox}>
+              <Text style={styles.signName}>NOQT Experience</Text>
+              <View style={styles.signLine} />
+              <Text style={styles.signLabel}>Yetkili İmzası / Tarih</Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Footer */}
         <View style={styles.footer} fixed>

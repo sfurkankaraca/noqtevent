@@ -5,7 +5,8 @@ import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { TERMS_VERSION, calcCashPrice, calcPrepayPrice, isPrepayAvailable } from "@/lib/bookingTerms";
 import { rateLimit } from "@/lib/rateLimit";
-import { sendPaymentClaimNotification } from "@/lib/email";
+import { sendPaymentClaimNotification, sendOfferAcceptedEmails } from "@/lib/email";
+import { createAndStoreContract } from "@/lib/contract";
 
 async function getRequestMeta() {
   const hdrs = await headers();
@@ -33,7 +34,7 @@ export async function acceptOffer(data: {
   // Booking'i slug üzerinden bul — client'tan gelen id/fiyata güvenilmez
   const { data: booking, error: lookupError } = await supabase
     .from("bookings")
-    .select("id, fee, status, event_date")
+    .select("id, fee, status, event_date, event_type, deposit_rate, client_email, dj_profiles(name)")
     .eq("offer_slug", data.slug)
     .single();
   if (lookupError || !booking) throw new Error("Teklif bulunamadı.");
@@ -64,6 +65,28 @@ export async function acceptOffer(data: {
     .update({ payment_plan: data.plan, status: nextStatus })
     .eq("id", booking.id);
   if (bookingError) throw new Error(bookingError.message);
+
+  // Sözleşmeyi otomatik oluştur ve müşteriye e-postayla gönder.
+  // Onay kaydedildi — PDF/e-posta hatası onayı geri almaz, sadece loglanır.
+  try {
+    const contract = await createAndStoreContract(booking.id);
+    const clientEmail = data.email?.trim() || booking.client_email || null;
+    await sendOfferAcceptedEmails({
+      clientName: name,
+      clientEmail,
+      artistName: (booking.dj_profiles as { name?: string } | null)?.name ?? "—",
+      eventType: booking.event_type,
+      eventDate: booking.event_date,
+      plan: data.plan,
+      agreedPrice,
+      depositAmount: Math.round(agreedPrice * ((booking.deposit_rate ?? 30) / 100)),
+      contractUrl: contract?.contractUrl ?? null,
+      contractPdf: contract?.pdfBuffer ?? null,
+      bookingId: booking.id,
+    });
+  } catch (err) {
+    console.error("[acceptOffer] sözleşme/e-posta hatası:", err);
+  }
 
   revalidatePath(`/teklif/${data.slug}`);
   revalidatePath(`/admin/bookings/${booking.id}`);

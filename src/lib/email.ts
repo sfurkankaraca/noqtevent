@@ -765,3 +765,89 @@ export async function sendContactNotification(msg: {
     `,
   });
 }
+
+// Teklif dijital olarak onaylandığında: müşteriye sözleşme PDF'i eklenmiş
+// onay maili + admin'e bildirim gönderir.
+export async function sendOfferAcceptedEmails(data: {
+  clientName: string;
+  clientEmail: string | null;
+  artistName: string;
+  eventType: string | null;
+  eventDate: string | null;
+  plan: "cash" | "prepay";
+  agreedPrice: number;
+  depositAmount: number;
+  contractUrl: string | null;
+  contractPdf: Buffer | null;
+  bookingId: string;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
+  const fmtMoney = (n: number) => n.toLocaleString("tr-TR") + " ₺";
+  const fmtDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }) : "—";
+  const planLabel = data.plan === "cash" ? "Peşin Ödeme" : "Ön Ödemeli";
+
+  const detailTable = `
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+      <tr><td style="padding:8px 0;color:#666;width:160px;">Sanatçı</td><td style="padding:8px 0;font-weight:600;">${data.artistName}</td></tr>
+      <tr><td style="padding:8px 0;color:#666;">Etkinlik Türü</td><td style="padding:8px 0;font-weight:600;">${data.eventType ?? "—"}</td></tr>
+      <tr><td style="padding:8px 0;color:#666;">Tarih</td><td style="padding:8px 0;font-weight:600;">${fmtDate(data.eventDate)}</td></tr>
+      <tr><td style="padding:8px 0;color:#666;">Ödeme Planı</td><td style="padding:8px 0;font-weight:600;">${planLabel}</td></tr>
+      <tr style="border-top:1px solid #eee;"><td style="padding:10px 0;color:#666;">Anlaşılan Bedel</td><td style="padding:10px 0;font-weight:700;font-size:16px;">${fmtMoney(data.agreedPrice)}</td></tr>
+      <tr><td style="padding:8px 0;color:#666;">Ön Ödeme / Kapora</td><td style="padding:8px 0;font-weight:600;color:#b45309;">${fmtMoney(data.depositAmount)}</td></tr>
+    </table>`;
+
+  const attachments = data.contractPdf
+    ? [{ filename: `noqt-sozlesme-${data.bookingId.slice(0, 8)}.pdf`, content: data.contractPdf }]
+    : undefined;
+
+  // Müşteriye — sözleşme ekte
+  if (data.clientEmail) {
+    const contractLine = data.contractPdf
+      ? `Sözleşmeniz bu e-postanın ekindedir${data.contractUrl ? ` — dilerseniz <a href="${data.contractUrl}" style="color:#1a1a1a;">buradan da indirebilirsiniz</a>` : ""}.`
+      : data.contractUrl
+        ? `Sözleşmenizi <a href="${data.contractUrl}" style="color:#1a1a1a;">buradan indirebilirsiniz</a>.`
+        : "Sözleşmeniz kısa süre içinde tarafınıza iletilecektir.";
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.clientEmail,
+      subject: `Rezervasyonunuz Onaylandı — ${data.artistName} · NOQT`,
+      attachments,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+          <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">NOQT Experience</p>
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">Onayınız alındı, ${data.clientName.split(" ")[0]}! 🎉</h1>
+          <p style="font-size:15px;color:#444;line-height:1.6;">
+            <strong>${data.artistName}</strong> için teklifi onayladınız — rezervasyonunuz oluşturuldu.
+            ${contractLine}
+          </p>
+          ${detailTable}
+          <p style="font-size:14px;color:#444;line-height:1.6;">
+            <strong>Sıradaki adım:</strong> Ödeme bilgileri için ekibimiz kısa süre içinde sizinle
+            iletişime geçecek. Ödemeniz onaylandığında rezervasyonunuz kesinleşir.
+          </p>
+          <p style="margin-top:32px;font-size:12px;color:#999;">Sorularınız için <a href="mailto:${ADMIN_EMAIL}" style="color:#1a1a1a;">${ADMIN_EMAIL}</a></p>
+        </div>`,
+    });
+  }
+
+  // Admin'e bildirim
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject: `🖊️ Teklif onaylandı — ${data.clientName} / ${data.artistName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <h1 style="font-size:20px;font-weight:700;margin-bottom:16px;">Müşteri teklifi onayladı</h1>
+        <p style="font-size:14px;color:#444;"><strong>${data.clientName}</strong> — ${planLabel} — ${fmtMoney(data.agreedPrice)}</p>
+        ${detailTable}
+        <p style="margin-top:20px;">
+          <a href="${BASE}/admin/bookings/${data.bookingId}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Booking'i Aç →</a>
+        </p>
+      </div>`,
+  });
+}

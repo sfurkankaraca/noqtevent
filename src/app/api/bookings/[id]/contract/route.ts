@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase";
 import { isAdmin } from "@/lib/adminAuth";
-import { generateContractPdf, type ContractData } from "@/lib/generateContractPdf";
+import { createAndStoreContract } from "@/lib/contract";
 import { sendBookingContractEmails } from "@/lib/email";
+
+export const maxDuration = 60;
 
 export async function POST(
   _req: NextRequest,
@@ -13,80 +14,13 @@ export async function POST(
   }
 
   const { id } = await params;
-  const supabase = createServiceClient();
-
-  const { data: booking, error } = await supabase
-    .from("bookings")
-    .select("*, dj_profiles(name, performer_type, city, email)")
-    .eq("id", id)
-    .single();
-
-  if (error || !booking) {
-    return NextResponse.json({ error: "Booking bulunamadı" }, { status: 404 });
-  }
-
-  const contractData: ContractData = {
-    bookingId: booking.id,
-    contractDate: new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
-    client: {
-      name: booking.client_name,
-      email: booking.client_email,
-      phone: booking.client_phone,
-    },
-    artist: {
-      name: booking.dj_profiles?.name ?? "—",
-      performer_type: booking.dj_profiles?.performer_type,
-      city: booking.dj_profiles?.city,
-    },
-    event: {
-      type: booking.event_type,
-      date: booking.event_date,
-      time: booking.event_time,
-      duration: booking.event_duration_hours,
-      venueName: booking.venue_name,
-      venueCity: booking.venue_city,
-      venueAddress: booking.venue_address,
-    },
-    financial: {
-      fee: booking.fee,
-      commissionRate: booking.commission_rate,
-      depositRate: booking.deposit_rate,
-      advanceAmount: booking.advance_amount,
-      travelRequired: booking.travel_required,
-      accommodationRequired: booking.accommodation_required,
-    },
-    notes: booking.notes,
-  };
 
   try {
-    const pdfBuffer = await generateContractPdf(contractData);
-
-    // Sözleşmeler PII içerdiği için private bucket'ta tutulur; erişim imzalı URL ile
-    const bucket = "contracts";
-    const { data: buckets } = await supabase.storage.listBuckets();
-    if (!buckets?.some((b) => b.name === bucket)) {
-      await supabase.storage.createBucket(bucket, { public: false });
+    const result = await createAndStoreContract(id);
+    if (!result) {
+      return NextResponse.json({ error: "Booking bulunamadı" }, { status: 404 });
     }
-
-    const fileName = `${booking.id}/sozlesme-${Date.now()}.pdf`;
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(fileName, pdfBuffer, { contentType: "application/pdf", upsert: true });
-
-    let contractUrl: string | null = null;
-    if (!uploadError) {
-      const { data: signed, error: signError } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 yıl
-      if (!signError && signed) {
-        contractUrl = signed.signedUrl;
-        await supabase.from("bookings").update({ contract_url: contractUrl }).eq("id", booking.id);
-      } else {
-        console.error("Contract sign-url error:", signError?.message);
-      }
-    } else {
-      console.error("Contract upload error:", uploadError.message);
-    }
+    const { pdfBuffer, contractUrl, booking } = result;
 
     // E-posta gönder (fire-and-forget)
     sendBookingContractEmails({

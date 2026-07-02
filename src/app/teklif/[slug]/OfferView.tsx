@@ -40,6 +40,9 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
   const handleAccept = () => {
     setError(null);
     if (!name.trim()) { setError("Ad soyad girin."); return; }
+    // Sözleşme e-postayla gönderilir — booking'te kayıtlı e-posta yoksa zorunlu
+    if (!email.trim() && !booking.client_email) { setError("Sözleşmenizi gönderebilmemiz için e-posta adresinizi girin."); return; }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError("Geçerli bir e-posta adresi girin."); return; }
     if (!agreeChecked) { setError("Devam etmek için şartları kabul etmelisiniz."); return; }
     startTransition(async () => {
       try {
@@ -166,6 +169,7 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
             </div>
             <p className="text-xs text-muted-foreground">
               {selectedPlan === "cash" ? "Peşin" : "Ön ödemeli"} plan ile <strong className="text-foreground">{fmt(agreedPrice)}</strong> tutarını kabul ettiniz.
+              Sözleşmeniz PDF olarak e-posta adresinize gönderildi.
             </p>
 
             <div className="border-t border-border pt-4">
