@@ -69,6 +69,7 @@ export async function createAndStoreContract(bookingId: string): Promise<Contrac
           acceptedAt: agreement.created_at,
           termsVersion: agreement.terms_version,
           ip: agreement.ip_address,
+          verifiedEmail: agreement.verified_email ?? null,
         }
       : null,
   };

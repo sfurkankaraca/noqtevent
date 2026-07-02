@@ -851,3 +851,30 @@ export async function sendOfferAcceptedEmails(data: {
       </div>`,
   });
 }
+
+// Teklif onayı öncesi e-posta doğrulama kodu (tek kullanımlık, ~10 dk geçerli)
+export async function sendOfferOtpEmail(data: {
+  email: string;
+  code: string;
+  artistName: string;
+}) {
+  const resend = getResend();
+  if (!resend) throw new Error("E-posta servisi yapılandırılmamış.");
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.email,
+    subject: `Onay Kodunuz: ${data.code} · NOQT`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">NOQT Experience</p>
+        <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">E-posta doğrulama kodunuz</h1>
+        <p style="font-size:15px;color:#444;line-height:1.6;">
+          <strong>${data.artistName}</strong> rezervasyon sözleşmesini onaylamak için aşağıdaki kodu girin.
+          Kod 10 dakika geçerlidir.
+        </p>
+        <p style="font-size:32px;font-weight:700;letter-spacing:8px;text-align:center;background:#f4f4f4;border-radius:12px;padding:20px;margin:24px 0;">${data.code}</p>
+        <p style="font-size:12px;color:#999;">Bu işlemi siz başlatmadıysanız bu e-postayı yok sayabilirsiniz.</p>
+      </div>`,
+  });
+}

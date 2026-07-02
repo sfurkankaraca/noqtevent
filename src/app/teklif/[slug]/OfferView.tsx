@@ -5,7 +5,7 @@ import {
   calcCashPrice, calcPrepayPrice, isPrepayAvailable, daysUntil,
   TERMS_TEXT, PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_DEADLINE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
 } from "@/lib/bookingTerms";
-import { acceptOffer, notifyPaymentClaim } from "./actions";
+import { acceptOffer, notifyPaymentClaim, sendOfferOtp } from "./actions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Booking = Record<string, any>;
@@ -26,6 +26,9 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
   const [accepted, setAccepted] = useState(!!agreement);
   const [paymentClaimed, setPaymentClaimed] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   const cashPrice = calcCashPrice(booking.fee ?? 0);
   const prepayPrice = calcPrepayPrice(booking.fee ?? 0);
@@ -37,17 +40,36 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
     ? new Date(booking.event_date).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
     : null;
 
-  const handleAccept = () => {
+  const validateForm = (): boolean => {
     setError(null);
-    if (!name.trim()) { setError("Ad soyad girin."); return; }
-    // Sözleşme e-postayla gönderilir — booking'te kayıtlı e-posta yoksa zorunlu
-    if (!email.trim() && !booking.client_email) { setError("Sözleşmenizi gönderebilmemiz için e-posta adresinizi girin."); return; }
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError("Geçerli bir e-posta adresi girin."); return; }
-    if (!agreeChecked) { setError("Devam etmek için şartları kabul etmelisiniz."); return; }
+    if (!name.trim()) { setError("Ad soyad girin."); return false; }
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError("Geçerli bir e-posta adresi girin."); return false; }
+    if (!agreeChecked) { setError("Devam etmek için şartları kabul etmelisiniz."); return false; }
+    return true;
+  };
+
+  // 1. adım: e-postaya tek kullanımlık doğrulama kodu gönder
+  const handleSendOtp = async () => {
+    if (!validateForm()) return;
+    setSendingOtp(true);
+    try {
+      await sendOfferOtp(slug, email.trim());
+      setOtpSent(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Kod gönderilemedi");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  // 2. adım: kodu doğrula ve sözleşmeyi onayla
+  const handleAccept = () => {
+    if (!validateForm()) return;
+    if (!/^\d{6}$/.test(otp.trim())) { setError("E-postanıza gelen 6 haneli kodu girin."); return; }
     startTransition(async () => {
       try {
         await acceptOffer({
-          slug, name: name.trim(), email: email.trim() || null,
+          slug, name: name.trim(), email: email.trim(), otp: otp.trim(),
           plan: selectedPlan,
         });
         setAccepted(true);
@@ -143,7 +165,11 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
             <p className="text-sm font-semibold text-foreground">Onay ve Elektronik İmza</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ad Soyad" className={inputCls} />
-              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-posta" type="email" className={inputCls} />
+              <input
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); if (otpSent) { setOtpSent(false); setOtp(""); } }}
+                placeholder="E-posta" type="email" className={inputCls}
+              />
             </div>
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={agreeChecked} onChange={(e) => setAgreeChecked(e.target.checked)}
@@ -153,13 +179,44 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
                 <strong className="text-foreground"> {fmt(agreedPrice)}</strong> bedeli kabul ediyorum. Bu onay, taraflar arasında bağlayıcı bir sözleşme oluşturur.
               </span>
             </label>
-            <button
-              onClick={handleAccept}
-              disabled={isPending || !prepayAvailable && selectedPlan === "prepay"}
-              className="w-full py-3.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {isPending ? "Kaydediliyor…" : "Şartları Kabul Et ve Onayla"}
-            </button>
+            {!otpSent ? (
+              <button
+                onClick={handleSendOtp}
+                disabled={sendingOtp || (!prepayAvailable && selectedPlan === "prepay")}
+                className="w-full py-3.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {sendingOtp ? "Kod gönderiliyor…" : "E-posta ile Doğrula ve Onayla"}
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-foreground">{email.trim()}</strong> adresine 6 haneli doğrulama kodu gönderdik.
+                  Kodu girerek onayınızı tamamlayın.
+                </p>
+                <input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="6 haneli kod"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  className={`${inputCls} text-center tracking-[0.5em] font-semibold`}
+                />
+                <button
+                  onClick={handleAccept}
+                  disabled={isPending || (!prepayAvailable && selectedPlan === "prepay")}
+                  className="w-full py-3.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {isPending ? "Sözleşme oluşturuluyor…" : "Kodu Doğrula, Şartları Kabul Et ve Onayla"}
+                </button>
+                <button
+                  onClick={handleSendOtp}
+                  disabled={sendingOtp}
+                  className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  {sendingOtp ? "Gönderiliyor…" : "Kodu tekrar gönder"}
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-border p-6 space-y-4">

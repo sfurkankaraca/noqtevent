@@ -116,6 +116,7 @@ export type ContractData = {
     acceptedAt: string; // ISO timestamp
     termsVersion: string;
     ip?: string | null;
+    verifiedEmail?: string | null; // OTP ile doğrulanan e-posta
   } | null;
 };
 
@@ -339,6 +340,14 @@ function ContractDocument({ data }: { data: ContractData }) {
                 <View style={styles.finRow}>
                   <Text style={styles.finLabel}>IP Adresi</Text>
                   <Text style={styles.finValue}>{agreement.ip}</Text>
+                </View>
+              )}
+              {agreement.verifiedEmail && (
+                <View style={styles.finRow}>
+                  <Text style={styles.finLabel}>Kimlik Doğrulama</Text>
+                  <Text style={styles.finValueGreen}>
+                    E-posta, tek kullanımlık kod ile doğrulandı ({agreement.verifiedEmail})
+                  </Text>
                 </View>
               )}
               <View style={styles.finDivider} />

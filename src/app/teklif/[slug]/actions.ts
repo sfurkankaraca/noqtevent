@@ -1,12 +1,16 @@
 "use server";
 
+import crypto from "node:crypto";
 import { headers } from "next/headers";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { TERMS_VERSION, calcCashPrice, calcPrepayPrice, isPrepayAvailable } from "@/lib/bookingTerms";
 import { rateLimit } from "@/lib/rateLimit";
-import { sendPaymentClaimNotification, sendOfferAcceptedEmails } from "@/lib/email";
+import { sendPaymentClaimNotification, sendOfferAcceptedEmails, sendOfferOtpEmail } from "@/lib/email";
 import { createAndStoreContract } from "@/lib/contract";
+import { generateOfferOtp, verifyOfferOtp } from "@/lib/offerOtp";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function getRequestMeta() {
   const hdrs = await headers();
@@ -15,10 +19,37 @@ async function getRequestMeta() {
   return { ip, userAgent };
 }
 
+// Onay öncesi e-posta doğrulama kodu gönderir — onaylayanın e-posta
+// sahibi olduğunu kanıtlamak sözleşmenin ispat gücünü artırır.
+export async function sendOfferOtp(slug: string, email: string) {
+  const { ip } = await getRequestMeta();
+  const { ok } = rateLimit(ip, "offer-otp", { max: 5, windowMs: 10 * 60_000 });
+  if (!ok) throw new Error("Çok fazla kod istendi. Lütfen birkaç dakika bekleyin.");
+
+  const cleanEmail = email?.trim().toLowerCase();
+  if (!cleanEmail || !EMAIL_RE.test(cleanEmail)) throw new Error("Geçerli bir e-posta adresi girin.");
+
+  const supabase = createServiceClient();
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("id, dj_profiles(name)")
+    .eq("offer_slug", slug)
+    .single();
+  if (error || !booking) throw new Error("Teklif bulunamadı.");
+
+  const code = generateOfferOtp(slug, cleanEmail);
+  await sendOfferOtpEmail({
+    email: cleanEmail,
+    code,
+    artistName: (booking.dj_profiles as { name?: string } | null)?.name ?? "NOQT",
+  });
+}
+
 export async function acceptOffer(data: {
   slug: string;
   name: string;
-  email: string | null;
+  email: string;
+  otp: string;
   plan: "cash" | "prepay";
 }) {
   const { ip, userAgent } = await getRequestMeta();
@@ -28,6 +59,12 @@ export async function acceptOffer(data: {
   const name = data.name?.trim().slice(0, 120);
   if (!name) throw new Error("Ad soyad zorunludur.");
   if (data.plan !== "cash" && data.plan !== "prepay") throw new Error("Geçersiz ödeme planı.");
+
+  const email = data.email?.trim().toLowerCase().slice(0, 200);
+  if (!email || !EMAIL_RE.test(email)) throw new Error("Geçerli bir e-posta adresi girin.");
+  if (!verifyOfferOtp(data.slug, email, data.otp)) {
+    throw new Error("Doğrulama kodu hatalı veya süresi dolmuş. Yeni kod isteyin.");
+  }
 
   const supabase = createServiceClient();
 
@@ -46,17 +83,29 @@ export async function acceptOffer(data: {
   // Fiyat sunucu tarafında hesaplanır
   const agreedPrice = data.plan === "cash" ? calcCashPrice(booking.fee ?? 0) : calcPrepayPrice(booking.fee ?? 0);
 
-  const { error: agreementError } = await supabase.from("booking_agreements").insert({
+  const baseAgreement = {
     booking_id: booking.id,
     accepted_name: name,
-    accepted_email: data.email?.trim().slice(0, 200) || null,
+    accepted_email: email,
     payment_plan: data.plan,
     agreed_price: agreedPrice,
     terms_version: TERMS_VERSION,
     ip_address: ip === "unknown" ? null : ip,
     user_agent: userAgent,
-  });
-  if (agreementError) throw new Error(agreementError.message);
+  };
+
+  // Doğrulama kolonları migration'ı henüz çalıştırılmadıysa onları atlayarak dene
+  let agreementId: string | null = null;
+  let insertResult = await supabase
+    .from("booking_agreements")
+    .insert({ ...baseAgreement, verification_method: "email-otp", verified_email: email })
+    .select("id")
+    .single();
+  if (insertResult.error?.message.includes("column")) {
+    insertResult = await supabase.from("booking_agreements").insert(baseAgreement).select("id").single();
+  }
+  if (insertResult.error) throw new Error(insertResult.error.message);
+  agreementId = insertResult.data?.id ?? null;
 
   const nextStatus = ["draft", "offer_sent"].includes(booking.status) ? "confirmed" : booking.status;
 
@@ -70,10 +119,22 @@ export async function acceptOffer(data: {
   // Onay kaydedildi — PDF/e-posta hatası onayı geri almaz, sadece loglanır.
   try {
     const contract = await createAndStoreContract(booking.id);
-    const clientEmail = data.email?.trim() || booking.client_email || null;
+
+    // Bütünlük kanıtı: sözleşme PDF'inin SHA-256 özeti onay kaydına yazılır
+    if (contract && agreementId) {
+      const contractHash = crypto.createHash("sha256").update(contract.pdfBuffer).digest("hex");
+      await supabase
+        .from("booking_agreements")
+        .update({ contract_hash: contractHash })
+        .eq("id", agreementId)
+        .then((r) => {
+          if (r.error && !r.error.message.includes("column")) console.error("[acceptOffer] hash kaydı:", r.error.message);
+        });
+    }
+
     await sendOfferAcceptedEmails({
       clientName: name,
-      clientEmail,
+      clientEmail: email,
       artistName: (booking.dj_profiles as { name?: string } | null)?.name ?? "—",
       eventType: booking.event_type,
       eventDate: booking.event_date,
