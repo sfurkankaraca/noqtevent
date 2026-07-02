@@ -8,7 +8,6 @@ export type RiderItem = {
   category: string;
   options: string[];
   preferredOption?: string; // alternatifler arasında birincil tercih
-  brandMatters: boolean;    // tam olarak bu marka/model mi, yoksa dengi mi kabul edilir
   required: boolean;        // zorunlu mu, opsiyonel mi
   qty: number;
   provided_by: "organizer" | "artist";
@@ -81,7 +80,7 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
 };
 
 function blankItem(): RiderItem {
-  return { category: "", options: [], preferredOption: undefined, brandMatters: false, required: true, qty: 1, provided_by: "organizer", notes: "" };
+  return { category: "", options: [], preferredOption: undefined, required: true, qty: 1, provided_by: "organizer", notes: "" };
 }
 
 // Eski format {item, qty, provided_by, notes} ile yeni format {category, options}
@@ -98,7 +97,6 @@ export function normalizeRiderItems(raw: unknown[]): RiderItem[] {
       category: item.category || item.item || "",
       options,
       preferredOption: item.preferredOption && options.includes(item.preferredOption) ? item.preferredOption : undefined,
-      brandMatters: item.brandMatters ?? false,
       required: item.required ?? true,
       qty: item.qty ?? 1,
       provided_by: item.provided_by ?? "organizer",
@@ -190,7 +188,7 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
               </button>
             </div>
 
-            {/* Zorunlu / Marka önemli mi */}
+            {/* Zorunlu mu */}
             {!compact && (
               <div className="flex gap-1.5">
                 <button
@@ -203,17 +201,6 @@ export default function RiderBuilder({ value, onChange, compact = false }: Props
                   }`}
                 >
                   {item.required ? "Zorunlu" : "Opsiyonel"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => update(idx, { brandMatters: !item.brandMatters })}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                    item.brandMatters
-                      ? "border-amber-200 bg-amber-50 text-amber-700"
-                      : "border-border text-muted-foreground hover:border-foreground/40"
-                  }`}
-                >
-                  {item.brandMatters ? "Marka önemli" : "Marka önemli değil (dengi olur)"}
                 </button>
               </div>
             )}

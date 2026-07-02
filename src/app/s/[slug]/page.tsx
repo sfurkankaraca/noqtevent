@@ -65,7 +65,7 @@ export default async function PresskitPage({ params }: Props) {
   const coverCities: string[] = Array.isArray(dj.cover_cities) ? dj.cover_cities : [];
   type RiderItem = {
     category?: string; item?: string; options?: string[]; preferredOption?: string;
-    brandMatters?: boolean; required?: boolean;
+    required?: boolean;
     qty: number; provided_by: "organizer" | "artist"; notes?: string;
   };
   const riderItemsRaw: RiderItem[] = Array.isArray(dj.rider) ? dj.rider : [];
@@ -76,7 +76,6 @@ export default async function PresskitPage({ params }: Props) {
       label: r.category || r.item || "",
       options,
       preferredOption: r.preferredOption && options.includes(r.preferredOption) ? r.preferredOption : undefined,
-      brandMatters: r.brandMatters ?? false,
       required: r.required ?? true,
       qty: r.qty,
       provided_by: r.provided_by,
@@ -226,7 +225,6 @@ export default async function PresskitPage({ params }: Props) {
                     <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Kategori</th>
                     <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Kabul Edilen Ekipmanlar</th>
                     <th className="text-center px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Adet</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Marka</th>
                     <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground tracking-wide">Sağlayan</th>
                   </tr>
                 </thead>
@@ -251,9 +249,6 @@ export default async function PresskitPage({ params }: Props) {
                         {r.notes && <p className="text-xs text-muted-foreground mt-1">{r.notes}</p>}
                       </td>
                       <td className="px-4 py-2.5 text-center text-muted-foreground tabular-nums align-top">{r.qty}</td>
-                      <td className="px-4 py-2.5 align-top text-muted-foreground">
-                        {r.brandMatters ? "Önemli" : "Önemli değil"}
-                      </td>
                       <td className="px-4 py-2.5 align-top">
                         <span className={`text-xs px-2.5 py-1 rounded-full border ${
                           r.provided_by === "organizer"
