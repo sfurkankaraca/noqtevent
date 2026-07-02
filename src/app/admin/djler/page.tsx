@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createServiceClient } from "@/lib/supabase";
 import DeleteDjButton from "./DeleteDjButton";
+import ApplyRiderTemplateButton from "./ApplyRiderTemplateButton";
 
 const PERFORMER_TYPES = [
   { id: "all", label: "Tümü", emoji: "✨" },
@@ -48,12 +49,15 @@ export default async function DjlerPage({ searchParams }: Props) {
             )}
           </p>
         </div>
-        <Link
-          href="/admin/djler/new"
-          className="inline-flex items-center gap-2 bg-foreground text-background px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
-        >
-          + Yeni Sanatçı
-        </Link>
+        <div className="flex items-center gap-2">
+          <ApplyRiderTemplateButton />
+          <Link
+            href="/admin/djler/new"
+            className="inline-flex items-center gap-2 bg-foreground text-background px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            + Yeni Sanatçı
+          </Link>
+        </div>
       </div>
 
       {/* Type filter tabs */}

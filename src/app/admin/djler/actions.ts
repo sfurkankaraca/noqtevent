@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import type { FocalPoint } from "@/components/admin/FocalPointPicker";
 import { sendArtistApprovalNotification } from "@/lib/email";
+import { RIDER_TEMPLATES } from "@/lib/riderTypes";
 
 export async function upsertDj(formData: FormData) {
   const supabase = createServiceClient();
@@ -110,4 +111,43 @@ export async function deleteDj(formData: FormData) {
   const supabase = createServiceClient();
   await supabase.from("dj_profiles").delete().eq("id", id);
   revalidatePath("/admin/djler");
+}
+
+// Belirtilen performer_type'taki, henüz rider'ı boş olan tüm sanatçılara
+// standart şablonu uygular. Zaten rider'ı olanlara dokunmaz (üzerine yazmaz).
+export async function applyRiderTemplateToAll(
+  performerType: "dj" | "artist"
+): Promise<{ updated: number; skipped: number; names: string[] }> {
+  const template = RIDER_TEMPLATES[performerType];
+  if (!template) throw new Error("Şablon bulunamadı");
+
+  const supabase = createServiceClient();
+  const { data: djs, error } = await supabase
+    .from("dj_profiles")
+    .select("id, name, rider")
+    .eq("performer_type", performerType);
+  if (error) throw new Error(error.message);
+
+  let updated = 0;
+  let skipped = 0;
+  const names: string[] = [];
+
+  for (const dj of djs ?? []) {
+    const hasRider = Array.isArray(dj.rider) && dj.rider.length > 0;
+    if (hasRider) {
+      skipped++;
+      continue;
+    }
+    const { error: updateError } = await supabase
+      .from("dj_profiles")
+      .update({ rider: template.items })
+      .eq("id", dj.id);
+    if (!updateError) {
+      updated++;
+      names.push(dj.name);
+    }
+  }
+
+  revalidatePath("/admin/djler");
+  return { updated, skipped, names };
 }
