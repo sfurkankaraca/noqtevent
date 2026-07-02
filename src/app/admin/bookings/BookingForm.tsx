@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { upsertBooking, type BookingPayload } from "./actions";
 
 const EVENT_TYPE_LABELS = [
-  "Düğün / Nikah", "Nişan", "Kına Gecesi", "Doğum Günü",
+  "Düğün", "Düğün / Nikah", "Nişan", "Kına Gecesi", "Doğum Günü",
   "Kurumsal Etkinlik", "Marka Lansmanı", "Açılış Etkinliği",
   "Özel Parti", "After Party", "Morning Party", "Bekarlığa Veda",
-  "Mezuniyet", "Kokteyl / Resepsiyon", "Festival",
+  "Bride / Bekarlığa Veda", "Mezuniyet", "Kokteyl / Resepsiyon",
+  "Festival", "Kulüp / Bar Gecesi",
 ];
 
 type Artist = { id: string; name: string; performer_type: string | null };
@@ -55,15 +56,10 @@ export default function BookingForm({ artists, inquiries = [], booking }: Props)
   const deposit = feeNum * (parseFloat(depositRate) / 100);
   const remaining = feeNum - deposit;
 
+  // Tam aktarım (sanatçı, mekan, notlar dahil) server tarafında yapılır
   const fillFromInquiry = (id: string) => {
     setInquiryId(id);
-    const inq = inquiries.find((i) => i.id === id);
-    if (!inq) return;
-    if (inq.name) setClientName(inq.name);
-    if (inq.email) setClientEmail(inq.email);
-    if (inq.phone) setClientPhone(inq.phone);
-    if (inq.event_type) setEventType(inq.event_type);
-    if (inq.event_date) setEventDate(inq.event_date);
+    if (id) router.push(`/admin/bookings/new?inquiry=${id}`);
   };
 
   const handleSave = () => {

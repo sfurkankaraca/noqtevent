@@ -68,6 +68,19 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
 
   const importantMoments = momentEntries.filter(([, v]) => v.important);
 
+  // Sanatçı rezervasyon formundan gelen talepler tüm detayı event_sections.artistBooking altında taşır
+  const ab = inq.event_sections?.artistBooking as Record<string, string | boolean> | undefined;
+  const abRow = (label: string, value: string | boolean | undefined | null) => {
+    if (value === undefined || value === null || value === "" ) return null;
+    const display = value === true ? "Evet" : value === false ? "Hayır" : String(value);
+    return (
+      <div key={label} className="flex justify-between gap-4 text-sm py-1.5 border-b border-border/60 last:border-0">
+        <span className="text-muted-foreground flex-shrink-0">{label}</span>
+        <span className="text-foreground font-medium text-right">{display}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 max-w-5xl">
       {/* Breadcrumb */}
@@ -123,7 +136,73 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
 
-          {/* Music journey */}
+          {/* Sanatçı Booking Detayları */}
+          {ab && (
+            <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-foreground">🎤 Sanatçı Booking Talebi</h2>
+                <Link
+                  href={`/admin/bookings/new?inquiry=${id}`}
+                  className="inline-flex items-center gap-2 bg-foreground text-background px-4 py-2 rounded-full text-xs font-medium hover:opacity-90 transition-opacity"
+                >
+                  Booking Oluştur →
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-2">Etkinlik</p>
+                  <div className="bg-secondary/30 rounded-xl px-4 py-2">
+                    {abRow("Sanatçı", ab.artistName as string)}
+                    {abRow("Ülke", ab.country as string)}
+                    {abRow("Şehir", ab.city as string)}
+                    {abRow("Mekan", ab.venueName as string)}
+                    {abRow("Mekan Sosyal", ab.venueSocial as string)}
+                    {abRow("Biletli mi?", ab.isTicketed === "yes" ? "Evet" : ab.isTicketed === "no" ? "Hayır" : undefined)}
+                    {abRow("Bilet Fiyatı", ab.ticketPrice as string)}
+                    {abRow("Kapasite", ab.venueCapacity as string)}
+                    {abRow("Sponsorlar", ab.sponsors as string)}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-2">Performans</p>
+                  <div className="bg-secondary/30 rounded-xl px-4 py-2">
+                    {abRow("Performans Tipi", ab.performanceType as string)}
+                    {abRow("Set Süresi", ab.setDuration as string)}
+                    {abRow("Kapı Açılış", ab.doorOpenTime as string)}
+                    {abRow("Sahne Saati", ab.stageTime as string)}
+                    {abRow("Bitiş (Curfew)", ab.curfew as string)}
+                    {abRow("Açılış DJ", ab.openingDj as string)}
+                    {abRow("Kapanış DJ", ab.closingDj as string)}
+                    {abRow("Diğer Sanatçılar", ab.otherPerformers as string)}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-2">Teknik</p>
+                  <div className="bg-secondary/30 rounded-xl px-4 py-2">
+                    {abRow("Rider Onaylandı", ab.technicalConfirmed as boolean)}
+                    {abRow("NOQT Ekipmanı İstiyor", ab.wantsNoqtEquipment === "yes" ? "Evet" : ab.wantsNoqtEquipment === "no" ? "Hayır" : undefined)}
+                    {abRow("Ekipman Notu", ab.equipmentNotes as string)}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-2">Bütçe & Lojistik</p>
+                  <div className="bg-secondary/30 rounded-xl px-4 py-2">
+                    {abRow("Bütçe", ab.budget as string)}
+                    {abRow("Konaklama", ab.accommodation as string)}
+                    {abRow("Transfer", ab.transfer as string)}
+                    {abRow("Özel İstekler", ab.specialRequests as string)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Music journey — planlayıcı taleplerinde göster */}
+          {!ab && (
           <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
             <h2 className="font-semibold text-foreground">Müzik Yolculuğu</h2>
             {sections.map((sec) => (
@@ -158,6 +237,7 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
               </div>
             ))}
           </div>
+          )}
 
           {/* Important moments */}
           {importantMoments.length > 0 && (
