@@ -2,12 +2,16 @@ import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
 import HomeBelowFold from "@/components/home/HomeBelowFold";
+import { HeroProof, EventLinks, HomeFaq, JournalTeaser } from "@/components/home/HomeSeoSections";
+import { HOME_FAQ } from "@/lib/homeFaq";
 import { createServiceClient } from "@/lib/supabase";
+
+const BASE_URL = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
 
 export default async function Home() {
   const supabase = createServiceClient();
 
-  const [djRes, partnerRes, conceptRes, testimonialRes, heroRes, partnerLogosRes] = await Promise.all([
+  const [djRes, partnerRes, conceptRes, testimonialRes, heroRes, partnerLogosRes, journalRes] = await Promise.all([
     supabase
       .from("dj_profiles")
       .select("id, name, bio, photo_url, photos, focal_points, concept_tags")
@@ -43,6 +47,12 @@ export default async function Home() {
       .eq("category", "brands")
       .eq("is_active", true)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("journal_posts")
+      .select("slug, title, category, excerpt, read_time")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(3),
   ]);
 
   // photos/focal_points columns may not exist yet — fall back gracefully
@@ -73,52 +83,35 @@ export default async function Home() {
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
 
+  // FAQ schema — görünür SSS bölümüyle (HomeFaq) aynı kaynaktan üretilir
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: "Kayseri'de düğün DJ'i nasıl bulabilirim?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "NOQT deneyim planlayıcısını kullanarak etkinlik türünüzü, konseptinizi ve tarihini belirleyin. Size uygun DJ ve sanatçı önerilerini anında alın, teklif isteyin.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Nevşehir ve Kapadokya'da açık hava düğünü için DJ hizmeti veriyor musunuz?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Evet. Nevşehir, Kapadokya bağ evleri, cave oteller ve açık alanlarda ses sistemi, DJ ve canlı müzisyen hizmeti sunuyoruz. Ekibimiz açık hava akustiği ve teknik gereksinimler konusunda deneyimlidir.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Sadece DJ mi, yoksa canlı müzisyen de ayarlıyor musunuz?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Her ikisini de sunuyoruz. DJ, canlı klarnet, keman, akustik gitar, solist ve bando seçeneklerimiz mevcuttur. İstediğinizde karma paketler de oluşturabiliyoruz.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Kayseri'de kına gecesi organizasyonu için destek veriyor musunuz?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Evet. Kayseri'deki kına geceleri için geleneksel oyun havaları ile modern müziği harmanlayan özel setler hazırlıyoruz. DJ ve canlı müzisyen kombinasyonu da tercih edilebilir.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Fiyatlandırma nasıl çalışıyor?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Fiyatlar etkinlik süresine, mekana, sanatçı sayısına ve seçilen konsepte göre değişir. Deneyim planlayıcımız aracılığıyla etkinliğinizin detaylarını girin, size özel teklif oluşturalım.",
-        },
-      },
-    ],
+    mainEntity: HOME_FAQ.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
   };
+
+  // aggregateRating — layout'taki LocalBusiness'a @id ile bağlanır, aramada yıldız gösterimi sağlar
+  const ratedTestimonials = testimonials.filter((t) => typeof t.rating === "number" && t.rating > 0);
+  const ratingSchema = ratedTestimonials.length >= 3
+    ? {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "@id": `${BASE_URL}#localbusiness`,
+        name: "NOQT Deneyim Stüdyosu",
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: (
+            ratedTestimonials.reduce((sum, t) => sum + (t.rating ?? 0), 0) / ratedTestimonials.length
+          ).toFixed(1),
+          reviewCount: ratedTestimonials.length,
+          bestRating: 5,
+        },
+      }
+    : null;
 
   const firstHeroImage = heroImages[0];
 
@@ -134,9 +127,13 @@ export default async function Home() {
         />
       )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      {ratingSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ratingSchema) }} />
+      )}
       <Navigation />
       <main>
         <Hero heroImages={heroImages} />
+        <HeroProof testimonial={testimonials[0] ?? null} />
         <HomeBelowFold
           testimonials={testimonials}
           djs={djs ?? []}
@@ -144,6 +141,9 @@ export default async function Home() {
           logos={partnerLogos}
           concepts={concepts ?? []}
         />
+        <EventLinks />
+        <JournalTeaser posts={journalRes.error ? [] : (journalRes.data ?? [])} />
+        <HomeFaq />
       </main>
       <Footer />
     </>

@@ -79,6 +79,8 @@ export const metadata: Metadata = {
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
+  // Ana sayfadaki aggregateRating schema'sı bu @id üzerinden aynı işletmeye bağlanır
+  "@id": `${BASE_URL}#localbusiness`,
   name: "NOQT Deneyim Stüdyosu",
   description:
     "Kayseri ve Nevşehir merkezli düğün DJ, kına gecesi, mezuniyet, kurumsal etkinlik ve after party organizasyonu.",

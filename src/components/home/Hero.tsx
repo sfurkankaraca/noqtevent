@@ -111,11 +111,11 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
           >
             <div className="h-px w-12 bg-foreground/30" />
             <span className="text-xs tracking-[0.25em] uppercase text-white/60 lg:text-muted-foreground font-medium">
-              Deneyim Stüdyosu
+              Doğru sanatçıyı bul. Etkinliğini tasarla.
             </span>
           </motion.div>
 
-          {/* Headline */}
+          {/* Headline — anahtar kelimeli H1 (SEO) */}
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -123,18 +123,18 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl leading-[1.05] tracking-tight text-white lg:text-foreground"
             style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
           >
-            Doğru sanatçıyı bul.{" "}
-            <em className="italic">Etkinliğini tasarla.</em>
+            Kayseri &amp; Nevşehir&apos;de{" "}
+            <em className="italic">düğün DJ&apos;i</em> ve etkinlik tasarımı
           </motion.h1>
 
-          {/* Subheadline */}
+          {/* Subheadline — somut vaat */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.25 }}
             className="mt-8 text-lg text-white/80 lg:text-muted-foreground leading-relaxed max-w-lg"
           >
-            Düğünden festivale, özel partiden kurumsal geceye — ihtiyacınız olan sanatçıyı ve deneyimi tek yerden planlayın.
+            Düğünden festivale, özel partiden kurumsal geceye — 2 dakikada planlayın, aynı gün size özel teklif alın.
           </motion.p>
 
           {/* CTAs */}
@@ -187,6 +187,30 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               </svg>
               WhatsApp
             </a>
+          </motion.div>
+
+          {/* Fiyat sinyali + müsaitlik */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.55 }}
+            className="mt-8 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5 text-sm"
+          >
+            <Link
+              href="/fiyatlar"
+              onClick={() => trackEvent("cta_click", { location: "hero", target: "fiyatlar" })}
+              className="text-white/75 lg:text-muted-foreground hover:text-white lg:hover:text-foreground transition-colors underline underline-offset-4 decoration-white/30 lg:decoration-border"
+            >
+              DJ hizmetleri 7.500 ₺&apos;den başlar
+            </Link>
+            <span className="hidden sm:inline text-white/30 lg:text-border">·</span>
+            <Link
+              href="/planla"
+              onClick={() => trackEvent("cta_click", { location: "hero", target: "tarih-kontrol" })}
+              className="text-white/75 lg:text-muted-foreground hover:text-white lg:hover:text-foreground transition-colors"
+            >
+              📅 Yaz sezonu tarihleri hızla doluyor — tarihinizin müsaitliğini kontrol edin
+            </Link>
           </motion.div>
         </div>
 
