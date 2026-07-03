@@ -12,6 +12,10 @@ type Upload = {
   created_at: string;
 };
 
+function downloadUrl(url: string, name: string) {
+  return `/api/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`;
+}
+
 export default function GalleryClient({
   event,
   uploads,
@@ -27,18 +31,28 @@ export default function GalleryClient({
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white">
       {/* Header */}
-      <div className="px-6 pt-12 pb-8 flex items-center justify-between max-w-5xl mx-auto">
-        <div>
+      <div className="px-6 pt-12 pb-8 flex items-center justify-between max-w-5xl mx-auto gap-4">
+        <div className="min-w-0">
           <p className="text-white/30 text-[10px] tracking-[0.35em] uppercase mb-1">Galeri</p>
-          <h1 className="text-2xl font-light" style={{ fontFamily: "Georgia, serif" }}>{event.title}</h1>
+          <h1 className="text-2xl font-light truncate" style={{ fontFamily: "Georgia, serif" }}>{event.title}</h1>
           <p className="text-white/30 text-xs mt-1">{uploads.length} içerik · {images.length} fotoğraf · {videos.length} video</p>
         </div>
-        <Link
-          href={`/memory/${event.slug}`}
-          className="text-xs border border-white/20 px-4 py-2 rounded-full text-white/50 hover:border-white/40 hover:text-white/70 transition-all"
-        >
-          + Yükle
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          {images.length > 0 && (
+            <a
+              href={`/api/memory/download-all?slug=${encodeURIComponent(event.slug)}`}
+              className="text-xs border border-white/20 px-4 py-2 rounded-full text-white/50 hover:border-white/40 hover:text-white/70 transition-all whitespace-nowrap"
+            >
+              ⬇ Tüm Fotoğraflar (.zip)
+            </a>
+          )}
+          <Link
+            href={`/memory/${event.slug}`}
+            className="text-xs border border-white/20 px-4 py-2 rounded-full text-white/50 hover:border-white/40 hover:text-white/70 transition-all whitespace-nowrap"
+          >
+            + Yükle
+          </Link>
+        </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 pb-20">
@@ -92,9 +106,17 @@ export default function GalleryClient({
                     className="w-full"
                     preload="metadata"
                   />
-                  {u.uploader_name && (
-                    <p className="text-white/40 text-xs px-3 py-2">{u.uploader_name}</p>
-                  )}
+                  <div className="flex items-center justify-between px-3 py-2">
+                    {u.uploader_name ? (
+                      <p className="text-white/40 text-xs">{u.uploader_name}</p>
+                    ) : <span />}
+                    <a
+                      href={downloadUrl(u.file_url, u.file_name ?? "video.mp4")}
+                      className="text-white/40 hover:text-white/70 text-xs transition-colors"
+                    >
+                      ⬇ İndir
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>
@@ -121,9 +143,17 @@ export default function GalleryClient({
             className="max-w-full max-h-[90vh] object-contain rounded-xl"
             onClick={(e) => e.stopPropagation()}
           />
-          {lightbox.uploader_name && (
-            <p className="absolute bottom-6 text-white/40 text-xs">{lightbox.uploader_name}</p>
-          )}
+          <div className="absolute bottom-6 flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+            {lightbox.uploader_name && (
+              <p className="text-white/40 text-xs">{lightbox.uploader_name}</p>
+            )}
+            <a
+              href={downloadUrl(lightbox.file_url, lightbox.file_name ?? "foto.jpg")}
+              className="text-white/50 hover:text-white text-xs border border-white/20 px-3 py-1.5 rounded-full transition-colors"
+            >
+              ⬇ İndir
+            </a>
+          </div>
         </div>
       )}
     </div>
