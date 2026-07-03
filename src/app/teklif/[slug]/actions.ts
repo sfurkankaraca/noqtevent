@@ -178,3 +178,80 @@ export async function notifyPaymentClaim(slug: string, plan: "cash" | "prepay") 
     amount,
   });
 }
+
+// iyzico Checkout Form başlatır — tutar her zaman sunucuda hesaplanır.
+export async function startOnlinePayment(slug: string): Promise<{ paymentPageUrl: string }> {
+  const { ip } = await getRequestMeta();
+  const { ok } = rateLimit(ip, "start-payment", { max: 10, windowMs: 10 * 60_000 });
+  if (!ok) throw new Error("Çok fazla istek. Lütfen birkaç dakika bekleyin.");
+
+  const { isIyzicoConfigured, initCheckoutForm } = await import("@/lib/iyzico");
+  if (!isIyzicoConfigured()) {
+    throw new Error("Online ödeme şu an aktif değil. Lütfen banka havalesi ile ödeyin.");
+  }
+
+  const supabase = createServiceClient();
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("id, fee, status, payment_plan, deposit_rate, client_name, client_email, venue_city, event_type, dj_profiles(name)")
+    .eq("offer_slug", slug)
+    .single();
+  if (error || !booking) throw new Error("Teklif bulunamadı.");
+
+  // Ödeme yalnızca onaylanmış teklifler için
+  if (!booking.payment_plan || ["draft", "offer_sent", "cancelled"].includes(booking.status)) {
+    throw new Error("Ödeme için önce teklifi onaylamanız gerekiyor.");
+  }
+
+  // Son onaydaki isim/e-posta (booking'te yoksa)
+  const { data: agreement } = await supabase
+    .from("booking_agreements")
+    .select("accepted_name, accepted_email")
+    .eq("booking_id", booking.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // Tamamlanmış müşteri tahsilatları
+  const { data: payments } = await supabase
+    .from("booking_payments")
+    .select("amount")
+    .eq("booking_id", booking.id)
+    .eq("direction", "inbound")
+    .eq("status", "completed")
+    .in("type", ["deposit", "full"]);
+  const paidTotal = (payments ?? []).reduce((s, p) => s + Number(p.amount), 0);
+
+  const { calcDuePayment } = await import("@/lib/paymentPlan");
+  const due = calcDuePayment(booking, paidTotal);
+  if (!due) throw new Error("Ödenecek tutar kalmadı — ödemeniz zaten alınmış.");
+
+  const fullName = (agreement?.accepted_name || booking.client_name || "Müşteri Müşteri").trim();
+  const parts = fullName.split(/\s+/);
+  const surname = parts.length > 1 ? parts.pop()! : "—";
+  const name = parts.join(" ") || "Müşteri";
+  const email = agreement?.accepted_email || booking.client_email;
+  if (!email) throw new Error("Ödeme için e-posta adresi gerekli. Lütfen bizimle iletişime geçin.");
+
+  const artistName = (booking.dj_profiles as { name?: string } | null)?.name ?? "NOQT";
+  const kindLabel = due.kind === "deposit" ? "Ön Ödeme" : due.kind === "remaining" ? "Kalan Ödeme" : "Ödeme";
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
+
+  const { paymentPageUrl } = await initCheckoutForm({
+    conversationId: `${booking.id}:${due.kind}:${Date.now()}`,
+    basketId: booking.id,
+    price: due.amount,
+    callbackUrl: `${BASE}/api/payment/iyzico/callback?slug=${encodeURIComponent(slug)}`,
+    buyer: {
+      id: booking.id,
+      name,
+      surname,
+      email,
+      ip: ip === "unknown" ? "85.34.78.112" : ip,
+      city: booking.venue_city,
+    },
+    itemName: `${artistName} — Rezervasyon ${kindLabel}`,
+  });
+
+  return { paymentPageUrl };
+}

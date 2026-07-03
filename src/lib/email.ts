@@ -878,3 +878,67 @@ export async function sendOfferOtpEmail(data: {
       </div>`,
   });
 }
+
+// Online ödeme (iyzico) tahsilatı sonrası: müşteriye makbuz + admin'e bildirim
+export async function sendPaymentReceivedEmails(data: {
+  clientName: string;
+  clientEmail: string | null;
+  artistName: string;
+  amount: number;
+  kind: "deposit" | "remaining" | "full";
+  remaining: number;
+  bookingId: string;
+  cardLastFour: string | null;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
+  const fmtMoney = (n: number) => n.toLocaleString("tr-TR") + " ₺";
+  const kindLabel =
+    data.kind === "deposit" ? "Ön ödeme (kapora)" : data.kind === "remaining" ? "Kalan ödeme" : "Tam ödeme";
+
+  // Müşteriye makbuz
+  if (data.clientEmail) {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.clientEmail,
+      subject: `Ödemeniz Alındı — ${fmtMoney(data.amount)} · NOQT`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+          <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">NOQT Experience</p>
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">Ödemeniz alındı, ${data.clientName.split(" ")[0]}! ✓</h1>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+            <tr><td style="padding:8px 0;color:#666;width:160px;">Sanatçı</td><td style="padding:8px 0;font-weight:600;">${data.artistName}</td></tr>
+            <tr><td style="padding:8px 0;color:#666;">Ödeme Türü</td><td style="padding:8px 0;font-weight:600;">${kindLabel}${data.cardLastFour ? ` · Kart **** ${data.cardLastFour}` : ""}</td></tr>
+            <tr style="border-top:1px solid #eee;"><td style="padding:10px 0;color:#666;">Tahsil Edilen</td><td style="padding:10px 0;font-weight:700;font-size:16px;color:#15803d;">${fmtMoney(data.amount)}</td></tr>
+            ${data.remaining > 0 ? `<tr><td style="padding:8px 0;color:#666;">Kalan Bakiye</td><td style="padding:8px 0;font-weight:600;color:#b45309;">${fmtMoney(data.remaining)}</td></tr>` : ""}
+          </table>
+          <p style="font-size:14px;color:#444;line-height:1.6;">
+            ${data.remaining > 0
+              ? "Rezervasyonunuz kapora ile güvence altında. Kalan ödemeyi etkinlik tarihinden önce aynı sayfadan tamamlayabilirsiniz."
+              : "Ödemeniz tamamlandı — rezervasyonunuz kesinleşti. Etkinliğinizde görüşmek üzere!"}
+          </p>
+          <p style="margin-top:32px;font-size:12px;color:#999;">Sorularınız için <a href="mailto:${ADMIN_EMAIL}" style="color:#1a1a1a;">${ADMIN_EMAIL}</a></p>
+        </div>`,
+    });
+  }
+
+  // Admin'e bildirim
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject: `💰 Online ödeme alındı — ${data.clientName} · ${fmtMoney(data.amount)}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <h1 style="font-size:20px;font-weight:700;margin-bottom:16px;">iyzico üzerinden ödeme alındı</h1>
+        <p style="font-size:14px;color:#444;">
+          <strong>${data.clientName}</strong> — ${kindLabel} — <strong style="color:#15803d;">${fmtMoney(data.amount)}</strong>
+          ${data.remaining > 0 ? `<br/>Kalan bakiye: ${fmtMoney(data.remaining)}` : "<br/>Ödeme tamamlandı ✓"}
+        </p>
+        <p style="margin-top:20px;">
+          <a href="${BASE}/admin/bookings/${data.bookingId}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Booking'i Aç →</a>
+        </p>
+      </div>`,
+  });
+}

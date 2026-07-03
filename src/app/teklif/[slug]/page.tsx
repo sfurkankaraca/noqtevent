@@ -3,7 +3,10 @@ import type { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase";
 import OfferView from "./OfferView";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ odeme?: string; mesaj?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -20,8 +23,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function OfferPage({ params }: Props) {
+export default async function OfferPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { odeme, mesaj } = (await searchParams) ?? {};
   const supabase = createServiceClient();
   const { data: booking } = await supabase
     .from("bookings")
@@ -39,5 +43,13 @@ export default async function OfferPage({ params }: Props) {
     .limit(1)
     .maybeSingle();
 
-  return <OfferView booking={booking} slug={slug} agreement={agreement} />;
+  return (
+    <OfferView
+      booking={booking}
+      slug={slug}
+      agreement={agreement}
+      paymentResult={odeme === "basarili" ? "success" : odeme === "hata" ? "error" : null}
+      paymentMessage={mesaj ?? null}
+    />
+  );
 }

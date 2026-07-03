@@ -5,7 +5,7 @@ import {
   calcCashPrice, calcPrepayPrice, isPrepayAvailable, daysUntil,
   TERMS_TEXT, PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_DEADLINE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
 } from "@/lib/bookingTerms";
-import { acceptOffer, notifyPaymentClaim, sendOfferOtp } from "./actions";
+import { acceptOffer, notifyPaymentClaim, sendOfferOtp, startOnlinePayment } from "./actions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Booking = Record<string, any>;
@@ -14,7 +14,15 @@ type Agreement = Record<string, any> | null;
 
 const fmt = (n: number) => n.toLocaleString("tr-TR") + " ₺";
 
-export default function OfferView({ booking, slug, agreement }: { booking: Booking; slug: string; agreement: Agreement }) {
+export default function OfferView({
+  booking, slug, agreement, paymentResult = null, paymentMessage = null,
+}: {
+  booking: Booking;
+  slug: string;
+  agreement: Agreement;
+  paymentResult?: "success" | "error" | null;
+  paymentMessage?: string | null;
+}) {
   const [selectedPlan, setSelectedPlan] = useState<"cash" | "prepay">(
     agreement?.payment_plan ?? (isPrepayAvailable(booking.event_date) ? "prepay" : "cash")
   );
@@ -29,6 +37,8 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(paymentResult === "error" ? (paymentMessage ?? "Ödeme tamamlanamadı.") : null);
 
   const cashPrice = calcCashPrice(booking.fee ?? 0);
   const prepayPrice = calcPrepayPrice(booking.fee ?? 0);
@@ -77,6 +87,19 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
         setError(e instanceof Error ? e.message : "Bir hata oluştu");
       }
     });
+  };
+
+  // iyzico Checkout Form'a yönlendir — tutar sunucuda hesaplanır
+  const handlePayOnline = async () => {
+    setPayError(null);
+    setPaying(true);
+    try {
+      const { paymentPageUrl } = await startOnlinePayment(slug);
+      window.location.href = paymentPageUrl;
+    } catch (e) {
+      setPayError(e instanceof Error ? e.message : "Ödeme başlatılamadı");
+      setPaying(false);
+    }
   };
 
   const handleClaimPayment = async () => {
@@ -231,22 +254,63 @@ export default function OfferView({ booking, slug, agreement }: { booking: Booki
 
             <div className="border-t border-border pt-4">
               <p className="text-sm font-semibold text-foreground mb-2">Ödeme</p>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                Online ödeme altyapımız yakında aktif olacak. Şimdilik ödemenizi banka havalesi ile
-                gerçekleştirip aşağıdaki butonla bize bildirebilirsiniz — ekibimiz kısa sürede sizinle iletişime geçecek.
-              </p>
-              {!paymentClaimed ? (
-                <button
-                  onClick={handleClaimPayment}
-                  disabled={claiming}
-                  className="w-full py-3 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                  {claiming ? "Bildiriliyor…" : "Ödemeyi Yaptım, Bildir"}
-                </button>
-              ) : (
-                <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                  Bildiriminiz alındı. Ekibimiz en kısa sürede sizinle iletişime geçecek.
+
+              {paymentResult === "success" && (
+                <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-3">
+                  ✓ Ödemeniz başarıyla alındı. Makbuzunuz e-posta adresinize gönderildi.
                 </p>
+              )}
+              {payError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-3">{payError}</p>
+              )}
+
+              {booking.status === "full_paid" ? (
+                <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  Ödemeniz tamamlandı — rezervasyonunuz kesinleşti. Etkinliğinizde görüşmek üzere! 🎉
+                </p>
+              ) : (
+                <>
+                  {(() => {
+                    const depositAmount = Math.round(agreedPrice * ((booking.deposit_rate ?? 30) / 100));
+                    const dueNow = booking.status === "deposit_paid"
+                      ? agreedPrice - depositAmount
+                      : selectedPlan === "prepay" ? depositAmount : agreedPrice;
+                    const dueLabel = booking.status === "deposit_paid"
+                      ? "Kalan Ödemeyi Kartla Yap"
+                      : selectedPlan === "prepay" ? "Ön Ödemeyi Kartla Yap" : "Kartla Öde";
+                    return (
+                      <button
+                        onClick={handlePayOnline}
+                        disabled={paying}
+                        className="w-full py-3.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        {paying ? "Ödeme sayfasına yönlendiriliyorsunuz…" : `${dueLabel} — ${fmt(dueNow)}`}
+                      </button>
+                    );
+                  })()}
+                  <p className="text-[10px] text-muted-foreground text-center mt-2">
+                    iyzico güvencesiyle · Kart bilgileriniz sitemizde saklanmaz
+                  </p>
+
+                  <div className="mt-4 pt-3 border-t border-border/60">
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-2">
+                      Dilerseniz banka havalesi ile de ödeyebilirsiniz — havale sonrası aşağıdan bize bildirin.
+                    </p>
+                    {!paymentClaimed ? (
+                      <button
+                        onClick={handleClaimPayment}
+                        disabled={claiming}
+                        className="w-full py-2.5 rounded-full border border-border text-xs text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors disabled:opacity-50"
+                      >
+                        {claiming ? "Bildiriliyor…" : "Havale ile Ödedim, Bildir"}
+                      </button>
+                    ) : (
+                      <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                        Bildiriminiz alındı. Ekibimiz en kısa sürede sizinle iletişime geçecek.
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>
