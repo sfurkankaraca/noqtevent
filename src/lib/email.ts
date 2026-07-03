@@ -189,6 +189,13 @@ export async function sendArtistApprovalNotification(artist: {
         <div style="margin:28px 0;padding:20px 24px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-size:14px;color:#166534;line-height:1.7;">
           ✅ Profilin yayında. Etkinlik organizatörleri artık seni keşfedebilir.
         </div>
+        <p style="font-size:14px;color:#555;line-height:1.7;">
+          Rezervasyonlarını görmek, dolu tarihlerini işaretlemek ve teknik rider'ını güncellemek için
+          sanatçı panelini bu e-posta adresinle giriş yaparak kullanabilirsin.
+        </p>
+        <p style="margin:16px 0;">
+          <a href="${process.env.NEXT_PUBLIC_URL || "https://www.noqt.events"}/dj/dashboard" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Sanatçı Panelini Aç →</a>
+        </p>
         <p style="font-size:14px;color:#555;">Herhangi bir sorun veya güncelleme için <a href="mailto:hello@noqt.events" style="color:#1a1a1a;">hello@noqt.events</a> adresine yazabilirsiniz.</p>
         <div style="margin-top:40px;padding-top:24px;border-top:1px solid #e8e8e8;font-size:12px;color:#999;">NOQT Deneyim Stüdyosu — noqt.events</div>
       </div>
