@@ -17,12 +17,15 @@ export default async function AdminJournalPage() {
           <h1 className="text-2xl font-semibold text-foreground">Journal</h1>
           <p className="text-sm text-muted-foreground mt-1">Blog yazıları ve makaleler</p>
         </div>
-        <Link
-          href="/admin/journal/new"
-          className="bg-foreground text-background px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
-        >
-          + Yeni Yazı
-        </Link>
+        <div className="flex items-center gap-2">
+          <SeedPostsButton />
+          <Link
+            href="/admin/journal/new"
+            className="bg-foreground text-background px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            + Yeni Yazı
+          </Link>
+        </div>
       </div>
 
       {error && (
