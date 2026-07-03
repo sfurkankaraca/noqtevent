@@ -14,12 +14,15 @@ type Agreement = Record<string, any> | null;
 
 const fmt = (n: number) => n.toLocaleString("tr-TR") + " ₺";
 
+type BankInfo = { iban: string; accountName: string; bankName: string | null } | null;
+
 export default function OfferView({
-  booking, slug, agreement, paymentResult = null, paymentMessage = null,
+  booking, slug, agreement, bankInfo = null, paymentResult = null, paymentMessage = null,
 }: {
   booking: Booking;
   slug: string;
   agreement: Agreement;
+  bankInfo?: BankInfo;
   paymentResult?: "success" | "error" | null;
   paymentMessage?: string | null;
 }) {
@@ -39,6 +42,17 @@ export default function OfferView({
   const [sendingOtp, setSendingOtp] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(paymentResult === "error" ? (paymentMessage ?? "Ödeme tamamlanamadı.") : null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyToClipboard = async (key: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(key);
+      setTimeout(() => setCopied((c) => (c === key ? null : c)), 2000);
+    } catch {
+      // clipboard izni yoksa sessizce geç
+    }
+  };
 
   const cashPrice = calcCashPrice(booking.fee ?? 0);
   const prepayPrice = calcPrepayPrice(booking.fee ?? 0);
@@ -296,6 +310,40 @@ export default function OfferView({
                     <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                       Dilerseniz banka havalesi ile de ödeyebilirsiniz — havale sonrası aşağıdan bize bildirin.
                     </p>
+
+                    {bankInfo && (
+                      <div className="rounded-xl bg-secondary/50 border border-border p-4 mb-3 space-y-2.5">
+                        {[
+                          { key: "alici", label: "Alıcı", value: bankInfo.accountName },
+                          ...(bankInfo.bankName ? [{ key: "banka", label: "Banka", value: bankInfo.bankName }] : []),
+                          { key: "iban", label: "IBAN", value: bankInfo.iban, mono: true },
+                          { key: "aciklama", label: "Açıklama", value: `NOQT-${String(booking.id).slice(0, 8).toUpperCase()}`, mono: true },
+                        ].map((row) => (
+                          <div key={row.key} className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[10px] tracking-wide uppercase text-muted-foreground">{row.label}</p>
+                              <p className={`text-xs text-foreground truncate ${"mono" in row && row.mono ? "font-mono tracking-wide" : "font-medium"}`}>
+                                {row.value}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => copyToClipboard(row.key, row.value)}
+                              className={`shrink-0 text-[11px] px-3 py-1.5 rounded-full border transition-colors ${
+                                copied === row.key
+                                  ? "border-green-300 bg-green-50 text-green-700"
+                                  : "border-border bg-white text-muted-foreground hover:text-foreground hover:border-foreground/40"
+                              }`}
+                            >
+                              {copied === row.key ? "Kopyalandı ✓" : "Kopyala"}
+                            </button>
+                          </div>
+                        ))}
+                        <p className="text-[10px] text-muted-foreground pt-1">
+                          Havale açıklamasına yukarıdaki kodu yazmanız, ödemenizin rezervasyonunuzla anında eşleşmesini sağlar.
+                        </p>
+                      </div>
+                    )}
+
                     {!paymentClaimed ? (
                       <button
                         onClick={handleClaimPayment}

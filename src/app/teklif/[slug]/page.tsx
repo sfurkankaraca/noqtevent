@@ -43,11 +43,21 @@ export default async function OfferPage({ params, searchParams }: Props) {
     .limit(1)
     .maybeSingle();
 
+  // Havale bilgileri env'den — IBAN tanımlı değilse kutu gösterilmez
+  const bankInfo = process.env.BANK_IBAN
+    ? {
+        iban: process.env.BANK_IBAN,
+        accountName: process.env.BANK_ACCOUNT_NAME ?? "NOQT Experience",
+        bankName: process.env.BANK_NAME ?? null,
+      }
+    : null;
+
   return (
     <OfferView
       booking={booking}
       slug={slug}
       agreement={agreement}
+      bankInfo={bankInfo}
       paymentResult={odeme === "basarili" ? "success" : odeme === "hata" ? "error" : null}
       paymentMessage={mesaj ?? null}
     />
