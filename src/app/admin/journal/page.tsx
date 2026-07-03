@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import DeletePostButton from "./DeletePostButton";
+import SeedPostsButton from "./SeedPostsButton";
 
 export default async function AdminJournalPage() {
   const supabase = createServiceClient();

@@ -942,3 +942,97 @@ export async function sendPaymentReceivedEmails(data: {
       </div>`,
   });
 }
+
+// Ödeme hatırlatması — etkinliğe belirli gün kala, kalan bakiyesi olan booking'lere
+export async function sendPaymentReminderEmail(data: {
+  clientName: string;
+  clientEmail: string;
+  artistName: string;
+  eventDate: string;
+  daysLeft: number;
+  dueAmount: number;
+  offerUrl: string;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const fmtMoney = (n: number) => n.toLocaleString("tr-TR") + " ₺";
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.clientEmail,
+    subject: `Hatırlatma: Etkinliğinize ${data.daysLeft} gün kaldı — Ödeme · NOQT`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">NOQT Experience</p>
+        <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">Etkinliğinize ${data.daysLeft} gün kaldı, ${data.clientName.split(" ")[0]}!</h1>
+        <p style="font-size:15px;color:#444;line-height:1.6;">
+          <strong>${data.artistName}</strong> ile ${fmtDate(data.eventDate)} tarihli etkinliğiniz için
+          kalan ödemenizi tamamlamanızı hatırlatmak isteriz.
+        </p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+          <tr><td style="padding:8px 0;color:#666;">Kalan Bakiye</td><td style="padding:8px 0;font-weight:700;font-size:16px;color:#b45309;">${fmtMoney(data.dueAmount)}</td></tr>
+        </table>
+        <p style="margin-top:20px;">
+          <a href="${data.offerUrl}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Kartla Öde →</a>
+        </p>
+        <p style="margin-top:24px;font-size:12px;color:#999;">Ödemenizi zaten yaptıysanız bu e-postayı yok sayabilirsiniz.</p>
+      </div>`,
+  });
+}
+
+// Teklif ilk kez açıldığında admin'e bildirim ("sıcakken ara")
+export async function sendOfferViewedNotification(data: {
+  clientName: string;
+  artistName: string;
+  bookingId: string;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject: `👀 Teklif açıldı — ${data.clientName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <h1 style="font-size:20px;font-weight:700;margin-bottom:16px;">Müşteri teklifi görüntüledi</h1>
+        <p style="font-size:14px;color:#444;"><strong>${data.clientName}</strong> — ${data.artistName} teklifini az önce açtı. Şimdi aramak iyi bir zaman olabilir.</p>
+        <p style="margin-top:20px;">
+          <a href="${BASE}/admin/bookings/${data.bookingId}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Booking'i Aç →</a>
+        </p>
+      </div>`,
+  });
+}
+
+// Etkinlik sonrası değerlendirme isteği
+export async function sendReviewRequestEmail(data: {
+  clientName: string;
+  clientEmail: string;
+  artistName: string;
+  reviewUrl: string;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.clientEmail,
+    subject: `Etkinliğiniz nasıldı? — NOQT`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">NOQT Experience</p>
+        <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">Etkinliğiniz nasıldı, ${data.clientName.split(" ")[0]}?</h1>
+        <p style="font-size:15px;color:#444;line-height:1.6;">
+          <strong>${data.artistName}</strong> ile geçirdiğiniz etkinlik hakkında birkaç kelime yazmanız
+          bizim için çok değerli. 1 dakikanızı ayırabilir misiniz?
+        </p>
+        <p style="margin-top:24px;">
+          <a href="${data.reviewUrl}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Değerlendirme Bırak →</a>
+        </p>
+        <p style="margin-top:32px;font-size:12px;color:#999;">Teşekkür ederiz — NOQT Experience</p>
+      </div>`,
+  });
+}

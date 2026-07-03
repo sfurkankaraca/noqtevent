@@ -3,6 +3,7 @@
 import { requireAdmin } from "@/lib/adminAuth";
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase";
+import { SEED_JOURNAL_POSTS } from "@/lib/seedPosts";
 
 export async function upsertPost(formData: FormData) {
   await requireAdmin();
@@ -36,6 +37,39 @@ export async function upsertPost(formData: FormData) {
 
   revalidatePath("/admin/journal");
   revalidatePath("/journal");
+}
+
+export async function seedDefaultPosts(): Promise<{ added: number; skipped: number }> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  let added = 0;
+  let skipped = 0;
+
+  for (const post of SEED_JOURNAL_POSTS) {
+    const { data: existing } = await supabase
+      .from("journal_posts")
+      .select("id")
+      .eq("slug", post.slug)
+      .maybeSingle();
+
+    if (existing) {
+      skipped++;
+      continue;
+    }
+
+    const { error } = await supabase.from("journal_posts").insert({
+      ...post,
+      is_published: true,
+      published_at: new Date().toISOString(),
+    });
+    if (!error) added++;
+  }
+
+  revalidatePath("/admin/journal");
+  revalidatePath("/journal");
+  revalidatePath("/");
+  return { added, skipped };
 }
 
 export async function deletePost(formData: FormData) {

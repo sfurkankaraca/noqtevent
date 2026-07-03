@@ -149,8 +149,20 @@ export async function sendOfferEmail(bookingId: string) {
     eventDate: booking.event_date,
   });
 
-  if (booking.status === "draft") {
-    await supabase.from("bookings").update({ status: "offer_sent" }).eq("id", bookingId);
+  // Teklif geçerlilik süresi: gönderimden 10 gün sonra, ama etkinlikten en geç 1 gün önce
+  const tenDaysOut = new Date(Date.now() + 10 * 24 * 60 * 60_000);
+  let expiresAt = tenDaysOut;
+  if (booking.event_date) {
+    const dayBeforeEvent = new Date(new Date(booking.event_date).getTime() - 24 * 60 * 60_000);
+    if (dayBeforeEvent < expiresAt) expiresAt = dayBeforeEvent;
+  }
+
+  const update: Record<string, unknown> = { offer_expires_at: expiresAt.toISOString() };
+  if (booking.status === "draft") update.status = "offer_sent";
+  const { error: updateError } = await supabase.from("bookings").update(update).eq("id", bookingId);
+  if (updateError?.message.includes("column")) {
+    // offer_expires_at migration'ı henüz çalıştırılmadıysa yalnızca durumu güncelle
+    if (booking.status === "draft") await supabase.from("bookings").update({ status: "offer_sent" }).eq("id", bookingId);
   }
   revalidatePath(`/admin/bookings/${bookingId}`);
 }

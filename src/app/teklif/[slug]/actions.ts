@@ -69,12 +69,25 @@ export async function acceptOffer(data: {
   const supabase = createServiceClient();
 
   // Booking'i slug üzerinden bul — client'tan gelen id/fiyata güvenilmez
-  const { data: booking, error: lookupError } = await supabase
+  let bookingQuery = await supabase
     .from("bookings")
-    .select("id, fee, status, event_date, event_type, deposit_rate, client_email, dj_profiles(name)")
+    .select("id, fee, status, event_date, event_type, deposit_rate, client_email, offer_expires_at, dj_profiles(name)")
     .eq("offer_slug", data.slug)
     .single();
+  if (bookingQuery.error?.message.includes("column")) {
+    // offer_expires_at migration'ı henüz çalıştırılmadıysa onsuz dene
+    bookingQuery = await supabase
+      .from("bookings")
+      .select("id, fee, status, event_date, event_type, deposit_rate, client_email, dj_profiles(name)")
+      .eq("offer_slug", data.slug)
+      .single();
+  }
+  const { data: booking, error: lookupError } = bookingQuery;
   if (lookupError || !booking) throw new Error("Teklif bulunamadı.");
+
+  if (booking.offer_expires_at && new Date(booking.offer_expires_at) < new Date()) {
+    throw new Error("Bu teklifin süresi doldu. Güncel bir teklif için bizimle iletişime geçin.");
+  }
 
   if (data.plan === "prepay" && !isPrepayAvailable(booking.event_date)) {
     throw new Error("Ön ödemeli plan bu tarih için artık kullanılamıyor.");

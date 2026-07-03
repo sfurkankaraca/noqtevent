@@ -17,12 +17,13 @@ const fmt = (n: number) => n.toLocaleString("tr-TR") + " ₺";
 type BankInfo = { iban: string; accountName: string; bankName: string | null } | null;
 
 export default function OfferView({
-  booking, slug, agreement, bankInfo = null, paymentResult = null, paymentMessage = null,
+  booking, slug, agreement, bankInfo = null, expired = false, paymentResult = null, paymentMessage = null,
 }: {
   booking: Booking;
   slug: string;
   agreement: Agreement;
   bankInfo?: BankInfo;
+  expired?: boolean;
   paymentResult?: "success" | "error" | null;
   paymentMessage?: string | null;
 }) {
@@ -197,7 +198,15 @@ export default function OfferView({
           <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">{error}</p>
         )}
 
-        {!accepted ? (
+        {expired && !accepted ? (
+          <div className="bg-white rounded-2xl border border-amber-200 bg-amber-50/50 p-6 text-center">
+            <p className="text-sm font-semibold text-foreground mb-1">Bu teklifin süresi doldu</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Güncel bir teklif almak için lütfen bizimle iletişime geçin — size en kısa sürede
+              güncellenmiş bir teklif linki göndereceğiz.
+            </p>
+          </div>
+        ) : !accepted ? (
           <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
             <p className="text-sm font-semibold text-foreground">Onay ve Elektronik İmza</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase";
+import { sendOfferViewedNotification } from "@/lib/email";
 import OfferView from "./OfferView";
 
 type Props = {
@@ -35,6 +36,24 @@ export default async function OfferPage({ params, searchParams }: Props) {
 
   if (!booking) notFound();
 
+  // İlk görüntülemede admin'e "sıcakken ara" bildirimi.
+  // Serverless'ta response sonrası arka plan işi kesilebileceğinden burada await ediyoruz.
+  // Update başarısız olursa (ör. migration henüz çalıştırılmadıysa) bildirim gönderilmez —
+  // "görüldü" durumu kaydedilemeyen bir bildirimi her sayfa yenilemesinde tekrar atmamak için.
+  if (!booking.offer_viewed_at) {
+    const { error: viewedError } = await supabase
+      .from("bookings")
+      .update({ offer_viewed_at: new Date().toISOString() })
+      .eq("id", booking.id);
+    if (!viewedError) {
+      await sendOfferViewedNotification({
+        clientName: booking.client_name,
+        artistName: booking.dj_profiles?.name ?? "—",
+        bookingId: booking.id,
+      }).catch((err) => console.error("[offer-viewed]", err));
+    }
+  }
+
   const { data: agreement } = await supabase
     .from("booking_agreements")
     .select("*")
@@ -52,12 +71,19 @@ export default async function OfferPage({ params, searchParams }: Props) {
       }
     : null;
 
+  const expired = Boolean(
+    booking.offer_expires_at &&
+    new Date(booking.offer_expires_at) < new Date() &&
+    !agreement
+  );
+
   return (
     <OfferView
       booking={booking}
       slug={slug}
       agreement={agreement}
       bankInfo={bankInfo}
+      expired={expired}
       paymentResult={odeme === "basarili" ? "success" : odeme === "hata" ? "error" : null}
       paymentMessage={mesaj ?? null}
     />
