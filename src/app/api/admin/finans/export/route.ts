@@ -31,7 +31,7 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const header = [
-    "Tarih", "Müşteri", "Sanatçı", "Etkinlik Tarihi", "Tür", "Yön", "Tutar (TL)", "Durum", "Açıklama", "Booking ID",
+    "Tarih", "Müşteri", "Sanatçı", "Etkinlik Tarihi", "Tür", "Yön", "Tutar (TL)", "Durum", "Açıklama", "Booking ID", "Fatura Durumu", "Fatura No",
   ];
   const rows = (payments ?? []).map((p) => [
     new Date(p.paid_at ?? p.created_at).toLocaleDateString("tr-TR"),
@@ -44,6 +44,8 @@ export async function GET() {
     p.status,
     p.description ?? "",
     p.booking_id,
+    p.invoiced ? "Faturalandı" : "Bekliyor",
+    p.invoice_note ?? "",
   ]);
 
   // BOM: Excel'in Türkçe karakterleri doğru açması için

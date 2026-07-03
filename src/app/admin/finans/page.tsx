@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { calcCashPrice, calcPrepayPrice } from "@/lib/bookingTerms";
+import InvoiceRow from "./InvoiceRow";
 
 export const dynamic = "force-dynamic";
 
@@ -266,6 +267,54 @@ export default async function FinansPage() {
           Ödeme yaptığınızda ilgili booking sayfasından &quot;Sanatçı Ödemesi&quot; hareketi ekleyin — buradaki bakiye otomatik güncellenir.
         </p>
       </div>
+
+      {/* Faturalandırılmamış tahsilatlar */}
+      {(() => {
+        const unbilled = completed.filter(
+          (p) => p.direction === "inbound" && ["deposit", "full"].includes(p.type) && !p.invoiced
+        );
+        return (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground tracking-wide uppercase mb-3">
+              Faturalandırılmamış Tahsilatlar {unbilled.length > 0 && `(${unbilled.length})`}
+            </p>
+            <div className="bg-white rounded-2xl border border-border overflow-x-auto">
+              {unbilled.length === 0 ? (
+                <p className="p-8 text-center text-sm text-muted-foreground">Tüm tahsilatlar faturalandırılmış 🎉</p>
+              ) : (
+                <table className="w-full text-sm min-w-[640px]">
+                  <thead>
+                    <tr className="border-b border-border bg-secondary/40">
+                      {["Tarih", "Müşteri", "Tür", "Tutar", ""].map((h) => (
+                        <th key={h} className="text-left px-5 py-3 text-xs font-medium text-muted-foreground tracking-wide">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {unbilled.map((p) => (
+                      <tr key={p.id}>
+                        <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
+                          {new Date(p.paid_at ?? p.created_at).toLocaleDateString("tr-TR")}
+                        </td>
+                        <td className="px-5 py-3 font-medium text-foreground">{p.bookings?.client_name ?? "—"}</td>
+                        <td className="px-5 py-3 text-muted-foreground">{TYPE_LABEL[p.type] ?? p.type}</td>
+                        <td className="px-5 py-3 tabular-nums font-medium text-green-700">{fmt(Number(p.amount))}</td>
+                        <td className="px-5 py-3">
+                          <InvoiceRow paymentId={p.id} invoiced={Boolean(p.invoiced)} invoiceNote={p.invoice_note ?? null} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Muhasebeciniz Paraşüt/BirFatura&apos;dan fatura kestiğinde buradan &quot;Faturalandı&quot; olarak işaretleyin —
+              CSV&apos;deki fatura durumu buna göre güncellenir.
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Son hareketler */}
       <div>
