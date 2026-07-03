@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase";
 import { retrieveCheckoutForm } from "@/lib/iyzico";
 import { calcDuePayment } from "@/lib/paymentPlan";
 import { sendPaymentReceivedEmails } from "@/lib/email";
+import { createAndStoreContract } from "@/lib/contract";
 
 // iyzico, ödeme sonrası müşteriyi bu adrese token ile POST eder.
 // Sonuç iyzico'dan sunucudan sunucuya doğrulanır — client verisine güvenilmez.
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     const supabase = createServiceClient();
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, offer_slug, status, fee, payment_plan, deposit_rate, client_name, client_email, dj_profiles(name, email)")
+      .select("id, offer_slug, status, fee, payment_plan, deposit_rate, contract_url, client_name, client_email, dj_profiles(name, email, slug)")
       .eq("id", result.basketId)
       .single();
 
@@ -90,6 +91,16 @@ export async function POST(req: NextRequest) {
     const newStatus = stillDue ? "deposit_paid" : "full_paid";
     await supabase.from("bookings").update({ status: newStatus }).eq("id", booking.id);
 
+    // Sözleşme henüz üretilmediyse (imza akışı atlanmış olabilir) burada oluştur —
+    // ödeme makbuzunun yanında müşteriye her zaman geçerli bir sözleşme linki gitmeli.
+    let contractUrl = booking.contract_url ?? null;
+    if (!contractUrl) {
+      const contract = await createAndStoreContract(booking.id).catch(() => null);
+      contractUrl = contract?.contractUrl ?? null;
+    }
+    const artistSlug = (booking.dj_profiles as { slug?: string | null } | null)?.slug ?? null;
+    const presskitUrl = artistSlug ? `${BASE()}/s/${artistSlug}` : null;
+
     // Makbuz + admin bildirimi (hata ödemeyi etkilemez)
     sendPaymentReceivedEmails({
       clientName: booking.client_name,
@@ -100,6 +111,8 @@ export async function POST(req: NextRequest) {
       remaining: stillDue?.amount ?? 0,
       bookingId: booking.id,
       cardLastFour: result.cardLastFour ?? null,
+      presskitUrl,
+      contractUrl,
     }).catch(console.error);
 
     return redirectToOffer(offerSlug, "basarili");

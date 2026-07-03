@@ -3,7 +3,11 @@
 import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
-import { sendBookingDeliveryEmail, sendOfferEmail as sendOfferEmailLib } from "@/lib/email";
+import { sendBookingDeliveryEmail, sendOfferEmail as sendOfferEmailLib, sendPaymentReceivedEmails } from "@/lib/email";
+import { calcDuePayment } from "@/lib/paymentPlan";
+import { createAndStoreContract } from "@/lib/contract";
+
+const BASE = () => process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
 export type BookingStatus =
   | "draft" | "offer_sent" | "confirmed" | "contracted"
@@ -72,6 +76,52 @@ export async function addPayment(bookingId: string, data: {
   });
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/bookings/${bookingId}`);
+
+  // Kapora/tam ödeme elle girildiğinde de müşteriye presskit + sözleşme içeren
+  // ödeme makbuzu gitsin — iyzico callback'iyle aynı e-postayı kullanır.
+  if (data.direction === "inbound" && (data.type === "deposit" || data.type === "full")) {
+    sendManualPaymentReceipt(bookingId, data.amount).catch(console.error);
+  }
+}
+
+async function sendManualPaymentReceipt(bookingId: string, amount: number) {
+  const supabase = createServiceClient();
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, client_name, client_email, fee, payment_plan, deposit_rate, contract_url, dj_profiles(name, slug)")
+    .eq("id", bookingId)
+    .single();
+  if (!booking) return;
+
+  const { data: payments } = await supabase
+    .from("booking_payments")
+    .select("amount")
+    .eq("booking_id", bookingId)
+    .eq("direction", "inbound")
+    .eq("status", "completed")
+    .in("type", ["deposit", "full"]);
+  const paidTotal = (payments ?? []).reduce((s, p) => s + Number(p.amount), 0);
+  const stillDue = calcDuePayment(booking, paidTotal);
+
+  let contractUrl = booking.contract_url ?? null;
+  if (!contractUrl) {
+    const contract = await createAndStoreContract(booking.id).catch(() => null);
+    contractUrl = contract?.contractUrl ?? null;
+  }
+  const artistSlug = (booking.dj_profiles as { slug?: string | null } | null)?.slug ?? null;
+
+  await sendPaymentReceivedEmails({
+    clientName: booking.client_name,
+    clientEmail: booking.client_email,
+    artistName: (booking.dj_profiles as { name?: string } | null)?.name ?? "—",
+    amount,
+    kind: paidTotal > amount ? "remaining" : stillDue ? "deposit" : "full",
+    remaining: stillDue?.amount ?? 0,
+    bookingId: booking.id,
+    cardLastFour: null,
+    presskitUrl: artistSlug ? `${BASE()}/s/${artistSlug}` : null,
+    contractUrl,
+  });
 }
 
 export async function saveDelivery(bookingId: string, data: {

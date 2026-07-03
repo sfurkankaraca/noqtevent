@@ -896,6 +896,8 @@ export async function sendPaymentReceivedEmails(data: {
   remaining: number;
   bookingId: string;
   cardLastFour: string | null;
+  presskitUrl?: string | null;
+  contractUrl?: string | null;
 }) {
   const resend = getResend();
   if (!resend) return;
@@ -904,6 +906,15 @@ export async function sendPaymentReceivedEmails(data: {
   const fmtMoney = (n: number) => n.toLocaleString("tr-TR") + " ₺";
   const kindLabel =
     data.kind === "deposit" ? "Ön ödeme (kapora)" : data.kind === "remaining" ? "Kalan ödeme" : "Tam ödeme";
+
+  const linkButtons = [
+    data.presskitUrl
+      ? `<a href="${data.presskitUrl}" style="display:inline-block;background:#1a1a1a;color:#fff;padding:11px 20px;border-radius:100px;text-decoration:none;font-size:13px;margin:4px 8px 4px 0;">Sanatçı Presskiti →</a>`
+      : "",
+    data.contractUrl
+      ? `<a href="${data.contractUrl}" style="display:inline-block;border:1px solid #ccc;color:#1a1a1a;padding:11px 20px;border-radius:100px;text-decoration:none;font-size:13px;margin:4px 0;">Sözleşmeyi İndir →</a>`
+      : "",
+  ].filter(Boolean).join("");
 
   // Müşteriye makbuz
   if (data.clientEmail) {
@@ -926,6 +937,7 @@ export async function sendPaymentReceivedEmails(data: {
               ? "Rezervasyonunuz kapora ile güvence altında. Kalan ödemeyi etkinlik tarihinden önce aynı sayfadan tamamlayabilirsiniz."
               : "Ödemeniz tamamlandı — rezervasyonunuz kesinleşti. Etkinliğinizde görüşmek üzere!"}
           </p>
+          ${linkButtons ? `<div style="margin-top:24px;">${linkButtons}</div>` : ""}
           <p style="margin-top:32px;font-size:12px;color:#999;">Sorularınız için <a href="mailto:${ADMIN_EMAIL}" style="color:#1a1a1a;">${ADMIN_EMAIL}</a></p>
         </div>`,
     });
