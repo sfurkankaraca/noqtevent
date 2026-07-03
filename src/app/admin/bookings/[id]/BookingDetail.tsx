@@ -5,6 +5,7 @@ import Link from "next/link";
 import { updateBookingStatus, addPayment, type BookingStatus } from "../actions";
 import DeliveryManager from "./DeliveryManager";
 import OfferManager from "./OfferManager";
+import CancelBookingPanel from "./CancelBookingPanel";
 
 const STATUS_META: Record<string, { label: string; cls: string; dot: string }> = {
   draft:        { label: "Taslak",             cls: "bg-gray-100 text-gray-600",     dot: "bg-gray-400" },
@@ -187,6 +188,13 @@ export default function BookingDetail({ booking, payments, artists }: {
                   {a.label}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Kapora/tam ödeme alındıktan sonra iptal — iade akışını içerir */}
+          {["deposit_paid", "full_paid"].includes(booking.status) && (
+            <div className="pt-1">
+              <CancelBookingPanel bookingId={booking.id} totalPaid={totalIn} eventDate={booking.event_date ?? null} />
             </div>
           )}
         </div>

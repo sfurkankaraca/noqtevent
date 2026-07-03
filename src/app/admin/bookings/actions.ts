@@ -173,3 +173,86 @@ export async function deleteBooking(id: string) {
   await supabase.from("bookings").delete().eq("id", id);
   revalidatePath("/admin/bookings");
 }
+
+// Booking'i iptal eder; refundAmount > 0 ise iyzico ile tahsil edilmişse
+// otomatik online iade dener, değilse (banka havalesi) manuel iade kaydı açar.
+export async function cancelBookingWithRefund(bookingId: string, refundAmount: number, reason: string) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("id, internal_notes")
+    .eq("id", bookingId)
+    .single();
+  if (error || !booking) throw new Error("Booking bulunamadı");
+
+  const amount = Math.max(0, Math.round(Number(refundAmount) * 100) / 100);
+
+  if (amount > 0) {
+    const { data: iyzicoPayment } = await supabase
+      .from("booking_payments")
+      .select("id, amount, provider_transaction_id")
+      .eq("booking_id", bookingId)
+      .eq("direction", "inbound")
+      .eq("status", "completed")
+      .in("type", ["deposit", "full"])
+      .not("provider_transaction_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (iyzicoPayment?.provider_transaction_id && amount <= Number(iyzicoPayment.amount) + 0.01) {
+      const { refundPayment } = await import("@/lib/iyzico");
+      let refundOk = false;
+      let refundMsg = "";
+      try {
+        const result = await refundPayment({
+          paymentTransactionId: iyzicoPayment.provider_transaction_id,
+          price: amount,
+          ip: "85.34.78.112",
+        });
+        refundOk = result.success;
+        refundMsg = result.message ?? "";
+      } catch (err) {
+        refundMsg = err instanceof Error ? err.message : String(err);
+      }
+      await supabase.from("booking_payments").insert({
+        booking_id: bookingId,
+        type: "refund",
+        amount,
+        direction: "outbound",
+        status: refundOk ? "completed" : "failed",
+        description: refundOk
+          ? "iyzico üzerinden otomatik iade"
+          : `iyzico iade başarısız — manuel kontrol gerekiyor${refundMsg ? `: ${refundMsg}` : ""}`,
+        paid_at: refundOk ? new Date().toISOString() : null,
+      });
+    } else {
+      // Banka havalesi ile tahsil edilmiş veya iyzico işlem kaydı yok — manuel iade
+      await supabase.from("booking_payments").insert({
+        booking_id: bookingId,
+        type: "refund",
+        amount,
+        direction: "outbound",
+        status: "pending",
+        description: "Banka havalesi ile manuel iade gerekiyor",
+      });
+    }
+  }
+
+  const notes = [
+    booking.internal_notes,
+    `İptal (${new Date().toLocaleDateString("tr-TR")}): ${reason?.trim() || "sebep belirtilmedi"}${amount > 0 ? ` — iade tutarı ${amount.toLocaleString("tr-TR")} ₺` : " — iade yok"}`,
+  ].filter(Boolean).join("\n");
+
+  const { error: cancelError } = await supabase
+    .from("bookings")
+    .update({ status: "cancelled", internal_notes: notes })
+    .eq("id", bookingId);
+  if (cancelError) throw new Error(cancelError.message);
+
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath("/admin/bookings");
+  revalidatePath("/admin/finans");
+}

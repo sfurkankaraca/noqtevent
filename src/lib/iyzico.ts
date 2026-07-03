@@ -106,6 +106,7 @@ export type CheckoutResult = {
   conversationId: string;
   cardLastFour?: string;
   errorMessage?: string;
+  itemTransactionId?: string; // iade için gerekli
 };
 
 export function retrieveCheckoutForm(token: string): Promise<CheckoutResult> {
@@ -126,7 +127,42 @@ export function retrieveCheckoutForm(token: string): Promise<CheckoutResult> {
           conversationId: String(result.conversationId ?? ""),
           cardLastFour: result.lastFourDigits,
           errorMessage: result.errorMessage,
+          itemTransactionId: result.itemTransactions?.[0]?.paymentTransactionId
+            ? String(result.itemTransactions[0].paymentTransactionId)
+            : undefined,
         });
+      }
+    );
+  });
+}
+
+export type RefundResult = { success: boolean; message?: string };
+
+// Kısmi veya tam iade — paymentTransactionId, ödeme kaydedilirken saklanan
+// itemTransactionId'dir (paymentId değil).
+export function refundPayment(params: {
+  paymentTransactionId: string;
+  price: number;
+  ip: string;
+  conversationId?: string;
+}): Promise<RefundResult> {
+  return new Promise((resolve, reject) => {
+    client().refund.create(
+      {
+        locale: Iyzipay.LOCALE.TR,
+        conversationId: params.conversationId ?? `refund-${Date.now()}`,
+        paymentTransactionId: params.paymentTransactionId,
+        price: params.price.toFixed(2),
+        currency: Iyzipay.CURRENCY.TRY,
+        ip: params.ip,
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (err: unknown, result: any) => {
+        if (err) return reject(err instanceof Error ? err : new Error(String(err)));
+        if (result?.status !== "success") {
+          return resolve({ success: false, message: result?.errorMessage ?? "İade başarısız." });
+        }
+        resolve({ success: true });
       }
     );
   });

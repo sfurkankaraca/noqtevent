@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
       ...paymentRow,
       provider: "iyzico",
       provider_payment_id: result.paymentId,
+      provider_transaction_id: result.itemTransactionId ?? null,
       conversation_id: result.conversationId,
     });
     if (insert.error?.message.includes("column")) {
