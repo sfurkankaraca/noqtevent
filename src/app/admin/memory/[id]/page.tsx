@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 import MemoryEventForm from "../MemoryEventForm";
 import AdminGallery from "./AdminGallery";
+import DeleteEventButton from "./DeleteEventButton";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -77,7 +78,10 @@ export default async function MemoryEventAdminPage({ params }: Props) {
 
       {/* Etkinlik düzenleme */}
       <div>
-        <p className="text-sm font-medium text-foreground mb-4">Etkinlik Ayarları</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-medium text-foreground">Etkinlik Ayarları</p>
+          <DeleteEventButton id={ev.id} title={ev.title} />
+        </div>
         <MemoryEventForm event={ev} />
       </div>
     </div>

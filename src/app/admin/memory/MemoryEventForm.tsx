@@ -1,16 +1,28 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { upsertMemoryEvent } from "./actions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function MemoryEventForm({ event }: { event?: Record<string, any> }) {
-  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
+    setPending(true);
     const fd = new FormData(e.currentTarget);
-    startTransition(() => upsertMemoryEvent(fd));
+    try {
+      const { id } = await upsertMemoryEvent(fd);
+      router.push(event?.id ? `/admin/memory/${event.id}` : `/admin/memory/${id}`);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+      setPending(false);
+    }
   }
 
   const inp = "w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40";
@@ -19,6 +31,10 @@ export default function MemoryEventForm({ event }: { event?: Record<string, any>
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-xl">
       {event?.id && <input type="hidden" name="id" value={event.id} />}
+
+      {error && (
+        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
+      )}
 
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
         <h2 className="font-medium text-foreground">Etkinlik Bilgileri</h2>
@@ -31,7 +47,7 @@ export default function MemoryEventForm({ event }: { event?: Record<string, any>
         <div>
           <label className={lbl}>URL (slug)</label>
           <input name="slug" required defaultValue={event?.slug ?? ""} placeholder="ayse-ali" className={inp} />
-          <p className="text-xs text-muted-foreground mt-1">noqt.events/memory/ayse-ali</p>
+          <p className="text-xs text-muted-foreground mt-1">noqt.events/memory/ayse-ali — Türkçe karakterler otomatik sadeleştirilir</p>
         </div>
 
         <div>

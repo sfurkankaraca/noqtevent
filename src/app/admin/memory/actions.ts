@@ -3,33 +3,76 @@
 import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { deleteFromR2 } from "@/lib/r2";
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
-export async function upsertMemoryEvent(formData: FormData) {
+const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+// Türkçe/aksanlı karakterleri sadeleştirip URL-güvenli slug üretir (ör. "Şükrü Öz" → "sukru-oz")
+function slugify(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/ğ/g, "g").replace(/ş/g, "s").replace(/ı/g, "i")
+    .replace(/ö/g, "o").replace(/ü/g, "u").replace(/ç/g, "c")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export async function upsertMemoryEvent(formData: FormData): Promise<{ id: string }> {
   await requireAdmin();
   const id = formData.get("id") as string | null;
+
+  const slug = slugify(formData.get("slug") as string);
+  const title = (formData.get("title") as string).trim();
+
+  if (!title) throw new Error("Etkinlik adı zorunludur.");
+  if (!slug || !SLUG_RE.test(slug)) throw new Error("Geçerli bir URL (slug) girin — yalnızca harf, rakam ve tire.");
+
   const payload = {
-    slug: (formData.get("slug") as string).trim().toLowerCase(),
-    title: (formData.get("title") as string).trim(),
+    slug,
+    title,
     description: (formData.get("description") as string) || null,
-    invitation_id: (formData.get("invitation_id") as string) || null,
     is_active: formData.get("is_active") === "on",
   };
 
   const supabase = createServiceClient();
+
   if (id) {
-    await supabase.from("memory_events").update(payload).eq("id", id);
-  } else {
-    await supabase.from("memory_events").insert(payload);
+    const { error } = await supabase.from("memory_events").update(payload).eq("id", id);
+    if (error) {
+      throw new Error(
+        error.code === "23505" ? `Bu URL (${slug}) zaten kullanımda. Farklı bir slug deneyin.` : error.message
+      );
+    }
+    revalidatePath("/admin/memory");
+    revalidatePath(`/admin/memory/${id}`);
+    return { id };
   }
-  redirect("/admin/memory");
+
+  const { data, error } = await supabase.from("memory_events").insert(payload).select("id").single();
+  if (error || !data) {
+    throw new Error(
+      error?.code === "23505" ? `Bu URL (${slug}) zaten kullanımda. Farklı bir slug deneyin.` : error?.message ?? "Etkinlik oluşturulamadı."
+    );
+  }
+  revalidatePath("/admin/memory");
+  return { id: data.id };
 }
 
 export async function deleteMemoryEvent(id: string) {
   await requireAdmin();
   const supabase = createServiceClient();
-  await supabase.from("memory_events").delete().eq("id", id);
-  redirect("/admin/memory");
+
+  // R2'deki dosyalar DB satırı silindiğinde (cascade) otomatik temizlenmez —
+  // önce depolamadan sil, sonra event'i (ve cascade ile yükleme kayıtlarını) sil
+  const { data: uploads } = await supabase.from("memory_uploads").select("file_path").eq("event_id", id);
+  await Promise.all((uploads ?? []).map((u) => deleteFromR2(u.file_path).catch(() => {})));
+
+  const { error } = await supabase.from("memory_events").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/memory");
 }
 
 export async function deleteUpload(id: string, filePath: string) {
