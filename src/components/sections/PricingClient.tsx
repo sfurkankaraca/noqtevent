@@ -1,84 +1,48 @@
 "use client";
 
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 
-const BUDGET_TIERS = [
-  {
-    range: "₺3.000 – ₺8.000",
-    label: "Başlangıç",
-    emoji: "🎵",
-    desc: "Kişisel DJ seti, taşınabilir ses sistemi. Küçük mekanlara ve özel partilere uygun.",
-    includes: ["DJ (3-4 saat)", "Taşınabilir ses sistemi", "Şarkı listesi planlaması"],
-    best: ["Doğum günü", "Küçük özel parti", "Küçük nişan"],
-    color: "bg-[oklch(0.94_0.012_200)]",
-  },
-  {
-    range: "₺8.000 – ₺18.000",
-    label: "Standart",
-    emoji: "🎧",
-    desc: "Profesyonel DJ, tam kapsamlı ses sistemi, ışık donanımı. Orta ölçekli düğün ve etkinlikler.",
-    includes: ["Profesyonel DJ (4-5 saat)", "Tam ses sistemi & subwoofer", "Işık donanımı", "Teknik operatör"],
-    best: ["Nişan", "Düğün (orta salon)", "Kına gecesi", "Yıldönümü"],
-    color: "bg-[oklch(0.975_0.006_80)]",
-    featured: true,
-  },
-  {
-    range: "₺18.000 – ₺40.000+",
-    label: "Premium",
-    emoji: "✨",
-    desc: "Deneyimli DJ + canlı müzisyen, premium ses & ışık, etkinlik koordinatörü dahil.",
-    includes: [
-      "Headliner DJ (5+ saat)",
-      "Canlı müzisyen (klarnet, keman vb.)",
-      "Premium ses & ışık sistemi",
-      "Etkinlik koordinatörü",
-      "Fotoğrafçı opsiyonu",
-    ],
-    best: ["Büyük düğün", "Festival & kulüp gecesi", "Kurumsal etkinlik", "VIP parti"],
-    color: "bg-[oklch(0.13_0.01_260)]",
-    dark: true,
-  },
-];
+export type BudgetTier = {
+  id: string;
+  label: string;
+  emoji: string;
+  range_text: string;
+  description: string | null;
+  includes: string[];
+  suitable: string[];
+  is_featured: boolean;
+  is_dark: boolean;
+  color: string;
+};
 
-const FACTORS = [
-  { factor: "Mekan büyüklüğü", impact: "Büyük salon → daha güçlü ses sistemi gereksinimi" },
-  { factor: "Etkinlik süresi", impact: "Her ekstra saat ücrete eklenir" },
-  { factor: "Sanatçı deneyimi", impact: "Resident vs. headliner DJ arasında fark var" },
-  { factor: "Tarih", impact: "Yaz ve yılbaşı dönemi yoğun talep → erken rezervasyon şart" },
-  { factor: "Canlı müzisyen", impact: "DJ + klarnet/keman kombinasyonu premium ekler" },
-  { factor: "Teknik rider", impact: "Kendi ekipmanını getiren DJ mi, kiralık mı?" },
-];
+export type PricingFactor = {
+  id: string;
+  factor: string;
+  impact: string;
+};
 
-const FAQ = [
-  {
-    q: "Fiyata KDV dahil mi?",
-    a: "Bireysel etkinliklerde genellikle KDV'siz fiyat verilir. Kurumsal etkinliklerde fatura ve KDV ayrıca belirtilir.",
-  },
-  {
-    q: "Depozito alıyor musunuz?",
-    a: "Evet, rezervasyon onayı için toplam ücretin %30–50'si kapora olarak alınır. Kalan tutar etkinlik günü veya öncesinde ödenir.",
-  },
-  {
-    q: "İptal veya tarih değişikliği mümkün mü?",
-    a: "30 gün öncesine kadar iade veya tarih değişikliği yapılabilir. Sözleşmede detaylı koşullar belirtilir.",
-  },
-  {
-    q: "Ses sistemi fiyata dahil mi?",
-    a: "Standart ve premium paketlerde ses sistemi dahildir. Başlangıç paketinde mekan ses sistemini kullanabilirsiniz ya da ekleme ücretli yapılır.",
-  },
-  {
-    q: "Kayseri dışına hizmet veriyor musunuz?",
-    a: "Evet. Nevşehir, Kapadokya ve çevre illere hizmet veriyoruz. Ulaşım mesafesine göre yol ücreti eklenir.",
-  },
-];
+export type FaqItem = {
+  id: string;
+  question: string;
+  answer: string;
+};
 
-export default function PricingClient() {
+export default function PricingClient({
+  tiers,
+  factors,
+  faq,
+}: {
+  tiers: BudgetTier[];
+  factors: PricingFactor[];
+  faq: FaqItem[];
+}) {
   const tierRef = useRef(null);
   const tierInView = useInView(tierRef, { once: true, margin: "-60px" });
   const faqRef = useRef(null);
   const faqInView = useInView(faqRef, { once: true, margin: "-60px" });
+  const [openFaq, setOpenFaq] = useState<string | null>(null);
 
   return (
     <>
@@ -121,20 +85,20 @@ export default function PricingClient() {
           </motion.div>
 
           <div className="grid lg:grid-cols-3 gap-5">
-            {BUDGET_TIERS.map((tier, i) => {
-              const text = tier.dark ? "text-white" : "text-foreground";
-              const muted = tier.dark ? "text-white/50" : "text-foreground/50";
-              const border = tier.dark ? "border-white/10" : "border-black/8";
-              const tagCls = tier.dark
+            {tiers.map((tier, i) => {
+              const text = tier.is_dark ? "text-white" : "text-foreground";
+              const muted = tier.is_dark ? "text-white/50" : "text-foreground/50";
+              const border = tier.is_dark ? "border-white/10" : "border-black/8";
+              const tagCls = tier.is_dark
                 ? "text-white/40 border-white/15"
-                : tier.featured
+                : tier.is_featured
                 ? "bg-foreground text-background border-foreground"
                 : "text-foreground/45 border-black/12";
-              const divider = tier.dark ? "border-white/10" : "border-black/8";
+              const divider = tier.is_dark ? "border-white/10" : "border-black/8";
 
               return (
                 <motion.div
-                  key={tier.label}
+                  key={tier.id}
                   initial={{ opacity: 0, y: 28 }}
                   animate={tierInView ? { opacity: 1, y: 0 } : {}}
                   transition={{ duration: 0.55, delay: i * 0.1 }}
@@ -150,9 +114,9 @@ export default function PricingClient() {
                     className={`text-3xl lg:text-4xl ${text} mb-1`}
                     style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
                   >
-                    {tier.range}
+                    {tier.range_text}
                   </div>
-                  <p className={`text-sm leading-relaxed ${muted} mt-3 mb-6`}>{tier.desc}</p>
+                  <p className={`text-sm leading-relaxed ${muted} mt-3 mb-6`}>{tier.description}</p>
 
                   <div className={`border-t ${divider} pt-5 mb-5`}>
                     <p className={`text-[11px] font-semibold tracking-[0.15em] uppercase ${muted} mb-3`}>Genellikle dahil</p>
@@ -171,7 +135,7 @@ export default function PricingClient() {
                   <div className={`border-t ${divider} pt-5 mt-auto`}>
                     <p className={`text-[11px] font-semibold tracking-[0.15em] uppercase ${muted} mb-2.5`}>Uygun etkinlikler</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {tier.best.map((b) => (
+                      {tier.suitable.map((b) => (
                         <span key={b} className={`text-[11px] px-2.5 py-1 rounded-full border ${border} ${muted}`}>
                           {b}
                         </span>
@@ -194,59 +158,76 @@ export default function PricingClient() {
       </section>
 
       {/* What affects price */}
-      <section className="py-20 lg:py-24 bg-[oklch(0.975_0.006_80)]">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="max-w-xl mb-10">
-            <span className="text-xs tracking-[0.25em] uppercase text-muted-foreground font-medium">
-              Fiyatı Etkileyen Faktörler
-            </span>
-            <h2
-              className="text-3xl lg:text-4xl mt-5 text-foreground leading-snug"
-              style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
-            >
-              Fiyat neden değişir?
-            </h2>
+      {factors.length > 0 && (
+        <section className="py-20 lg:py-24 bg-[oklch(0.975_0.006_80)]">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="max-w-xl mb-10">
+              <span className="text-xs tracking-[0.25em] uppercase text-muted-foreground font-medium">
+                Fiyatı Etkileyen Faktörler
+              </span>
+              <h2
+                className="text-3xl lg:text-4xl mt-5 text-foreground leading-snug"
+                style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
+              >
+                Fiyat neden değişir?
+              </h2>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {factors.map((f) => (
+                <div key={f.id} className="bg-background rounded-xl p-5 border border-border">
+                  <p className="font-medium text-foreground text-sm mb-1.5">{f.factor}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{f.impact}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FACTORS.map((f) => (
-              <div key={f.factor} className="bg-background rounded-xl p-5 border border-border">
-                <p className="font-medium text-foreground text-sm mb-1.5">{f.factor}</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.impact}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* FAQ */}
-      <section ref={faqRef} className="py-20 lg:py-28 bg-background">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={faqInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6 }}
-            className="mb-12"
-          >
-            <span className="text-xs tracking-[0.25em] uppercase text-muted-foreground font-medium">
-              Sık Sorulan Sorular
-            </span>
-          </motion.div>
-          <div className="divide-y divide-border">
-            {FAQ.map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 16 }}
-                animate={faqInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.45, delay: i * 0.07 }}
-                className="py-6"
-              >
-                <p className="font-medium text-foreground mb-2">{item.q}</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
-              </motion.div>
-            ))}
+      {faq.length > 0 && (
+        <section ref={faqRef} className="py-20 lg:py-28 bg-background">
+          <div className="max-w-3xl mx-auto px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={faqInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.6 }}
+              className="mb-12"
+            >
+              <span className="text-xs tracking-[0.25em] uppercase text-muted-foreground font-medium">
+                Sık Sorulan Sorular
+              </span>
+            </motion.div>
+            <div className="divide-y divide-border">
+              {faq.map((item, i) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={faqInView ? { opacity: 1, y: 0 } : {}}
+                  transition={{ duration: 0.45, delay: i * 0.07 }}
+                  className="py-6"
+                >
+                  <button
+                    onClick={() => setOpenFaq(openFaq === item.id ? null : item.id)}
+                    className="w-full flex items-center justify-between text-left gap-4"
+                  >
+                    <p className="font-medium text-foreground">{item.question}</p>
+                    <svg
+                      width="14" height="14" viewBox="0 0 16 16" fill="none"
+                      className={`shrink-0 transition-transform duration-200 text-muted-foreground ${openFaq === item.id ? "rotate-180" : ""}`}
+                    >
+                      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {openFaq === item.id && (
+                    <p className="text-sm text-muted-foreground leading-relaxed mt-3">{item.answer}</p>
+                  )}
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="py-20 lg:py-28 bg-foreground text-center">
