@@ -13,11 +13,10 @@ export const metadata: Metadata = {
 const CATEGORY_LABELS: Record<string, string> = {
   "cocktail": "Kokteyl & Karşılama",
   "celebration": "Ana Kutlama",
-  "traditional": "Geleneksel",
   "after-party": "After Party",
 };
 
-const CATEGORY_ORDER = ["cocktail", "celebration", "traditional", "after-party"];
+const CATEGORY_ORDER = ["cocktail", "celebration", "after-party"];
 
 export default async function KonseptlerPage() {
   const supabase = createServiceClient();

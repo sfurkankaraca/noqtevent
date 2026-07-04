@@ -4,91 +4,25 @@ import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
 import Link from "next/link";
 
-const PACKAGES = [
-  {
-    slug: "dugun-deneyimi",
-    tag: "En Çok Tercih",
-    name: "Düğün Deneyimi",
-    emoji: "💍",
-    desc: "Hayatınızın en özel gecesini başından sonuna biz yönetiyoruz. DJ, canlı müzisyen, fotoğrafçı ve dekorasyon tek çatı altında.",
-    includes: [
-      "Profesyonel DJ (5 saat set)",
-      "Canlı müzisyen / klarnet",
-      "Düğün fotoğrafçısı",
-      "Çiçek & masa dekorasyonu",
-      "Ses sistemi kurulum & operasyon",
-      "Etkinlik koordinatörü",
-      "Sözleşme & ödeme planı",
-    ],
-    suitable: ["Düğün", "Nişan", "Kına Gecesi"],
-    priceNote: "Kişisel teklif için",
-    cta: "Teklif Al",
-    href: "/planla",
-    color: "bg-[oklch(0.94_0.035_65)]",
-    dark: false,
-  },
-  {
-    slug: "kulup-gecesi",
-    tag: "Organizatörlere Özel",
-    name: "Kulüp & Festival Gecesi",
-    emoji: "🎧",
-    desc: "Kulüp açılışları, festival sahneleri ve after party'ler için eksiksiz teknik ve sanatsal kadro.",
-    includes: [
-      "Ana DJ + açılış DJ",
-      "Profesyonel ses & ışık sistemi",
-      "Teknik rider hazırlığı",
-      "Sahne koordinasyonu",
-      "Sözleşme & ön ödeme sistemi",
-    ],
-    suitable: ["Kulüp Gecesi", "Festival", "After Party", "Morning Party"],
-    priceNote: "Kadro & tarih bazlı fiyat",
-    cta: "Kadroyu Gör",
-    href: "/sanatcilar",
-    color: "bg-[oklch(0.13_0.01_260)]",
-    dark: true,
-  },
-  {
-    slug: "kurumsal-gece",
-    tag: "Kurumsal",
-    name: "Kurumsal Etkinlik",
-    emoji: "🏢",
-    desc: "Lansman, yılsonu gecesi, açılış — fatura, sözleşme, teknik koordinasyon ve MC dahil tam kapsamlı paket.",
-    includes: [
-      "DJ veya canlı müzisyen",
-      "MC / Sunucu",
-      "Ses & sahne teknik koordinasyonu",
-      "Fatura & kurumsal sözleşme",
-      "Etkinlik timeline planlaması",
-    ],
-    suitable: ["Lansman", "Yılsonu Gecesi", "Açılış", "Ödül Töreni"],
-    priceNote: "Kişisel teklif için",
-    cta: "Teklif Al",
-    href: "/planla",
-    color: "bg-[oklch(0.93_0.012_200)]",
-    dark: false,
-  },
-  {
-    slug: "ozel-parti",
-    tag: "Esnek",
-    name: "Özel Parti",
-    emoji: "🎉",
-    desc: "Doğum günü, bride party, sürpriz — küçük ölçekli ama büyük enerji. Bütçenize göre şekillendiriyoruz.",
-    includes: [
-      "DJ (3-4 saat set)",
-      "Bluetooth / kablosuz ses sistemi",
-      "Şarkı listesi planlaması",
-      "Dekor önerileri",
-    ],
-    suitable: ["Doğum Günü", "Bride Party", "Sürpriz Parti", "Mezuniyet"],
-    priceNote: "Mekan & süreye göre",
-    cta: "Planlamaya Başla",
-    href: "/planla",
-    color: "bg-[oklch(0.92_0.022_320)]",
-    dark: false,
-  },
-];
+export type PackageItem = {
+  slug: string;
+  tag: string | null;
+  name: string;
+  emoji: string | null;
+  desc: string | null;
+  includes: string[];
+  suitable: string[];
+  priceFrom: number | null;
+  priceNote: string | null;
+  cta: string;
+  href: string;
+  color: string;
+  dark: boolean;
+};
 
-export default function PackagesClient() {
+const fmt = (n: number) => n.toLocaleString("tr-TR");
+
+export default function PackagesClient({ packages }: { packages: PackageItem[] }) {
   const [active, setActive] = useState<string | null>(null);
   const headerRef = useRef(null);
   const headerInView = useInView(headerRef, { once: true, margin: "-60px" });
@@ -152,7 +86,7 @@ export default function PackagesClient() {
           </motion.div>
 
           <div className="grid lg:grid-cols-2 gap-5">
-            {PACKAGES.map((pkg, i) => {
+            {packages.map((pkg, i) => {
               const isOpen = active === pkg.slug;
               const text = pkg.dark ? "text-white" : "text-foreground";
               const muted = pkg.dark ? "text-white/50" : "text-foreground/50";
@@ -175,9 +109,11 @@ export default function PackagesClient() {
                   <div className="p-7 lg:p-9">
                     <div className="flex items-start justify-between gap-4 mb-6">
                       <span className="text-3xl">{pkg.emoji}</span>
-                      <span className={`text-[10px] font-semibold tracking-[0.16em] uppercase border rounded-full px-3 py-1 ${tagCls}`}>
-                        {pkg.tag}
-                      </span>
+                      {pkg.tag && (
+                        <span className={`text-[10px] font-semibold tracking-[0.16em] uppercase border rounded-full px-3 py-1 ${tagCls}`}>
+                          {pkg.tag}
+                        </span>
+                      )}
                     </div>
                     <h2
                       className={`text-2xl lg:text-3xl leading-snug ${text} mb-3`}
@@ -232,7 +168,15 @@ export default function PackagesClient() {
                     )}
 
                     <div className={`flex items-center justify-between pt-5 border-t ${divider}`}>
-                      <span className={`text-xs ${muted}`}>{pkg.priceNote}</span>
+                      <div>
+                        {pkg.priceFrom ? (
+                          <span className={`text-sm font-medium ${text}`}>
+                            {fmt(pkg.priceFrom)} ₺&apos;den başlayan fiyatlarla
+                          </span>
+                        ) : (
+                          <span className={`text-xs ${muted}`}>{pkg.priceNote}</span>
+                        )}
+                      </div>
                       <Link
                         href={pkg.href}
                         className={`inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-full transition-opacity ${ctaCls}`}
