@@ -35,7 +35,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             >
               <Image
                 src={images[current]}
-                alt="NOQT etkinlik atmosferi"
+                alt="NOQT — Kayseri ve Nevşehir DJ performansı, etkinlik atmosferi"
                 fill
                 className="object-cover"
                 priority={current === 0}
@@ -62,7 +62,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               >
                 <Image
                   src={images[current]}
-                  alt="NOQT etkinlik atmosferi"
+                  alt="NOQT — Kayseri ve Nevşehir DJ performansı, etkinlik atmosferi"
                   fill
                   className="object-cover"
                   priority={current === 0}
@@ -111,11 +111,11 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
           >
             <div className="h-px w-12 bg-foreground/30" />
             <span className="text-xs tracking-[0.25em] uppercase text-white/60 lg:text-muted-foreground font-medium">
-              Doğru sanatçıyı bul. Etkinliğini tasarla.
+              DJ &amp; Sanatçı Booking · Etkinlik Yönetimi
             </span>
           </motion.div>
 
-          {/* Headline — anahtar kelimeli H1 (SEO) */}
+          {/* Headline — kısa ve odaklı; coğrafi SEO metni ekran okuyucu katmanında */}
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -123,18 +123,22 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl leading-[1.05] tracking-tight text-white lg:text-foreground"
             style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
           >
-            Kayseri &amp; Nevşehir&apos;de{" "}
-            <em className="italic">düğün DJ&apos;i</em> ve etkinlik tasarımı
+            Sahnede doğru sanatçı,{" "}
+            <em className="italic">kusursuz bir etkinlik</em>
+            <span className="sr-only">
+              {" "}— Kayseri ve Nevşehir&apos;de DJ ve sanatçı booking; düğün, festival, kulüp gecesi,
+              açılış ve kurumsal etkinlik yönetimi
+            </span>
           </motion.h1>
 
-          {/* Subheadline — somut vaat */}
+          {/* Subheadline — tek cümle */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.25 }}
             className="mt-8 text-lg text-white/80 lg:text-muted-foreground leading-relaxed max-w-lg"
           >
-            Düğünden festivale, özel partiden kurumsal geceye — 2 dakikada planlayın, aynı gün size özel teklif alın.
+            Etkinliğinize ya da mekanınıza doğru sanatçıyı bulur, organizasyonu baştan sona yönetiriz.
           </motion.p>
 
           {/* CTAs */}
@@ -204,13 +208,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               DJ hizmetleri 7.500 ₺&apos;den başlar
             </Link>
             <span className="hidden sm:inline text-white/30 lg:text-border">·</span>
-            <Link
-              href="/planla"
-              onClick={() => trackEvent("cta_click", { location: "hero", target: "tarih-kontrol" })}
-              className="text-white/75 lg:text-muted-foreground hover:text-white lg:hover:text-foreground transition-colors"
-            >
-              📅 Yaz sezonu tarihleri hızla doluyor — tarihinizin müsaitliğini kontrol edin
-            </Link>
+            <span className="text-white/75 lg:text-muted-foreground">Aynı gün teklif</span>
           </motion.div>
         </div>
 
