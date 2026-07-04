@@ -8,6 +8,7 @@ import {
   EVENT_TYPES,
   type PlannerData,
 } from "./PlannerStore";
+import { getArtistFeeRange, estimateFeeRangeAcrossArtists, formatFeeRange, type FeeRange } from "@/lib/artistPricing";
 import Step1EventType from "./steps/Step1EventType";
 import Step2Guests from "./steps/Step3Guests";
 import Step3EventSections from "./steps/StepEventSections";
@@ -39,6 +40,8 @@ type Dj = {
   instagram_url: string | null; spotify_url: string | null; website_url: string | null;
   soundcloud_url: string | null; mixcloud_url?: string | null; youtube_url?: string | null;
   preview_video_url?: string | null; concept_tags: string[] | null;
+  base_fee_min?: number | null; base_fee_max?: number | null;
+  event_type_fees?: Record<string, FeeRange> | null;
 };
 
 type Venue = {
@@ -75,6 +78,16 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
   };
 
   const progress = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
+
+  // Bütçe tahmini: bir sanatçı seçildiyse onun kaşesi, seçilmediyse tüm sanatçılar arası aralık
+  const feeRange: FeeRange | null = (() => {
+    if (!data.eventType) return null;
+    const selectedDj = data.selectedDjIds?.length
+      ? djs.find((d) => data.selectedDjIds.includes(d.id))
+      : null;
+    if (selectedDj) return getArtistFeeRange(selectedDj, data.eventType);
+    return estimateFeeRangeAcrossArtists(djs, data.eventType);
+  })();
 
   const variants = {
     enter: (d: number) => ({ opacity: 0, x: d > 0 ? 48 : -48 }),
@@ -174,6 +187,17 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
           {step} / {TOTAL_STEPS}
         </span>
       </div>
+
+      {/* Bütçe tahmini banner */}
+      {feeRange && (
+        <div className="max-w-3xl mx-auto w-full px-6 lg:px-8 -mt-2 mb-6">
+          <div className="inline-flex items-center gap-2 bg-secondary/60 border border-border rounded-full px-4 py-2 text-xs text-foreground">
+            <span>💰</span>
+            <span className="text-muted-foreground">Tahmini bütçe:</span>
+            <span className="font-semibold tabular-nums">{formatFeeRange(feeRange)}</span>
+          </div>
+        </div>
+      )}
 
       {/* Step content */}
       <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-6 lg:px-8 pb-12">

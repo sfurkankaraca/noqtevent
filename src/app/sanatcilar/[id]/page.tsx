@@ -179,7 +179,13 @@ export default async function DjDetailPage({ params }: Props) {
               )}
 
               <div className="pt-4 border-t border-border">
-                <ArtistBookingButton artistId={id} artistName={dj.name} />
+                <ArtistBookingButton
+                  artistId={id}
+                  artistName={dj.name}
+                  baseFeeMin={dj.base_fee_min ?? null}
+                  baseFeeMax={dj.base_fee_max ?? null}
+                  eventTypeFees={dj.event_type_fees ?? null}
+                />
               </div>
             </div>
           </div>

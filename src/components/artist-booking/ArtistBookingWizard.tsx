@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/analytics";
 import { submitArtistBooking, getArtistRider } from "@/app/sanatcilar/rezervasyon/actions";
 import type { RiderItem } from "@/lib/riderTypes";
+import { getArtistFeeRange, formatFeeRange, type FeeRange } from "@/lib/artistPricing";
 
 // Kulüp / festival önde, düğün / aile geride
 const BOOKING_EVENT_TYPES = [
@@ -734,10 +735,16 @@ function makeInitial(artistId: string, artistName: string): ArtistBookingData {
 export default function ArtistBookingWizard({
   artistId,
   artistName,
+  baseFeeMin = null,
+  baseFeeMax = null,
+  eventTypeFees = null,
   onClose,
 }: {
   artistId: string;
   artistName: string;
+  baseFeeMin?: number | null;
+  baseFeeMax?: number | null;
+  eventTypeFees?: Record<string, FeeRange> | null;
   onClose: () => void;
 }) {
   const [step, setStep] = useState(1);
@@ -792,6 +799,10 @@ export default function ArtistBookingWizard({
   };
 
   const progress = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
+
+  const feeRange: FeeRange | null = data.eventType
+    ? getArtistFeeRange({ base_fee_min: baseFeeMin, base_fee_max: baseFeeMax, event_type_fees: eventTypeFees }, data.eventType)
+    : null;
 
   const variants = {
     enter: (d: number) => ({ opacity: 0, x: d > 0 ? 48 : -48 }),
@@ -897,6 +908,17 @@ export default function ArtistBookingWizard({
           </svg>
         </button>
       </div>
+
+      {/* Bütçe tahmini banner */}
+      {feeRange && (
+        <div className="px-6 lg:px-8 max-w-3xl mx-auto w-full mb-2">
+          <div className="inline-flex items-center gap-2 bg-secondary/60 border border-border rounded-full px-4 py-2 text-xs text-foreground">
+            <span>💰</span>
+            <span className="text-muted-foreground">Tahmini kaşe:</span>
+            <span className="font-semibold tabular-nums">{formatFeeRange(feeRange)}</span>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 max-w-3xl mx-auto w-full px-6 lg:px-8 pb-16">

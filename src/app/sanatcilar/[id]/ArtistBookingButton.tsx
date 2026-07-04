@@ -3,13 +3,20 @@
 import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import ArtistBookingWizard from "@/components/artist-booking/ArtistBookingWizard";
+import type { FeeRange } from "@/lib/artistPricing";
 
 export default function ArtistBookingButton({
   artistId,
   artistName,
+  baseFeeMin = null,
+  baseFeeMax = null,
+  eventTypeFees = null,
 }: {
   artistId: string;
   artistName: string;
+  baseFeeMin?: number | null;
+  baseFeeMax?: number | null;
+  eventTypeFees?: Record<string, FeeRange> | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -30,6 +37,9 @@ export default function ArtistBookingButton({
           <ArtistBookingWizard
             artistId={artistId}
             artistName={artistName}
+            baseFeeMin={baseFeeMin}
+            baseFeeMax={baseFeeMax}
+            eventTypeFees={eventTypeFees}
             onClose={() => setOpen(false)}
           />
         )}

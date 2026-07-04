@@ -7,7 +7,8 @@ import Link from "next/link";
 import { upsertDj } from "./actions";
 import FocalPointPicker, { type FocalPoint } from "@/components/admin/FocalPointPicker";
 import RiderBuilder, { normalizeRiderItems, type RiderItem } from "@/components/admin/RiderBuilder";
-import { MUSIC_CONCEPTS, CONCEPT_CATEGORIES, type ConceptCategory } from "@/components/planner/PlannerStore";
+import { MUSIC_CONCEPTS, CONCEPT_CATEGORIES, EVENT_TYPES as PLANNER_EVENT_TYPES, type ConceptCategory } from "@/components/planner/PlannerStore";
+import type { FeeRange } from "@/lib/artistPricing";
 
 const CONCEPT_CATEGORY_ORDER: ConceptCategory[] = ["cocktail", "celebration", "traditional", "after-party"];
 
@@ -67,6 +68,9 @@ type Dj = {
   application_status?: string;
   preview_video_url?: string;
   videos?: string[];
+  base_fee_min?: number;
+  base_fee_max?: number;
+  event_type_fees?: Record<string, FeeRange>;
 };
 
 interface PhotoEntry {
@@ -155,6 +159,9 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     Array.isArray(dj?.rider) ? normalizeRiderItems(dj.rider) : []
   );
   const [slug, setSlug] = useState<string>(dj?.slug ?? "");
+  const [baseFeeMin, setBaseFeeMin] = useState<string>(dj?.base_fee_min != null ? String(dj.base_fee_min) : "");
+  const [baseFeeMax, setBaseFeeMax] = useState<string>(dj?.base_fee_max != null ? String(dj.base_fee_max) : "");
+  const [eventTypeFees, setEventTypeFees] = useState<Record<string, FeeRange>>(dj?.event_type_fees ?? {});
   const [copied, setCopied] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -265,6 +272,12 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     fd.set("slug", slug);
     fd.set("rider_url", riderUrl);
     fd.set("rider_json", JSON.stringify(riderItems));
+    fd.set("base_fee_min", baseFeeMin);
+    fd.set("base_fee_max", baseFeeMax);
+    const cleanEventTypeFees = Object.fromEntries(
+      Object.entries(eventTypeFees).filter(([, r]) => r && (r.min > 0 || r.max > 0))
+    );
+    fd.set("event_type_fees_json", JSON.stringify(cleanEventTypeFees));
 
     setPending(true);
     setError(null);
@@ -698,6 +711,71 @@ export default function DjForm({ dj }: { dj?: Dj }) {
               {selectedEventTypes.includes(et.id) && <span className="ml-auto">✓</span>}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Kaşe Bedelleri */}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-5">
+        <div>
+          <h2 className="font-medium text-foreground">Kaşe Bedelleri</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Genel aralık, etkinlik türüne özel bedel girilmeyen türler için kullanılır. Planlayıcıda ve rezervasyon formunda müşteriye bu aralıklar tahmini olarak gösterilir.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Genel Aralık (₺)</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number" min={0} value={baseFeeMin} onChange={(e) => setBaseFeeMin(e.target.value)}
+              placeholder="Min" className="w-32 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+            <span className="text-muted-foreground">–</span>
+            <input
+              type="number" min={0} value={baseFeeMax} onChange={(e) => setBaseFeeMax(e.target.value)}
+              placeholder="Max" className="w-32 px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase">Etkinlik Türüne Özel (opsiyonel)</label>
+          {PLANNER_EVENT_TYPES.map((et) => {
+            const range = eventTypeFees[et.id] ?? { min: 0, max: 0 };
+            return (
+              <div key={et.id} className="flex items-center gap-2">
+                <span className="w-40 flex-shrink-0 text-xs text-foreground flex items-center gap-1.5">
+                  <span>{et.emoji}</span>{et.label}
+                </span>
+                <input
+                  type="number" min={0}
+                  value={range.min || ""}
+                  onChange={(e) => setEventTypeFees((prev) => ({
+                    ...prev, [et.id]: { min: Number(e.target.value) || 0, max: prev[et.id]?.max ?? 0 },
+                  }))}
+                  placeholder="Min"
+                  className="w-28 px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+                />
+                <span className="text-muted-foreground text-xs">–</span>
+                <input
+                  type="number" min={0}
+                  value={range.max || ""}
+                  onChange={(e) => setEventTypeFees((prev) => ({
+                    ...prev, [et.id]: { min: prev[et.id]?.min ?? 0, max: Number(e.target.value) || 0 },
+                  }))}
+                  placeholder="Max"
+                  className="w-28 px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+                />
+                {(range.min > 0 || range.max > 0) && (
+                  <button type="button"
+                    onClick={() => setEventTypeFees((prev) => { const n = { ...prev }; delete n[et.id]; return n; })}
+                    className="text-xs text-red-500 hover:text-red-700 ml-1">
+                    Temizle
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

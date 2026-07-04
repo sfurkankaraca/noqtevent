@@ -25,6 +25,11 @@ export async function upsertDj(formData: FormData) {
     .split(",").map((d) => d.trim()).filter(Boolean);
   const event_types: string[] = JSON.parse((formData.get("event_types_json") as string) || "[]");
   const youtube_links: string[] = JSON.parse((formData.get("youtube_links_json") as string) || "[]");
+  const event_type_fees: Record<string, { min: number; max: number }> = (() => {
+    try { return JSON.parse((formData.get("event_type_fees_json") as string) || "{}"); } catch { return {}; }
+  })();
+  const base_fee_min_raw = formData.get("base_fee_min") as string;
+  const base_fee_max_raw = formData.get("base_fee_max") as string;
 
   const payload = {
     name: formData.get("name") as string,
@@ -42,6 +47,9 @@ export async function upsertDj(formData: FormData) {
     rider_url: (formData.get("rider_url") as string) || null,
     rider,
     media_drive_url: (formData.get("media_drive_url") as string) || null,
+    base_fee_min: base_fee_min_raw ? Number(base_fee_min_raw) : null,
+    base_fee_max: base_fee_max_raw ? Number(base_fee_max_raw) : null,
+    event_type_fees,
     application_status: (formData.get("application_status") as string) || "approved",
     repertoire: (formData.get("repertoire") as string) || null,
     email: (formData.get("email") as string) || null,
@@ -68,8 +76,8 @@ export async function upsertDj(formData: FormData) {
 
     const { error } = await supabase.from("dj_profiles").update(payload).eq("id", id);
     if (error) {
-      if (error.message.includes("photos") || error.message.includes("focal_points")) {
-        const { photos: _p, focal_points: _fp, ...safe } = payload;
+      if (error.message.includes("photos") || error.message.includes("focal_points") || error.message.includes("base_fee") || error.message.includes("event_type_fees")) {
+        const { photos: _p, focal_points: _fp, base_fee_min: _bmin, base_fee_max: _bmax, event_type_fees: _etf, ...safe } = payload;
         const { error: e2 } = await supabase.from("dj_profiles").update(safe).eq("id", id);
         if (e2) throw new Error(e2.message);
       } else {
@@ -92,8 +100,8 @@ export async function upsertDj(formData: FormData) {
       clerk_id: `admin-${Date.now()}`,
     });
     if (error) {
-      if (error.message.includes("photos") || error.message.includes("focal_points")) {
-        const { photos: _p, focal_points: _fp, ...safe } = payload;
+      if (error.message.includes("photos") || error.message.includes("focal_points") || error.message.includes("base_fee") || error.message.includes("event_type_fees")) {
+        const { photos: _p, focal_points: _fp, base_fee_min: _bmin, base_fee_max: _bmax, event_type_fees: _etf, ...safe } = payload;
         const { error: e2 } = await supabase.from("dj_profiles").insert({
           ...safe,
           clerk_id: `admin-${Date.now()}`,
