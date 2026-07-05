@@ -11,12 +11,27 @@ export default async function MemoryEventAdminPage({ params }: Props) {
   const { id } = await params;
   const supabase = createServiceClient();
 
-  const [{ data: ev }, { data: uploads }] = await Promise.all([
+  const [{ data: ev, error: evError }, { data: uploads, error: uploadsError }] = await Promise.all([
     supabase.from("memory_events").select("*").eq("id", id).single(),
     supabase.from("memory_uploads").select("*").eq("event_id", id).order("created_at", { ascending: false }),
   ]);
 
+  // Gerçek bir sorgu hatasını (ör. env/izin sorunu) sessizce 404'e çevirmek yerine göster —
+  // "bulunamadı" ile "bir şeyler bozuldu" birbirinden ayrılabilsin
+  if (evError && evError.code !== "PGRST116") {
+    return (
+      <div className="p-8 max-w-2xl">
+        <Link href="/admin/memory" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Memory Drive
+        </Link>
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mt-6">
+          Etkinlik yüklenemedi: {evError.message}
+        </div>
+      </div>
+    );
+  }
   if (!ev) notFound();
+  if (uploadsError) console.error("[admin/memory/id] uploads query error:", uploadsError.message);
 
   const images = (uploads ?? []).filter((u) => u.file_type === "image");
   const videos = (uploads ?? []).filter((u) => u.file_type === "video");

@@ -3,10 +3,21 @@ import { createServiceClient } from "@/lib/supabase";
 
 export default async function MemoryAdminPage() {
   const supabase = createServiceClient();
-  const { data: events } = await supabase
+  let { data: events, error } = await supabase
     .from("memory_events")
     .select("*, memory_uploads(count)")
     .order("created_at", { ascending: false });
+
+  // memory_uploads join'i (count) bazı Supabase yapılandırmalarında hata verebilir —
+  // basit select ile tekrar dene ki tek bir join hatası tüm listeyi kilitlemesin
+  if (error) {
+    const retry = await supabase
+      .from("memory_events")
+      .select("*")
+      .order("created_at", { ascending: false });
+    events = retry.data;
+    error = retry.error;
+  }
 
   return (
     <div className="p-8 max-w-4xl">
@@ -23,8 +34,18 @@ export default async function MemoryAdminPage() {
         </Link>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-6">
+          {error.message}
+          <p className="mt-1 text-xs">
+            Bu hata genelde <code>supabase-memory.sql</code> henüz çalıştırılmadığında veya
+            Supabase env değişkenleri eksik olduğunda görülür.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-3">
-        {(!events || events.length === 0) && (
+        {(!events || events.length === 0) && !error && (
           <div className="text-center py-20 text-muted-foreground text-sm border border-dashed border-border rounded-2xl">
             Henüz etkinlik yok.
           </div>
