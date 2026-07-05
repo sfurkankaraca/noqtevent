@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import { mediaProxyUrl } from "@/lib/media";
 
 type UploadedFile = { url: string; type: "image" | "video"; name: string; isHeic: boolean };
 
@@ -125,7 +126,8 @@ export default function MemoryUploadClient({
           throw new Error(j.error || "Kayıt oluşturulamadı");
         }
 
-        results.push({ url: presign.publicUrl, type: presign.type, name: file.name, isHeic: isHeicFile(file) });
+        // Önizleme proxy üzerinden (media.noqt.events Türkiye'den engelli olabilir)
+        results.push({ url: mediaProxyUrl(presign.path), type: presign.type, name: file.name, isHeic: isHeicFile(file) });
       } catch (err) {
         failed.push(`${file.name}: ${err instanceof Error ? err.message : "Bilinmeyen hata"}`);
       }

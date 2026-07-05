@@ -6,6 +6,7 @@ import Link from "next/link";
 type Upload = {
   id: string;
   file_url: string;
+  display_url?: string; // proxy URL — img/video görüntülemesi için (indirmeler file_url)
   file_type: string;
   file_name?: string | null;
   uploader_name?: string | null;
@@ -119,7 +120,7 @@ export default function GalleryClient({
                   className="relative aspect-square overflow-hidden rounded-lg bg-white/5 group"
                 >
                   <GalleryImage
-                    src={u.file_url}
+                    src={u.display_url ?? u.file_url}
                     alt={u.file_name ?? ""}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     forceIconOnly={isHeicUpload(u)}
@@ -143,7 +144,7 @@ export default function GalleryClient({
               {videos.map((u) => (
                 <div key={u.id} className="rounded-xl overflow-hidden bg-white/5">
                   <video
-                    src={u.file_url}
+                    src={u.display_url ?? u.file_url}
                     controls
                     className="w-full"
                     preload="metadata"
@@ -186,7 +187,7 @@ export default function GalleryClient({
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={lightbox.file_url}
+              src={lightbox.display_url ?? lightbox.file_url}
               alt=""
               className="max-w-full max-h-[90vh] object-contain rounded-xl"
               onClick={(e) => e.stopPropagation()}

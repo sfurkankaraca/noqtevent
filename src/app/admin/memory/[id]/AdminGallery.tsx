@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { deleteUpload } from "../actions";
+import { mediaProxyUrl } from "@/lib/media";
 
 type Upload = {
   id: string;
@@ -75,7 +76,7 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={u.file_url}
+                    src={mediaProxyUrl(u.file_path)}
                     alt={u.file_name ?? ""}
                     className="w-full h-full object-cover cursor-pointer"
                     loading="lazy"
@@ -88,10 +89,8 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
                 </div>
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                   <a
-                    href={u.file_url}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={mediaProxyUrl(u.file_path)}
+                    download={u.file_name ?? true}
                     className="w-8 h-8 rounded-full bg-white/20 backdrop-blur flex items-center justify-center hover:bg-white/40 transition-colors"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -129,7 +128,7 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
           <div className="space-y-3">
             {videos.map((u) => (
               <div key={u.id} className="bg-white border border-border rounded-xl p-4 flex items-center gap-4">
-                <video src={u.file_url} className="w-32 h-20 object-cover rounded-lg bg-secondary" preload="metadata" />
+                <video src={mediaProxyUrl(u.file_path)} className="w-32 h-20 object-cover rounded-lg bg-secondary" preload="metadata" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{u.file_name ?? "video"}</p>
                   {u.uploader_name && <p className="text-xs text-muted-foreground mt-0.5">{u.uploader_name}</p>}
@@ -139,10 +138,8 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <a
-                    href={u.file_url}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={mediaProxyUrl(u.file_path)}
+                    download={u.file_name ?? true}
                     className="text-xs border border-border px-3 py-1.5 rounded-full text-muted-foreground hover:border-foreground/40 transition-colors"
                   >
                     İndir
@@ -176,7 +173,7 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={lightbox.file_url}
+              src={mediaProxyUrl(lightbox.file_path)}
               alt=""
               className="max-w-full max-h-[90vh] object-contain rounded-xl"
               onClick={(e) => e.stopPropagation()}
@@ -185,7 +182,7 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
           )}
           <div className="absolute bottom-6 flex items-center gap-3">
             {lightbox.uploader_name && <p className="text-white/40 text-xs">{lightbox.uploader_name}</p>}
-            <a href={lightbox.file_url} download target="_blank" rel="noopener noreferrer"
+            <a href={mediaProxyUrl(lightbox.file_path)} download={lightbox.file_name ?? true}
               className="text-xs border border-white/20 px-4 py-2 rounded-full text-white/60 hover:border-white/40 transition-colors">
               İndir
             </a>

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase";
+import { mediaProxyUrl } from "@/lib/media";
 import GalleryClient from "./GalleryClient";
 
 type Props = {
@@ -55,5 +56,11 @@ export default async function GalleryPage({ params, searchParams }: Props) {
     .eq("event_id", event.id)
     .order("created_at", { ascending: false });
 
-  return <GalleryClient event={event} uploads={uploads ?? []} />;
+  // Görüntüleme URL'i proxy üzerinden (Türkiye ISP engeli); indirmeler file_url ile server-side
+  const withProxy = (uploads ?? []).map((u) => ({
+    ...u,
+    display_url: u.file_path ? mediaProxyUrl(u.file_path) : u.file_url,
+  }));
+
+  return <GalleryClient event={event} uploads={withProxy} />;
 }
