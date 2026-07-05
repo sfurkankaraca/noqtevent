@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -11,6 +11,11 @@ const SLIDE_INTERVAL = 5000;
 export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
   const images = heroImages.length > 0 ? heroImages : ["/hero-bg.webp"];
   const [current, setCurrent] = useState(0);
+  // İlk boyamada yalnızca LCP görseli (ilk slayt) yüklensin; diğer slaytlar
+  // mount sonrası eklensin ki LCP ile bant genişliği için yarışmasınlar.
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (images.length <= 1) return;
@@ -18,31 +23,33 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
     return () => clearInterval(id);
   }, [images.length]);
 
+  // İlk render'da sadece ilk görsel; mount sonrası tüm slaytlar
+  const rendered = mounted ? images : images.slice(0, 1);
+
   return (
     <section className="relative min-h-screen flex flex-col">
       {/* Background: mobile = full bleed photo, desktop = split */}
+      {/* Crossfade saf CSS ile yapılır — ilk görsel SSR'da hemen opacity:100 render edilip
+          priority ile preload edilir; böylece LCP JS/animasyona takılmaz (framer-motion opacity:0
+          eski kurulumda LCP'yi ~9sn'ye itiyordu). */}
       <div className="absolute inset-0">
         {/* Mobile: full photo background */}
         <div className="absolute inset-0 lg:hidden overflow-hidden">
-          <AnimatePresence initial={false}>
-            <motion.div
-              key={current}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.2, ease: "easeInOut" }}
-              className="absolute inset-0"
+          {rendered.map((src, i) => (
+            <div
+              key={i}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${i === current ? "opacity-100" : "opacity-0"}`}
             >
               <Image
-                src={images[current]}
+                src={src}
                 alt="NOQT — Kayseri ve Nevşehir DJ performansı, etkinlik atmosferi"
                 fill
                 className="object-cover"
-                priority={current === 0}
+                priority={i === 0}
                 sizes="100vw"
               />
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          ))}
           {/* Dark overlay so text stays readable */}
           <div className="absolute inset-0 bg-black/50" />
         </div>
@@ -51,25 +58,21 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
         <div className="hidden lg:grid absolute inset-0 grid-cols-2">
           <div className="bg-[oklch(0.975_0.006_80)]" />
           <div className="relative overflow-hidden">
-            <AnimatePresence initial={false}>
-              <motion.div
-                key={current}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, ease: "easeInOut" }}
-                className="absolute inset-0"
+            {rendered.map((src, i) => (
+              <div
+                key={i}
+                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${i === current ? "opacity-100" : "opacity-0"}`}
               >
                 <Image
-                  src={images[current]}
+                  src={src}
                   alt="NOQT — Kayseri ve Nevşehir DJ performansı, etkinlik atmosferi"
                   fill
                   className="object-cover"
-                  priority={current === 0}
+                  priority={i === 0}
                   sizes="50vw"
                 />
-              </motion.div>
-            </AnimatePresence>
+              </div>
+            ))}
             {/* Left-edge fade */}
             <div className="absolute inset-0 bg-gradient-to-r from-[oklch(0.975_0.006_80)] via-transparent to-transparent w-1/3 z-10" />
           </div>
