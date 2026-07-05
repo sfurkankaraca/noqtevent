@@ -4,10 +4,10 @@ import Image from "next/image";
 const footerLinks = {
   "Hizmetler": [
     { label: "Deneyim Planlayıcı", href: "/planla" },
-    { label: "Düğün", href: "/deneyimler/dugun" },
-    { label: "Kurumsal Etkinlik", href: "/deneyimler/kurumsal" },
-    { label: "Açılış & Lansman", href: "/deneyimler/acilis" },
-    { label: "Özel Parti", href: "/deneyimler/ozel-parti" },
+    { label: "Düğün", href: "/etkinlikler/dugun-dj" },
+    { label: "Kurumsal Etkinlik", href: "/etkinlikler/kurumsal-etkinlik" },
+    { label: "Açılış & Lansman", href: "/etkinlikler/acilis-lansman" },
+    { label: "Özel Parti", href: "/etkinlikler/ozel-parti" },
   ],
   "Keşfet": [
     { label: "Sanatçılar", href: "/sanatcilar" },

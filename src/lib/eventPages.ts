@@ -332,6 +332,84 @@ export const EVENT_PAGES: EventPage[] = [
       { q: "After party için minimum süre var mı?", a: "Genellikle en az 3 saat. Kısa süreli after party'ler için de görüşebiliriz." },
     ],
   },
+  {
+    slug: "acilis-lansman",
+    emoji: "🎉",
+    title: "Açılış & Lansman",
+    metaTitle: "Açılış & Lansman Organizasyonu DJ ve Müzik — NOQT",
+    metaDescription:
+      "Mağaza açılışı, ürün lansmanı ve marka etkinliği için profesyonel DJ, ses sistemi ve atmosfer yönetimi. Kayseri, Nevşehir ve Kapadokya bölgesinde kurumsal etkinlik organizasyonu.",
+    keywords: [
+      "açılış organizasyonu",
+      "lansman organizasyonu",
+      "açılış dj kayseri",
+      "mağaza açılışı müzik",
+      "ürün lansmanı etkinlik",
+      "marka etkinliği dj",
+      "kurumsal açılış organizasyonu",
+      "açılış töreni ses sistemi",
+      "lansman etkinliği kayseri",
+    ],
+    hero: {
+      eyebrow: "Açılış & Lansman",
+      headline: "İlk izlenim bir kez yaratılır.",
+      sub: "Mağaza açılışı, ürün lansmanı veya marka etkinliği — doğru atmosfer, doğru müzik ve kusursuz teknik koordinasyonla.",
+    },
+    about: {
+      heading: "Açılış ve lansmanda müzik neden kritik?",
+      body: "Bir açılış ya da lansman, markanızın sahne aldığı andır. Misafirler mekana adım attığı saniyede hissettikleri şey markanız hakkında bir izlenim bırakır. Doğru müzik ve akıcı bir program, davetlilerin daha uzun kalmasını, markayla daha güçlü bir bağ kurmasını sağlar. Biz açılışın enerjisini kurgular, konuşma-müzik geçişlerini ve basın anlarını kusursuz yönetiriz.",
+    },
+    features: [
+      { icon: "🎧", title: "Ambiyans & DJ Performansı", desc: "Karşılamadan zirveye markanızın tonuna uygun müzik akışı" },
+      { icon: "🎤", title: "MC & Program Yönetimi", desc: "Konuşma, kurdele kesimi ve basın anlarının zamanlaması tek elden" },
+      { icon: "🔊", title: "Profesyonel Ses & Sahne", desc: "Mekan keşfi, ses sistemi kurulumu ve teknik koordinasyon" },
+      { icon: "🏢", title: "Kurumsal Süreç", desc: "Fatura, sözleşme ve kurumsal beklentilere uygun çalışma" },
+    ],
+    faq: [
+      { q: "Açılış programını sizinle birlikte kurgulayabilir miyiz?", a: "Kesinlikle. Konuşma, kurdele kesimi, ikram ve müzik geçişlerini içeren detaylı bir akış planını birlikte hazırlıyoruz." },
+      { q: "Fatura ve kurumsal sözleşme sağlıyor musunuz?", a: "Evet. Kurumsal etkinliklerde hizmet faturalı ve sözleşmeli olarak yürütülür." },
+      { q: "Gündüz açılışları için de hizmet veriyor musunuz?", a: "Evet, gündüz ve akşam açılışları için uygun ambiyans müziği ve teknik kurulumu sağlıyoruz." },
+    ],
+  },
+  {
+    slug: "ozel-parti",
+    emoji: "🥳",
+    title: "Özel Parti",
+    metaTitle: "Özel Parti Organizasyonu ve DJ — NOQT",
+    metaDescription:
+      "Doğum günü, yıldönümü, ev partisi ve özel kutlamalar için DJ ve müzik organizasyonu. Kayseri, Nevşehir ve Kapadokya bölgesinde bütçenize göre özel parti çözümleri.",
+    keywords: [
+      "özel parti organizasyonu",
+      "özel parti dj",
+      "ev partisi dj kayseri",
+      "yıldönümü partisi organizasyonu",
+      "kutlama organizasyonu",
+      "özel kutlama dj",
+      "parti müziği kayseri",
+      "bahçe partisi dj",
+      "özel davet organizasyonu",
+    ],
+    hero: {
+      eyebrow: "Özel Parti",
+      headline: "Sebep sizde, atmosfer bizde.",
+      sub: "Doğum günü, yıldönümü, ev partisi ya da sadece iyi bir gece — hayal ettiğiniz kutlamayı birlikte tasarlayalım.",
+    },
+    about: {
+      heading: "Küçük ama unutulmaz bir gece",
+      body: "Özel partiler büyük olmak zorunda değil — ama en az düğün kadar özenle planlanmayı hak ediyor. Yakın çevrenizle, samimi bir ortamda, tamamen size özel bir müzik seçkisiyle. Küçük konuk listesi kişiselleştirme için büyük bir fırsat: her misafirin enerjisini okuyup geceyi anlık kurgulayan bir DJ deneyimi sunuyoruz.",
+    },
+    features: [
+      { icon: "🎵", title: "Size Özel Seçki", desc: "Favori şarkılarınız ve grubunuzun enerjisine göre kurgulanan set" },
+      { icon: "🎉", title: "Sürpriz Koordinasyonu", desc: "Pasta anı, özel anonslar ve sürpriz girişlerin müzik planlaması" },
+      { icon: "🔊", title: "Kompakt Ses Sistemi", desc: "Ev, bahçe ve küçük mekanlara uygun esnek ses kurulumu" },
+      { icon: "💫", title: "Esnek Bütçe", desc: "Mekan, süre ve grup büyüklüğüne göre şekillenen çözümler" },
+    ],
+    faq: [
+      { q: "Ev ve bahçe partileri için de hizmet veriyor musunuz?", a: "Evet. Küçük ve orta ölçekli ortamlara uygun kompakt ses sistemleriyle ev ve bahçe partilerinde çalışıyoruz." },
+      { q: "Minimum kaç kişilik etkinliğe geliyorsunuz?", a: "25 kişilik samimi kutlamalardan büyük partilere kadar hizmet veriyoruz." },
+      { q: "Sürpriz anları için müzik koordinasyonu yapıyor musunuz?", a: "Evet. Pasta anı, sürpriz giriş ve özel anonsları önceden planlayıp doğru anda devreye alıyoruz." },
+    ],
+  },
 ];
 
 export function getEventPage(slug: string): EventPage | undefined {

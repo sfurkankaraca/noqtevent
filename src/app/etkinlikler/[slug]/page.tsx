@@ -50,7 +50,7 @@ export default async function EventLandingPage({ params }: Props) {
       "@type": "LocalBusiness",
       name: "NOQT Deneyim Stüdyosu",
       url: BASE,
-      areaServed: ["İstanbul", "İzmir", "Ankara", "Türkiye"],
+      areaServed: ["Kayseri", "Nevşehir", "Kapadokya", "Türkiye"],
       address: { "@type": "PostalAddress", addressCountry: "TR" },
     },
     serviceType: page.title,

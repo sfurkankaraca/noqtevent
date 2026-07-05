@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
         destination: "/etkinlikler/bekarliga-veda-bride",
         permanent: true,
       },
+      // /deneyimler/* → /etkinlikler/* konsolidasyonu (keyword cannibalization giderildi)
+      { source: "/deneyimler/dugun", destination: "/etkinlikler/dugun-dj", permanent: true },
+      { source: "/deneyimler/kurumsal", destination: "/etkinlikler/kurumsal-etkinlik", permanent: true },
+      { source: "/deneyimler/acilis", destination: "/etkinlikler/acilis-lansman", permanent: true },
+      { source: "/deneyimler/ozel-parti", destination: "/etkinlikler/ozel-parti", permanent: true },
     ];
   },
   async headers() {
