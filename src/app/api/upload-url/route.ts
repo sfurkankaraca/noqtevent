@@ -23,16 +23,22 @@ const ALLOWED_FOLDERS = [
   "journal",
   "other",
   "bookings/delivery",
+  "invitations/covers",
+  "invitations/seating",
 ];
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg", "image/jpg", "image/png", "image/webp",
   "image/gif", "image/avif",
+  "image/heic", "image/heif",
   "video/mp4", "video/webm", "video/quicktime",
 ];
 
 // Public folders don't require auth (used in artist/partner signup forms)
 const PUBLIC_FOLDERS = ["partners/logos", "partners/photos", "artists/photos", "artists/videos"];
+
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15 MB
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500 MB
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -41,10 +47,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Çok fazla istek." }, { status: 429 });
   }
 
-  const { folder, filename, contentType } = await req.json();
+  const { folder, filename, contentType, size } = await req.json();
 
   if (!folder || !filename || !contentType) {
     return NextResponse.json({ error: "Eksik parametre." }, { status: 400 });
+  }
+
+  // Boyut kontrolü — size gönderilmediyse (eski çağıranlar) atlanır
+  if (typeof size === "number") {
+    const maxSize = contentType.startsWith("video/") ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    if (size > maxSize) {
+      return NextResponse.json({ error: `Dosya boyutu ${maxSize / 1024 / 1024} MB limitini aşıyor.` }, { status: 400 });
+    }
   }
 
   // Folder allowlist

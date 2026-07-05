@@ -33,8 +33,21 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
   // Memory Drive — mevcut değeri koru, alternatif olarak var olan bir etkinliğe bağla
   const [memorySlugInput, setMemorySlugInput] = useState("");
 
-  // Yükleme yüzdesi göstermek için fetch yerine XHR kullanır
-  function uploadFile(
+  // Bazı tarayıcılar HEIC/HEIF (iPhone fotoğrafları) için file.type'ı boş bırakır
+  const EXT_MIME: Record<string, string> = {
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
+    gif: "image/gif", avif: "image/avif", heic: "image/heic", heif: "image/heif",
+  };
+  function mimeFor(file: File): string {
+    if (file.type) return file.type;
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    return EXT_MIME[ext] ?? "";
+  }
+
+  // Dosya tarayıcıdan doğrudan Supabase Storage'a yüklenir (imzalı URL).
+  // Sunucu üzerinden geçirmek (eski /api/upload) Vercel'in ~4.5MB fonksiyon
+  // body limitine takılıyordu — büyük PNG/JPEG'ler sessizce 413 ile reddediliyordu.
+  async function uploadFile(
     file: File,
     folder: string,
     setUrl: (u: string) => void,
@@ -43,36 +56,40 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
   ) {
     setError(null);
     setProgress(0);
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("folder", folder);
-
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/upload");
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      setProgress(null);
-      try {
-        const json = JSON.parse(xhr.responseText);
-        if (xhr.status >= 200 && xhr.status < 300 && json.url) {
-          setUrl(json.url);
-          if (json.isHeic) {
-            setError("Yüklendi, ancak bu HEIC (iPhone) formatı bazı tarayıcılarda önizlenemeyebilir. Sorun yaşarsanız JPEG/PNG olarak tekrar yükleyin.");
-          }
-        } else {
-          setError(json.error || "Yükleme başarısız oldu.");
-        }
-      } catch {
-        setError("Yükleme başarısız oldu.");
+    try {
+      const contentType = mimeFor(file);
+      const presignRes = await fetch("/api/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder, filename: file.name, contentType, size: file.size }),
+      });
+      const presign = await presignRes.json();
+      if (!presignRes.ok || !presign.signedUrl) {
+        throw new Error(presign.error || "Yükleme başlatılamadı.");
       }
-    };
-    xhr.onerror = () => {
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", presign.signedUrl);
+        xhr.setRequestHeader("Content-Type", contentType);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
+        };
+        xhr.onload = () =>
+          xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Yükleme hatası (${xhr.status})`));
+        xhr.onerror = () => reject(new Error("Bağlantı hatası — tekrar deneyin."));
+        xhr.send(file);
+      });
+
+      setUrl(presign.publicUrl);
+      if (contentType === "image/heic" || contentType === "image/heif") {
+        setError("Yüklendi, ancak bu HEIC (iPhone) formatı bazı tarayıcılarda önizlenemeyebilir. Sorun yaşarsanız JPEG/PNG olarak tekrar yükleyin.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Yükleme başarısız oldu.");
+    } finally {
       setProgress(null);
-      setError("Bağlantı hatası — tekrar deneyin.");
-    };
-    xhr.send(fd);
+    }
   }
 
   function addTable() {
