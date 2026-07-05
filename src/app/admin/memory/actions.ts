@@ -34,18 +34,27 @@ export async function upsertMemoryEvent(formData: FormData): Promise<{ id: strin
   const visibilityRaw = formData.get("gallery_visibility") as string | null;
   const gallery_visibility = visibilityRaw === "couple" ? "couple" : "guests";
 
-  const payload = {
+  const base = {
     slug,
     title,
     description: (formData.get("description") as string) || null,
     is_active: formData.get("is_active") === "on",
-    gallery_visibility,
   };
+  // Galeri sütunları migration'a bağlı; yoksa yazma hata verir, o alanlar atlanır
+  const gallery_token = randomBytes(9).toString("hex");
+  const payload = { ...base, gallery_visibility };
+
+  // gallery_* sütunu bulunamadı hatasında (migration çalışmamış) o alanları at
+  const isMissingGalleryCol = (msg?: string) =>
+    !!msg && (msg.includes("gallery_visibility") || msg.includes("gallery_token"));
 
   const supabase = createServiceClient();
 
   if (id) {
-    const { error } = await supabase.from("memory_events").update(payload).eq("id", id);
+    let { error } = await supabase.from("memory_events").update(payload).eq("id", id);
+    if (error && isMissingGalleryCol(error.message)) {
+      ({ error } = await supabase.from("memory_events").update(base).eq("id", id));
+    }
     if (error) {
       throw new Error(
         error.code === "23505" ? `Bu URL (${slug}) zaten kullanımda. Farklı bir slug deneyin.` : error.message
@@ -56,13 +65,14 @@ export async function upsertMemoryEvent(formData: FormData): Promise<{ id: strin
     return { id };
   }
 
-  // Özel galeri linki için token üret (couple moduna geçildiğinde hazır olsun)
-  const gallery_token = randomBytes(9).toString("hex");
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("memory_events")
     .insert({ ...payload, gallery_token })
     .select("id")
     .single();
+  if (error && isMissingGalleryCol(error.message)) {
+    ({ data, error } = await supabase.from("memory_events").insert(base).select("id").single());
+  }
   if (error || !data) {
     throw new Error(
       error?.code === "23505" ? `Bu URL (${slug}) zaten kullanımda. Farklı bir slug deneyin.` : error?.message ?? "Etkinlik oluşturulamadı."

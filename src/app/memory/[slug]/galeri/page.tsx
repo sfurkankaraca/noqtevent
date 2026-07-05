@@ -22,9 +22,11 @@ export default async function GalleryPage({ params, searchParams }: Props) {
   const { k } = await searchParams;
   const supabase = createServiceClient();
 
+  // select("*") — gallery_visibility/gallery_token migration'ı çalışmamış olabilir;
+  // eksik sütun seçmek sorguyu hataya düşürür. * ile var olan sütunlar döner.
   const { data: event } = await supabase
     .from("memory_events")
-    .select("id, slug, title, gallery_visibility, gallery_token")
+    .select("*")
     .eq("slug", slug)
     .eq("is_active", true)
     .single();

@@ -16,9 +16,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function MemoryUploadPage({ params }: Props) {
   const { slug } = await params;
   const supabase = createServiceClient();
+  // select("*") — gallery_visibility migration'ı çalışmamışsa eksik sütun sorguyu bozar
   const { data: event } = await supabase
     .from("memory_events")
-    .select("id, slug, title, description, gallery_visibility")
+    .select("*")
     .eq("slug", slug)
     .eq("is_active", true)
     .single();
