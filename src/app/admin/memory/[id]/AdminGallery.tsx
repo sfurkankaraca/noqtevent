@@ -12,6 +12,7 @@ type Upload = {
   file_name?: string | null;
   file_size?: number | null;
   uploader_name?: string | null;
+  youtube_url?: string | null;
   created_at: string;
 };
 
@@ -42,6 +43,8 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
   const [items, setItems] = useState(uploads);
   const [lightbox, setLightbox] = useState<Upload | null>(null);
   const [pending, startTransition] = useTransition();
+  const [ytBusy, setYtBusy] = useState<string | null>(null);
+  const [ytError, setYtError] = useState<string | null>(null);
 
   function handleDelete(upload: Upload) {
     if (!confirm("Bu dosyayı sil?")) return;
@@ -49,6 +52,26 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
       await deleteUpload(upload.id, upload.file_path);
       setItems((prev) => prev.filter((u) => u.id !== upload.id));
     });
+  }
+
+  async function moveToYoutube(upload: Upload) {
+    if (!confirm("Bu video YouTube'a (unlisted) taşınacak ve R2'deki kopyası silinecek. Devam edilsin mi?")) return;
+    setYtError(null);
+    setYtBusy(upload.id);
+    try {
+      const res = await fetch("/api/admin/memory-to-youtube", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uploadId: upload.id }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Taşıma başarısız");
+      setItems((prev) => prev.map((u) => (u.id === upload.id ? { ...u, youtube_url: j.youtubeUrl } : u)));
+    } catch (e) {
+      setYtError(e instanceof Error ? e.message : "Taşıma başarısız");
+    } finally {
+      setYtBusy(null);
+    }
   }
 
   const images = items.filter((u) => u.file_type === "image");
@@ -125,10 +148,17 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
           <p className="text-xs font-medium text-muted-foreground tracking-wide uppercase mb-3">
             Videolar ({videos.length})
           </p>
+          {ytError && <p className="text-xs text-red-600 mb-2">{ytError}</p>}
           <div className="space-y-3">
             {videos.map((u) => (
               <div key={u.id} className="bg-white border border-border rounded-xl p-4 flex items-center gap-4">
-                <video src={mediaProxyUrl(u.file_path)} className="w-32 h-20 object-cover rounded-lg bg-secondary" preload="metadata" />
+                {u.youtube_url ? (
+                  <div className="w-32 h-20 rounded-lg bg-black flex items-center justify-center text-white/70 text-[10px] text-center px-1">
+                    ▶ YouTube&apos;da
+                  </div>
+                ) : (
+                  <video src={mediaProxyUrl(u.file_path)} className="w-32 h-20 object-cover rounded-lg bg-secondary" preload="metadata" />
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{u.file_name ?? "video"}</p>
                   {u.uploader_name && <p className="text-xs text-muted-foreground mt-0.5">{u.uploader_name}</p>}
@@ -137,13 +167,33 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
                   </p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
-                  <a
-                    href={mediaProxyUrl(u.file_path)}
-                    download={u.file_name ?? true}
-                    className="text-xs border border-border px-3 py-1.5 rounded-full text-muted-foreground hover:border-foreground/40 transition-colors"
-                  >
-                    İndir
-                  </a>
+                  {u.youtube_url ? (
+                    <a
+                      href={u.youtube_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs border border-border px-3 py-1.5 rounded-full text-muted-foreground hover:border-foreground/40 transition-colors"
+                    >
+                      YouTube ↗
+                    </a>
+                  ) : (
+                    <>
+                      <a
+                        href={mediaProxyUrl(u.file_path)}
+                        download={u.file_name ?? true}
+                        className="text-xs border border-border px-3 py-1.5 rounded-full text-muted-foreground hover:border-foreground/40 transition-colors"
+                      >
+                        İndir
+                      </a>
+                      <button
+                        onClick={() => moveToYoutube(u)}
+                        disabled={ytBusy === u.id}
+                        className="text-xs border border-border px-3 py-1.5 rounded-full text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                      >
+                        {ytBusy === u.id ? "Taşınıyor…" : "YouTube'a taşı"}
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => handleDelete(u)}
                     disabled={pending}

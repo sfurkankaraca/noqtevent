@@ -7,11 +7,18 @@ type Upload = {
   id: string;
   file_url: string;
   display_url?: string; // proxy URL — img/video görüntülemesi için (indirmeler file_url)
+  youtube_url?: string | null; // video YouTube'a taşındıysa gömülü oynatıcı
   file_type: string;
   file_name?: string | null;
   uploader_name?: string | null;
   created_at: string;
 };
+
+// YouTube watch/short URL'inden gömülü (embed) URL üretir
+function youtubeEmbed(url: string): string | null {
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+  return m ? `https://www.youtube.com/embed/${m[1]}` : null;
+}
 
 function downloadUrl(url: string, name: string) {
   return `/api/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`;
@@ -141,27 +148,44 @@ export default function GalleryClient({
           <div className="mt-8">
             <p className="text-white/20 text-[10px] tracking-[0.25em] uppercase mb-4 px-2">Videolar ({videos.length})</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {videos.map((u) => (
-                <div key={u.id} className="rounded-xl overflow-hidden bg-white/5">
-                  <video
-                    src={u.display_url ?? u.file_url}
-                    controls
-                    className="w-full"
-                    preload="metadata"
-                  />
-                  <div className="flex items-center justify-between px-3 py-2">
-                    {u.uploader_name ? (
-                      <p className="text-white/40 text-xs">{u.uploader_name}</p>
-                    ) : <span />}
-                    <a
-                      href={downloadUrl(u.file_url, u.file_name ?? "video.mp4")}
-                      className="text-white/40 hover:text-white/70 text-xs transition-colors"
-                    >
-                      ⬇ İndir
-                    </a>
+              {videos.map((u) => {
+                const embed = u.youtube_url ? youtubeEmbed(u.youtube_url) : null;
+                return (
+                  <div key={u.id} className="rounded-xl overflow-hidden bg-white/5">
+                    {embed ? (
+                      <div className="relative w-full aspect-video">
+                        <iframe
+                          src={embed}
+                          className="absolute inset-0 w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          title={u.file_name ?? "video"}
+                        />
+                      </div>
+                    ) : (
+                      <video
+                        src={u.display_url ?? u.file_url}
+                        controls
+                        className="w-full"
+                        preload="metadata"
+                      />
+                    )}
+                    <div className="flex items-center justify-between px-3 py-2">
+                      {u.uploader_name ? (
+                        <p className="text-white/40 text-xs">{u.uploader_name}</p>
+                      ) : <span />}
+                      {!embed && (
+                        <a
+                          href={downloadUrl(u.file_url, u.file_name ?? "video.mp4")}
+                          className="text-white/40 hover:text-white/70 text-xs transition-colors"
+                        >
+                          ⬇ İndir
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import type { Readable } from "stream";
 
 export const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME ?? "noqt-memory";
 
@@ -36,4 +37,10 @@ export async function uploadToR2(
 
 export async function deleteFromR2(path: string): Promise<void> {
   await r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: path }));
+}
+
+// R2 nesnesini Node stream olarak döndürür (YouTube'a stream ederek yüklemek için)
+export async function getR2Stream(path: string): Promise<Readable> {
+  const res = await r2.send(new GetObjectCommand({ Bucket: R2_BUCKET, Key: path }));
+  return res.Body as Readable;
 }
