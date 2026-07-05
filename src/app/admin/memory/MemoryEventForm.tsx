@@ -67,6 +67,41 @@ export default function MemoryEventForm({ event }: { event?: Record<string, any>
         </label>
       </div>
 
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
+        <div>
+          <h2 className="font-medium text-foreground">Galeri Görünürlüğü</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Yüklenen fotoğrafları kimler görebilir?</p>
+        </div>
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="radio"
+            name="gallery_visibility"
+            value="guests"
+            defaultChecked={(event?.gallery_visibility ?? "guests") !== "couple"}
+            className="w-4 h-4 mt-0.5"
+          />
+          <span className="text-sm text-foreground">
+            Misafirler de görebilir
+            <span className="block text-xs text-muted-foreground">Yükleme sayfasında &quot;Galeriyi görüntüle&quot; linki gösterilir; herkes galeriyi açabilir.</span>
+          </span>
+        </label>
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="radio"
+            name="gallery_visibility"
+            value="couple"
+            defaultChecked={event?.gallery_visibility === "couple"}
+            className="w-4 h-4 mt-0.5"
+          />
+          <span className="text-sm text-foreground">
+            Sadece gelin &amp; damat (özel)
+            <span className="block text-xs text-muted-foreground">Misafirler yükler ama galeriyi göremez. Çifte verilen özel link ile açılır — link etkinlik detay sayfasında.</span>
+          </span>
+        </label>
+      </div>
+
       <button
         type="submit"
         disabled={pending}

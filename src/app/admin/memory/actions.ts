@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { deleteFromR2 } from "@/lib/r2";
@@ -30,11 +31,15 @@ export async function upsertMemoryEvent(formData: FormData): Promise<{ id: strin
   if (!title) throw new Error("Etkinlik adı zorunludur.");
   if (!slug || !SLUG_RE.test(slug)) throw new Error("Geçerli bir URL (slug) girin — yalnızca harf, rakam ve tire.");
 
+  const visibilityRaw = formData.get("gallery_visibility") as string | null;
+  const gallery_visibility = visibilityRaw === "couple" ? "couple" : "guests";
+
   const payload = {
     slug,
     title,
     description: (formData.get("description") as string) || null,
     is_active: formData.get("is_active") === "on",
+    gallery_visibility,
   };
 
   const supabase = createServiceClient();
@@ -51,7 +56,13 @@ export async function upsertMemoryEvent(formData: FormData): Promise<{ id: strin
     return { id };
   }
 
-  const { data, error } = await supabase.from("memory_events").insert(payload).select("id").single();
+  // Özel galeri linki için token üret (couple moduna geçildiğinde hazır olsun)
+  const gallery_token = randomBytes(9).toString("hex");
+  const { data, error } = await supabase
+    .from("memory_events")
+    .insert({ ...payload, gallery_token })
+    .select("id")
+    .single();
   if (error || !data) {
     throw new Error(
       error?.code === "23505" ? `Bu URL (${slug}) zaten kullanımda. Farklı bir slug deneyin.` : error?.message ?? "Etkinlik oluşturulamadı."

@@ -37,7 +37,11 @@ export default async function MemoryEventAdminPage({ params }: Props) {
   const videos = (uploads ?? []).filter((u) => u.file_type === "video");
 
   const uploadLink = `https://www.noqt.events/memory/${ev.slug}`;
-  const galleryLink = `https://www.noqt.events/memory/${ev.slug}/galeri`;
+  const isCoupleOnly = ev.gallery_visibility === "couple";
+  // Özel galeride link token içerir; herkese açık galeride sade link
+  const galleryLink = isCoupleOnly && ev.gallery_token
+    ? `https://www.noqt.events/memory/${ev.slug}/galeri?k=${ev.gallery_token}`
+    : `https://www.noqt.events/memory/${ev.slug}/galeri`;
 
   return (
     <div className="p-8 max-w-5xl space-y-8">
@@ -81,6 +85,19 @@ export default async function MemoryEventAdminPage({ params }: Props) {
         </div>
         <p className="text-xs text-muted-foreground mt-2">Bu linki veya QR kodu misafirlerinizle paylaşın — hesap gerekmez.</p>
       </div>
+
+      {/* Özel galeri linki — yalnızca couple modunda */}
+      {isCoupleOnly && (
+        <div className="bg-white border border-border rounded-2xl p-6">
+          <p className="text-xs font-medium text-muted-foreground tracking-wide uppercase mb-1">Çiftle Paylaş — Özel Galeri</p>
+          <p className="text-xs text-muted-foreground mb-3">
+            Galeri misafirlere kapalı. Bu özel linki yalnızca gelin &amp; damat ile paylaşın — link olmadan fotoğraflar görüntülenemez.
+          </p>
+          <code className="block bg-secondary rounded-xl px-4 py-3 text-sm font-mono text-foreground break-all">
+            {galleryLink}
+          </code>
+        </div>
+      )}
 
       {/* Yüklemeler */}
       {(uploads ?? []).length > 0 ? (

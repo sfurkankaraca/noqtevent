@@ -18,7 +18,7 @@ export default async function MemoryUploadPage({ params }: Props) {
   const supabase = createServiceClient();
   const { data: event } = await supabase
     .from("memory_events")
-    .select("id, slug, title, description")
+    .select("id, slug, title, description, gallery_visibility")
     .eq("slug", slug)
     .eq("is_active", true)
     .single();

@@ -25,10 +25,26 @@ function isHeicFile(file: File): boolean {
   return ext === "heic" || ext === "heif" || mimeFor(file).includes("heic") || mimeFor(file).includes("heif");
 }
 
+// iPhone fotoğrafları HEIC formatında gelir; tarayıcıların çoğu önizleyemez.
+// Yüklemeden önce JPEG'e çevirerek galeride her cihazda görünmelerini sağlıyoruz.
+// Dönüşüm başarısız olursa (ör. bozuk dosya) orijinal HEIC'i olduğu gibi yükleriz.
+async function toUploadable(file: File): Promise<File> {
+  if (!isHeicFile(file)) return file;
+  try {
+    const heic2any = (await import("heic2any")).default;
+    const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+    const blob = Array.isArray(converted) ? converted[0] : converted;
+    const newName = file.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
+    return new File([blob], newName, { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
 export default function MemoryUploadClient({
   event,
 }: {
-  event: { id: string; slug: string; title: string; description?: string | null };
+  event: { id: string; slug: string; title: string; description?: string | null; gallery_visibility?: string | null };
 }) {
   const [name, setName] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -56,7 +72,8 @@ export default function MemoryUploadClient({
     const results: UploadedFile[] = [];
     const failed: string[] = [];
 
-    for (const file of arr) {
+    for (const original of arr) {
+      const file = await toUploadable(original);
       try {
         const contentType = mimeFor(file);
         const presignRes = await fetch("/api/memory/upload-url", {
@@ -267,15 +284,17 @@ export default function MemoryUploadClient({
           </div>
         )}
 
-        {/* Galeri linki */}
-        <div className="pt-4 border-t border-white/10 text-center">
-          <Link
-            href={`/memory/${event.slug}/galeri`}
-            className="text-white/30 text-xs hover:text-white/50 transition-colors"
-          >
-            Galeriyi görüntüle →
-          </Link>
-        </div>
+        {/* Galeri linki — yalnızca misafirlere açık galeriler için gösterilir */}
+        {event.gallery_visibility !== "couple" && (
+          <div className="pt-4 border-t border-white/10 text-center">
+            <Link
+              href={`/memory/${event.slug}/galeri`}
+              className="text-white/30 text-xs hover:text-white/50 transition-colors"
+            >
+              Galeriyi görüntüle →
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
