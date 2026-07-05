@@ -1,6 +1,7 @@
 "use client";
 
-import { useTransition, useState, useRef } from "react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { upsertInvitation } from "./actions";
 
@@ -8,16 +9,20 @@ type Table = { name: string; capacity: number; guests: string[] };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function InvitationForm({ invitation }: { invitation?: Record<string, any> }) {
-  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Cover photo
   const [coverUrl, setCoverUrl] = useState<string>(invitation?.cover_photo_url ?? "");
-  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverProgress, setCoverProgress] = useState<number | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
   const coverRef = useRef<HTMLInputElement>(null);
 
   // Seating plan image
   const [seatingUrl, setSeatingUrl] = useState<string>(invitation?.seating_plan_url ?? "");
-  const [seatingUploading, setSeatingUploading] = useState(false);
+  const [seatingProgress, setSeatingProgress] = useState<number | null>(null);
+  const [seatingError, setSeatingError] = useState<string | null>(null);
   const seatingRef = useRef<HTMLInputElement>(null);
 
   // Seating tables
@@ -25,20 +30,46 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
     Array.isArray(invitation?.seating_tables) ? invitation.seating_tables : []
   );
 
-  async function uploadFile(
+  // Memory Drive — mevcut değeri koru, alternatif olarak var olan bir etkinliğe bağla
+  const [memorySlugInput, setMemorySlugInput] = useState("");
+
+  // Yükleme yüzdesi göstermek için fetch yerine XHR kullanır
+  function uploadFile(
     file: File,
     folder: string,
     setUrl: (u: string) => void,
-    setLoading: (v: boolean) => void
+    setProgress: (p: number | null) => void,
+    setError: (e: string | null) => void
   ) {
-    setLoading(true);
+    setError(null);
+    setProgress(0);
     const fd = new FormData();
     fd.append("file", file);
     fd.append("folder", folder);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const json = await res.json();
-    if (json.url) setUrl(json.url);
-    setLoading(false);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/upload");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      setProgress(null);
+      try {
+        const json = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300 && json.url) {
+          setUrl(json.url);
+        } else {
+          setError(json.error || "Yükleme başarısız oldu.");
+        }
+      } catch {
+        setError("Yükleme başarısız oldu.");
+      }
+    };
+    xhr.onerror = () => {
+      setProgress(null);
+      setError("Bağlantı hatası — tekrar deneyin.");
+    };
+    xhr.send(fd);
   }
 
   function addTable() {
@@ -58,13 +89,25 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
     setTables((t) => t.filter((_, idx) => idx !== i));
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setFormError(null);
     const fd = new FormData(e.currentTarget);
     fd.set("cover_photo_url", coverUrl);
     fd.set("seating_plan_url", seatingUrl);
     fd.set("seating_tables", JSON.stringify(tables));
-    startTransition(() => upsertInvitation(fd));
+    fd.set("existing_memory_drive_url", invitation?.memory_drive_url ?? "");
+    if (memorySlugInput.trim()) fd.set("memory_drive_manual", memorySlugInput.trim());
+
+    setPending(true);
+    try {
+      await upsertInvitation(fd);
+      router.push("/admin/davetiyeler");
+      router.refresh();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Bir hata oluştu");
+      setPending(false);
+    }
   }
 
   const inp = "w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40";
@@ -73,6 +116,10 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {invitation?.id && <input type="hidden" name="id" value={invitation.id} />}
+
+      {formError && (
+        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{formError}</p>
+      )}
 
       {/* Temel */}
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
@@ -132,8 +179,16 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
               <p className="text-xs text-muted-foreground/60">JPG, PNG, WEBP · Maks 15MB</p>
             </>
           )}
-          {coverUploading && <p className="text-xs text-muted-foreground">Yükleniyor…</p>}
+          {coverProgress !== null && (
+            <div className="w-full max-w-xs space-y-1">
+              <div className="w-full bg-secondary rounded-full h-1.5">
+                <div className="bg-foreground h-1.5 rounded-full transition-all duration-200" style={{ width: `${coverProgress}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">Yükleniyor… %{coverProgress}</p>
+            </div>
+          )}
         </div>
+        {coverError && <p className="text-xs text-red-600">{coverError}</p>}
         <input
           ref={coverRef}
           type="file"
@@ -141,7 +196,7 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) uploadFile(f, "invitations/covers", setCoverUrl, setCoverUploading);
+            if (f) uploadFile(f, "invitations/covers", setCoverUrl, setCoverProgress, setCoverError);
           }}
         />
         {coverUrl && (
@@ -211,8 +266,16 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
                 <p className="text-xs text-muted-foreground/60">Misafirler davetiyede görebilir</p>
               </>
             )}
-            {seatingUploading && <p className="text-xs text-muted-foreground">Yükleniyor…</p>}
+            {seatingProgress !== null && (
+              <div className="w-full max-w-xs space-y-1">
+                <div className="w-full bg-secondary rounded-full h-1.5">
+                  <div className="bg-foreground h-1.5 rounded-full transition-all duration-200" style={{ width: `${seatingProgress}%` }} />
+                </div>
+                <p className="text-xs text-muted-foreground text-center">Yükleniyor… %{seatingProgress}</p>
+              </div>
+            )}
           </div>
+          {seatingError && <p className="text-xs text-red-600 mt-1">{seatingError}</p>}
           <input
             ref={seatingRef}
             type="file"
@@ -220,7 +283,7 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) uploadFile(f, "invitations/seating", setSeatingUrl, setSeatingUploading);
+              if (f) uploadFile(f, "invitations/seating", setSeatingUrl, setSeatingProgress, setSeatingError);
             }}
           />
           {seatingUrl && (
@@ -306,13 +369,34 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
             <p className="text-xs text-muted-foreground">Misafirler bu linke fotoğraf/video yükleyebilir. Galeri Admin → Memory Drive bölümünde görünür.</p>
           </div>
         ) : (
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" name="create_memory_drive" className="w-4 h-4 rounded mt-0.5" />
-            <div>
-              <span className="text-sm text-foreground">Memory Drive oluştur</span>
-              <p className="text-xs text-muted-foreground mt-0.5">Misafirlerin fotoğraf ve video yükleyebileceği özel bir klasör otomatik oluşturulur.</p>
+          <div className="space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" name="create_memory_drive" className="w-4 h-4 rounded mt-0.5" disabled={!!memorySlugInput.trim()} />
+              <div>
+                <span className="text-sm text-foreground">Yeni Memory Drive oluştur</span>
+                <p className="text-xs text-muted-foreground mt-0.5">Misafirlerin fotoğraf ve video yükleyebileceği özel bir klasör otomatik oluşturulur.</p>
+              </div>
+            </label>
+
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">veya</span>
+              <div className="h-px flex-1 bg-border" />
             </div>
-          </label>
+
+            <div>
+              <label className={lbl}>Mevcut bir Memory Drive’a bağla</label>
+              <input
+                value={memorySlugInput}
+                onChange={(e) => setMemorySlugInput(e.target.value)}
+                placeholder="noqt.events/memory/ayse-ali veya ayse-ali"
+                className={inp}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Admin → Memory Drive panelinde daha önce oluşturduysanız, URL’sini veya slug’ını buraya yapıştırın.
+              </p>
+            </div>
+          </div>
         )}
       </div>
 

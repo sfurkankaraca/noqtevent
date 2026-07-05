@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 
-type UploadedFile = { url: string; type: "image" | "video"; name: string };
+type UploadedFile = { url: string; type: "image" | "video"; name: string; isHeic: boolean };
 
 // Bazı tarayıcılar (özellikle HEIC/MOV için) file.type'ı boş bırakır — uzantıdan tamamla
 const EXT_MIME: Record<string, string> = {
@@ -16,6 +16,13 @@ function mimeFor(file: File): string {
   if (file.type) return file.type;
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   return EXT_MIME[ext] ?? "";
+}
+
+// Çoğu masaüstü tarayıcı (Chrome, Firefox) HEIC/HEIF'i <img> içinde render edemez —
+// bu dosyalar için önizleme yerine ikon gösteriyoruz ki kırık görsel simgesi çıkmasın
+function isHeicFile(file: File): boolean {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  return ext === "heic" || ext === "heif" || mimeFor(file).includes("heic") || mimeFor(file).includes("heif");
 }
 
 export default function MemoryUploadClient({
@@ -101,7 +108,7 @@ export default function MemoryUploadClient({
           throw new Error(j.error || "Kayıt oluşturulamadı");
         }
 
-        results.push({ url: presign.publicUrl, type: presign.type, name: file.name });
+        results.push({ url: presign.publicUrl, type: presign.type, name: file.name, isHeic: isHeicFile(file) });
       } catch (err) {
         failed.push(`${file.name}: ${err instanceof Error ? err.message : "Bilinmeyen hata"}`);
       }
@@ -211,16 +218,34 @@ export default function MemoryUploadClient({
             <div className="grid grid-cols-3 gap-2">
               {files.map((f, i) => (
                 <div key={i} className="relative aspect-square rounded-xl overflow-hidden bg-white/8">
-                  {f.type === "image" ? (
+                  {f.type === "image" && !f.isHeic ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/50">
+                    <img
+                      src={f.url}
+                      alt={f.name}
+                      className="w-full h-full object-cover"
+                      // Tarayıcı görseli render edemezse (ör. beklenmeyen format) kırık ikon yerine
+                      // yerine geçen ikonu göster
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        e.currentTarget.nextElementSibling?.classList.remove("hidden");
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-full h-full flex-col items-center justify-center gap-1 ${f.type === "image" && !f.isHeic ? "hidden" : "flex"}`}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/50">
+                      {f.type === "video" ? (
                         <polygon points="5 3 19 12 5 21 5 3"/>
-                      </svg>
-                    </div>
-                  )}
+                      ) : (
+                        <>
+                          <rect x="3" y="3" width="18" height="18" rx="2"/>
+                          <circle cx="8.5" cy="8.5" r="1.5"/>
+                          <polyline points="21 15 16 10 5 21"/>
+                        </>
+                      )}
+                    </svg>
+                    {f.isHeic && <span className="text-white/40 text-[9px] px-1">Yüklendi ✓</span>}
+                  </div>
                   <div className="absolute bottom-1 right-1 bg-black/60 rounded-full w-5 h-5 flex items-center justify-center">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12"/>

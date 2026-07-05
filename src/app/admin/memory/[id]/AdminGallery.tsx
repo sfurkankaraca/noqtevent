@@ -20,6 +20,23 @@ function formatSize(bytes?: number | null) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+// Çoğu masaüstü tarayıcı HEIC/HEIF'i <img> içinde render edemez —
+// kırık görsel yerine "önizleme yok" ikonu göster
+function isHeicUpload(u: { file_name?: string | null; file_url: string }): boolean {
+  const ext = (u.file_name ?? u.file_url).split(".").pop()?.toLowerCase() ?? "";
+  return ext === "heic" || ext === "heif";
+}
+
+function PhotoFallbackIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  );
+}
+
 export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
   const [items, setItems] = useState(uploads);
   const [lightbox, setLightbox] = useState<Upload | null>(null);
@@ -47,14 +64,28 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
             {images.map((u) => (
               <div key={u.id} className="relative aspect-square rounded-xl overflow-hidden bg-secondary group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={u.file_url}
-                  alt={u.file_name ?? ""}
-                  className="w-full h-full object-cover cursor-pointer"
-                  loading="lazy"
-                  onClick={() => setLightbox(u)}
-                />
+                {isHeicUpload(u) ? (
+                  <div
+                    className="w-full h-full flex flex-col items-center justify-center gap-1 cursor-pointer"
+                    onClick={() => setLightbox(u)}
+                  >
+                    <PhotoFallbackIcon />
+                    <span className="text-muted-foreground/60 text-[9px]">HEIC</span>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={u.file_url}
+                    alt={u.file_name ?? ""}
+                    className="w-full h-full object-cover cursor-pointer"
+                    loading="lazy"
+                    onClick={() => setLightbox(u)}
+                    onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextElementSibling?.classList.remove("hidden"); }}
+                  />
+                )}
+                <div className="hidden w-full h-full flex-col items-center justify-center gap-1 absolute inset-0 bg-secondary">
+                  <PhotoFallbackIcon />
+                </div>
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                   <a
                     href={u.file_url}
@@ -137,8 +168,21 @@ export default function AdminGallery({ uploads }: { uploads: Upload[] }) {
           onClick={() => setLightbox(null)}
         >
           <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 text-white/50 hover:text-white text-2xl w-10 h-10 flex items-center justify-center">✕</button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightbox.file_url} alt="" className="max-w-full max-h-[90vh] object-contain rounded-xl" onClick={(e) => e.stopPropagation()} />
+          {isHeicUpload(lightbox) ? (
+            <div className="flex flex-col items-center gap-3 text-white/40" onClick={(e) => e.stopPropagation()}>
+              <PhotoFallbackIcon className="w-16 h-16" />
+              <p className="text-sm">Bu dosya (HEIC) tarayıcıda önizlenemiyor — indirerek görüntüleyebilirsiniz.</p>
+            </div>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={lightbox.file_url}
+              alt=""
+              className="max-w-full max-h-[90vh] object-contain rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+            />
+          )}
           <div className="absolute bottom-6 flex items-center gap-3">
             {lightbox.uploader_name && <p className="text-white/40 text-xs">{lightbox.uploader_name}</p>}
             <a href={lightbox.file_url} download target="_blank" rel="noopener noreferrer"

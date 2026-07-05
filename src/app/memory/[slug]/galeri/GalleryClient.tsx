@@ -16,6 +16,49 @@ function downloadUrl(url: string, name: string) {
   return `/api/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`;
 }
 
+// Çoğu masaüstü tarayıcı (Chrome, Firefox) HEIC/HEIF'i <img> içinde render edemez —
+// bu dosyalar için kırık görsel yerine "önizleme yok" ikonu gösteriyoruz
+function isHeicUpload(u: Upload): boolean {
+  const ext = (u.file_name ?? u.file_url).split(".").pop()?.toLowerCase() ?? "";
+  return ext === "heic" || ext === "heif";
+}
+
+function PhotoFallbackIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  );
+}
+
+// <img> her zaman render edilir; kaynak render edilemezse (HEIC ya da hata)
+// görsel gizlenip yanındaki ikon fallback'i gösterilir
+function GalleryImage({ src, alt, className, forceIconOnly }: { src: string; alt: string; className: string; forceIconOnly: boolean }) {
+  return (
+    <>
+      {!forceIconOnly && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={alt}
+          className={className}
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+            e.currentTarget.nextElementSibling?.classList.remove("hidden");
+          }}
+        />
+      )}
+      <div className={`w-full h-full flex-col items-center justify-center gap-1 text-white/30 ${forceIconOnly ? "flex" : "hidden absolute inset-0"}`}>
+        <PhotoFallbackIcon />
+        <span className="text-[10px]">Önizleme yok</span>
+      </div>
+    </>
+  );
+}
+
 export default function GalleryClient({
   event,
   uploads,
@@ -75,12 +118,11 @@ export default function GalleryClient({
                   onClick={() => setLightbox(u)}
                   className="relative aspect-square overflow-hidden rounded-lg bg-white/5 group"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <GalleryImage
                     src={u.file_url}
                     alt={u.file_name ?? ""}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
+                    forceIconOnly={isHeicUpload(u)}
                   />
                   {u.uploader_name && (
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -136,13 +178,21 @@ export default function GalleryClient({
           >
             ✕
           </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightbox.file_url}
-            alt=""
-            className="max-w-full max-h-[90vh] object-contain rounded-xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+          {isHeicUpload(lightbox) ? (
+            <div className="flex flex-col items-center gap-3 text-white/40" onClick={(e) => e.stopPropagation()}>
+              <PhotoFallbackIcon className="w-16 h-16" />
+              <p className="text-sm">Bu dosya (HEIC) tarayıcıda önizlenemiyor — indirerek görüntüleyebilirsiniz.</p>
+            </div>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={lightbox.file_url}
+              alt=""
+              className="max-w-full max-h-[90vh] object-contain rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+            />
+          )}
           <div className="absolute bottom-6 flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
             {lightbox.uploader_name && (
               <p className="text-white/40 text-xs">{lightbox.uploader_name}</p>
