@@ -40,13 +40,14 @@ export async function upsertMemoryEvent(formData: FormData): Promise<{ id: strin
     description: (formData.get("description") as string) || null,
     is_active: formData.get("is_active") === "on",
   };
-  // Galeri sütunları migration'a bağlı; yoksa yazma hata verir, o alanlar atlanır
+  // Galeri/e-posta sütunları migration'a bağlı; yoksa yazma hata verir, o alanlar atlanır
   const gallery_token = randomBytes(9).toString("hex");
-  const payload = { ...base, gallery_visibility };
+  const couple_email = (formData.get("couple_email") as string)?.trim() || null;
+  const payload = { ...base, gallery_visibility, couple_email };
 
-  // gallery_* sütunu bulunamadı hatasında (migration çalışmamış) o alanları at
+  // gallery_*/couple_email sütunu bulunamadı hatasında (migration çalışmamış) o alanları at
   const isMissingGalleryCol = (msg?: string) =>
-    !!msg && (msg.includes("gallery_visibility") || msg.includes("gallery_token"));
+    !!msg && (msg.includes("gallery_visibility") || msg.includes("gallery_token") || msg.includes("couple_email"));
 
   const supabase = createServiceClient();
 

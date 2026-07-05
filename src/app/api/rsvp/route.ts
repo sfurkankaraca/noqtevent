@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
-import { sendRsvpConfirmation } from "@/lib/email";
+import { sendRsvpConfirmation, sendRsvpNotificationToCouple } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,10 +31,11 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Davetiye bilgilerini al (email göndermek için)
+  // Davetiye bilgilerini al (email göndermek için) — select("*") çünkü couple_email
+  // migration'ı çalışmamış olabilir; eksik sütun açık select'i hataya düşürür
   const { data: inv } = await supabase
     .from("invitations")
-    .select("bride_name, groom_name, wedding_date, venue_name, slug, memory_drive_url")
+    .select("*")
     .eq("id", invitation_id)
     .single();
 
@@ -55,9 +56,10 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Email gönder (email varsa ve davetiye bulunduysa)
+  const baseUrl = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
+
+  // Misafire onay e-postası (e-posta verdiyse ve davetiye bulunduysa)
   if (guest_email && inv) {
-    const baseUrl = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
     await sendRsvpConfirmation({
       guestName: String(guest_name).trim(),
       guestEmail: String(guest_email).trim(),
@@ -69,6 +71,20 @@ export async function POST(req: NextRequest) {
       invitationUrl: `${baseUrl}/davetiye/${inv.slug}`,
       memoryDriveUrl: inv.memory_drive_url,
     }).catch((e) => console.error("[rsvp email]", e));
+  }
+
+  // Gelin & damata her yanıtta bildirim (couple_email tanımlıysa)
+  if (inv?.couple_email) {
+    await sendRsvpNotificationToCouple({
+      coupleEmail: inv.couple_email,
+      guestName: String(guest_name).trim(),
+      attending: Boolean(attending),
+      guestCount: baseRow.guest_count,
+      message: baseRow.message,
+      brideName: inv.bride_name,
+      groomName: inv.groom_name,
+      invitationUrl: `${baseUrl}/davetiye/${inv.slug}`,
+    }).catch((e) => console.error("[rsvp couple email]", e));
   }
 
   return NextResponse.json({ ok: true });

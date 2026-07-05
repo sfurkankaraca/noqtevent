@@ -1055,3 +1055,82 @@ export async function sendReviewRequestEmail(data: {
       </div>`,
   });
 }
+
+// Virgülle ayrılmış e-posta listesini diziye çevirir
+function parseEmails(raw: string): string[] {
+  return raw.split(",").map((e) => e.trim()).filter(Boolean);
+}
+
+// Her RSVP yanıtında gelin & damata bildirim
+export async function sendRsvpNotificationToCouple(data: {
+  coupleEmail: string;
+  guestName: string;
+  attending: boolean;
+  guestCount: number;
+  message?: string | null;
+  brideName?: string | null;
+  groomName?: string | null;
+  invitationUrl?: string | null;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+  const to = parseEmails(data.coupleEmail);
+  if (!to.length) return;
+
+  const status = data.attending
+    ? `<span style="color:#16a34a;font-weight:600;">Katılıyor ✓</span>`
+    : `<span style="color:#dc2626;font-weight:600;">Katılamıyor</span>`;
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `${data.attending ? "✅" : "❌"} Yeni RSVP: ${data.guestName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">Davetiye · RSVP</p>
+        <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">Yeni bir yanıt geldi</h1>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:8px 0;color:#666;width:40%;">Misafir</td><td style="padding:8px 0;font-weight:500;">${data.guestName}</td></tr>
+          <tr><td style="padding:8px 0;color:#666;">Durum</td><td style="padding:8px 0;">${status}</td></tr>
+          <tr><td style="padding:8px 0;color:#666;">Kişi sayısı</td><td style="padding:8px 0;">${data.guestCount}</td></tr>
+          ${data.message ? `<tr><td style="padding:8px 0;color:#666;vertical-align:top;">Not</td><td style="padding:8px 0;">${data.message}</td></tr>` : ""}
+        </table>
+        ${data.invitationUrl ? `<p style="margin-top:24px;"><a href="${data.invitationUrl}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Davetiyeyi Aç →</a></p>` : ""}
+        <p style="margin-top:32px;font-size:12px;color:#999;">NOQT · Dijital Davetiye</p>
+      </div>`,
+  });
+  if (error) console.error("[email] sendRsvpNotificationToCouple failed:", error);
+}
+
+// Memory Drive'a yeni yükleme(ler) olduğunda gelin & damata bildirim + galeri linki
+export async function sendMemoryUploadNotification(data: {
+  coupleEmail: string;
+  eventTitle: string;
+  galleryUrl: string;
+  uploaderName?: string | null;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+  const to = parseEmails(data.coupleEmail);
+  if (!to.length) return;
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `📸 Memory Drive'a yeni anılar yüklendi`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:4px;">Memory Drive</p>
+        <h1 style="font-size:22px;font-weight:700;margin-bottom:12px;">${data.eventTitle}</h1>
+        <p style="font-size:15px;color:#444;line-height:1.6;">
+          ${data.uploaderName ? `<strong>${data.uploaderName}</strong> ` : "Bir misafiriniz "}
+          galerinize yeni fotoğraf/video ekledi. Aşağıdaki bağlantıdan tüm anıları görebilir ve indirebilirsiniz.
+        </p>
+        <p style="margin-top:24px;">
+          <a href="${data.galleryUrl}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Galeriyi Aç →</a>
+        </p>
+        <p style="margin-top:32px;font-size:12px;color:#999;">Bu bağlantı size özeldir — dilediğiniz zaman geri dönebilirsiniz. NOQT · Memory Drive</p>
+      </div>`,
+  });
+  if (error) console.error("[email] sendMemoryUploadNotification failed:", error);
+}

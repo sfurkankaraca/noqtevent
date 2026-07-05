@@ -445,6 +445,13 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
         <h2 className="font-medium text-foreground">RSVP</h2>
         <div>
+          <label className={lbl}>Gelin & Damat E-postası</label>
+          <input type="email" name="couple_email" defaultValue={invitation?.couple_email ?? ""} placeholder="cift@ornek.com" className={inp} />
+          <p className="text-xs text-muted-foreground mt-1">
+            Girilirse, her RSVP yanıtı ve Memory Drive yüklemesi bu adrese bildirilir. Birden fazla adres için virgülle ayırın.
+          </p>
+        </div>
+        <div>
           <label className={lbl}>Son Yanıt Tarihi</label>
           <input type="date" name="rsvp_deadline" defaultValue={invitation?.rsvp_deadline ?? ""} className={inp} />
         </div>

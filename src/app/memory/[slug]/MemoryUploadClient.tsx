@@ -139,6 +139,15 @@ export default function MemoryUploadClient({
     setFiles((f) => [...f, ...results]);
     setErrors(failed);
     setUploading(false);
+
+    // Batch başarılıysa gelin & damata bildirim (server tarafında throttle'lı)
+    if (results.length > 0) {
+      fetch("/api/memory/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_slug: event.slug, uploader_name: name.trim() || undefined }),
+      }).catch(() => {});
+    }
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -161,6 +170,24 @@ export default function MemoryUploadClient({
       </div>
 
       <div className="max-w-lg mx-auto px-6 pb-20 space-y-6">
+        {/* Misafir bilgilendirme */}
+        <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">📸</span>
+            <p className="text-sm font-medium text-white">Bu anı birlikte biriktirelim</p>
+          </div>
+          <p className="text-white/60 text-sm leading-relaxed">
+            Çektiğiniz fotoğraf ve videoları buraya yükleyerek çiftin bu özel gününü kendi
+            gözünüzden ölümsüzleştirin. Profesyonel çekimlerin yakalayamadığı o samimi anlar —
+            gülüşler, dans, kutlama — hepsi burada toplanıyor.
+          </p>
+          <ul className="mt-3 space-y-1.5 text-white/50 text-xs">
+            <li className="flex items-start gap-2"><span className="text-white/30">•</span> İstediğiniz kadar fotoğraf ve video ekleyebilirsiniz</li>
+            <li className="flex items-start gap-2"><span className="text-white/30">•</span> Hesap açmanıza gerek yok — sadece seçin ve yükleyin</li>
+            <li className="flex items-start gap-2"><span className="text-white/30">•</span> İsterseniz adınızı ekleyin, anılar size ait olarak görünsün</li>
+          </ul>
+        </div>
+
         {/* Name input */}
         <div>
           <label className="block text-[10px] tracking-[0.25em] uppercase text-white/30 mb-2">Adınız (isteğe bağlı)</label>

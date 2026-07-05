@@ -28,6 +28,7 @@ export async function upsertInvitation(formData: FormData): Promise<{ id: string
     template: formData.get("template") as string,
     bride_name,
     groom_name,
+    couple_email: (formData.get("couple_email") as string)?.trim() || null,
     wedding_date: (formData.get("wedding_date") as string) || null,
     wedding_time: (formData.get("wedding_time") as string) || null,
     venue_name: (formData.get("venue_name") as string) || null,
@@ -55,15 +56,25 @@ export async function upsertInvitation(formData: FormData): Promise<{ id: string
   // Sonucu iş öncesi bilinen id ile devam ettirebilmek için değişken
   let invitationId = id;
 
+  // couple_email migration'a bağlı; sütun yoksa o alanı atlayıp tekrar dener
+  const { couple_email, ...payloadNoEmail } = payload;
+  const isMissingCol = (msg?: string) => !!msg && msg.includes("couple_email");
+
   if (id) {
-    const { error } = await supabase.from("invitations").update(payload).eq("id", id);
+    let { error } = await supabase.from("invitations").update(payload).eq("id", id);
+    if (error && isMissingCol(error.message)) {
+      ({ error } = await supabase.from("invitations").update(payloadNoEmail).eq("id", id));
+    }
     if (error) {
       throw new Error(
         error.code === "23505" ? `Bu URL (${slug}) zaten kullanımda. Farklı bir slug deneyin.` : error.message
       );
     }
   } else {
-    const { data: inserted, error } = await supabase.from("invitations").insert(payload).select("id").single();
+    let { data: inserted, error } = await supabase.from("invitations").insert(payload).select("id").single();
+    if (error && isMissingCol(error.message)) {
+      ({ data: inserted, error } = await supabase.from("invitations").insert(payloadNoEmail).select("id").single());
+    }
     if (error || !inserted) {
       throw new Error(
         error?.code === "23505" ? `Bu URL (${slug}) zaten kullanımda. Farklı bir slug deneyin.` : error?.message ?? "Davetiye oluşturulamadı."
@@ -79,12 +90,16 @@ export async function upsertInvitation(formData: FormData): Promise<{ id: string
 
   if (!payload.memory_drive_url && createMemoryDrive) {
     const memoryUrl = `${BASE_URL}/memory/${slug}`;
-    const { error: memError } = await supabase.from("memory_events").insert({
+    const memBase = {
       slug,
       title: `${bride_name} & ${groom_name}`,
       invitation_id: invitationId,
       is_active: true,
-    });
+    };
+    let { error: memError } = await supabase.from("memory_events").insert({ ...memBase, couple_email });
+    if (memError && memError.message.includes("couple_email")) {
+      ({ error: memError } = await supabase.from("memory_events").insert(memBase));
+    }
     if (memError) {
       throw new Error(
         memError.code === "23505"

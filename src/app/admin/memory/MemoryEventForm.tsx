@@ -61,6 +61,20 @@ export default function MemoryEventForm({ event }: { event?: Record<string, any>
           />
         </div>
 
+        <div>
+          <label className={lbl}>Gelin & Damat E-postası (isteğe bağlı)</label>
+          <input
+            type="email"
+            name="couple_email"
+            defaultValue={event?.couple_email ?? ""}
+            placeholder="cift@ornek.com"
+            className={inp}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Girilirse, yeni yükleme olduğunda çifte galeri linkiyle bildirim e-postası gider. Virgülle birden fazla adres.
+          </p>
+        </div>
+
         <label className="flex items-center gap-3 cursor-pointer">
           <input type="checkbox" name="is_active" defaultChecked={event?.is_active ?? true} className="w-4 h-4 rounded" />
           <span className="text-sm text-foreground">Aktif (misafirler yükleyebilir)</span>
