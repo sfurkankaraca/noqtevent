@@ -77,6 +77,9 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  verification: {
+    yandex: "24ec483f0bd398ee",
+  },
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-icon.png",
