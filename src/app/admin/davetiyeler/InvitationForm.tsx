@@ -58,6 +58,9 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
         const json = JSON.parse(xhr.responseText);
         if (xhr.status >= 200 && xhr.status < 300 && json.url) {
           setUrl(json.url);
+          if (json.isHeic) {
+            setError("Yüklendi, ancak bu HEIC (iPhone) formatı bazı tarayıcılarda önizlenemeyebilir. Sorun yaşarsanız JPEG/PNG olarak tekrar yükleyin.");
+          }
         } else {
           setError(json.error || "Yükleme başarısız oldu.");
         }
@@ -188,7 +191,9 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
             </div>
           )}
         </div>
-        {coverError && <p className="text-xs text-red-600">{coverError}</p>}
+        {coverError && (
+          <p className={`text-xs ${coverUrl ? "text-amber-600" : "text-red-600"}`}>{coverError}</p>
+        )}
         <input
           ref={coverRef}
           type="file"
@@ -275,7 +280,9 @@ export default function InvitationForm({ invitation }: { invitation?: Record<str
               </div>
             )}
           </div>
-          {seatingError && <p className="text-xs text-red-600 mt-1">{seatingError}</p>}
+          {seatingError && (
+            <p className={`text-xs mt-1 ${seatingUrl ? "text-amber-600" : "text-red-600"}`}>{seatingError}</p>
+          )}
           <input
             ref={seatingRef}
             type="file"
