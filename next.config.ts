@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   // iyzipay dosyaları dinamik require ile yüklüyor — bundle edilemez, runtime'da node_modules'ten çalışır
@@ -25,6 +26,16 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "50mb",
     },
+  },
+  async redirects() {
+    return [
+      {
+        // Eski yazım hatalı slug — indexlenmiş URL'leri koru
+        source: "/etkinlikler/bekarlga-veda-bride",
+        destination: "/etkinlikler/bekarliga-veda-bride",
+        permanent: true,
+      },
+    ];
   },
   async headers() {
     return [
@@ -65,4 +76,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// SENTRY_AUTH_TOKEN yoksa kaynak haritası yükleme adımı sessizce atlanır
+// (build kırılmaz); Sentry organizasyon/proje bilgisi de env'den gelir.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: true,
+  disableLogger: true,
+  widenClientFileUpload: false,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+});

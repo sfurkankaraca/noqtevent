@@ -537,15 +537,23 @@ function ArtistCard({ dj, index }: { dj: Dj; index: number }) {
       </button>
 
       {/* Book CTA */}
-      <button
-        onClick={() => setBookingOpen(true)}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-foreground border-t border-border hover:bg-foreground/5 transition-colors"
-      >
-        Bu sanatçıyla planla
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-        </svg>
-      </button>
+      <div className="flex border-t border-border">
+        <button
+          onClick={() => setBookingOpen(true)}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-foreground hover:bg-foreground/5 transition-colors"
+        >
+          Bu sanatçıyla planla
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+          </svg>
+        </button>
+        <Link
+          href={`/sanatcilar/${dj.id}`}
+          className="flex items-center justify-center px-5 py-3 text-sm text-muted-foreground border-l border-border hover:bg-foreground/5 hover:text-foreground transition-colors whitespace-nowrap"
+        >
+          Profil
+        </Link>
+      </div>
 
       {/* Quick view + booking wizard */}
       <AnimatePresence>

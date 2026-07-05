@@ -4,18 +4,22 @@ import { EVENT_PAGES } from "@/lib/eventPages";
 
 const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
+// Yeni sanatçı/konsept/yazı eklendiğinde sitemap güncel kalsın
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createServiceClient();
 
+  // updated_at bazı tablolarda yok — seçilirse sorgu hata verir ve o bölüm sitemap'ten düşer
   const [
     { data: djs },
     { data: partners },
     { data: concepts },
     { data: posts },
   ] = await Promise.all([
-    supabase.from("dj_profiles").select("id, updated_at").eq("is_active", true),
-    supabase.from("partner_profiles").select("id, updated_at").eq("is_active", true),
-    supabase.from("concepts").select("slug, updated_at").eq("is_active", true),
+    supabase.from("dj_profiles").select("id").eq("is_active", true),
+    supabase.from("partner_profiles").select("id").eq("is_active", true),
+    supabase.from("concepts").select("slug").eq("is_active", true),
     supabase.from("journal_posts").select("slug, updated_at").eq("is_published", true),
   ]);
 
@@ -42,21 +46,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const djRoutes: MetadataRoute.Sitemap = (djs ?? []).map((d) => ({
     url: `${BASE}/sanatcilar/${d.id}`,
-    lastModified: d.updated_at ? new Date(d.updated_at) : undefined,
     changeFrequency: "monthly",
     priority: 0.6,
   }));
 
   const partnerRoutes: MetadataRoute.Sitemap = (partners ?? []).map((p) => ({
     url: `${BASE}/ortaklar/${p.id}`,
-    lastModified: p.updated_at ? new Date(p.updated_at) : undefined,
     changeFrequency: "monthly",
     priority: 0.6,
   }));
 
   const conceptRoutes: MetadataRoute.Sitemap = (concepts ?? []).map((c) => ({
     url: `${BASE}/konseptler/${c.slug}`,
-    lastModified: c.updated_at ? new Date(c.updated_at) : undefined,
     changeFrequency: "monthly",
     priority: 0.7,
   }));
