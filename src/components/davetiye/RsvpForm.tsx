@@ -17,8 +17,24 @@ export default function RsvpForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [count, setCount] = useState(1);
+  const [companionNames, setCompanionNames] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+
+  function handleCountChange(n: number) {
+    setCount(n);
+    // (n - 1) refakatçi ismi alanı — girilenleri korur, fazlasını kırpar
+    setCompanionNames((prev) => {
+      const needed = Math.max(0, n - 1);
+      const next = prev.slice(0, needed);
+      while (next.length < needed) next.push("");
+      return next;
+    });
+  }
+
+  function updateCompanionName(i: number, value: string) {
+    setCompanionNames((prev) => prev.map((n, idx) => (idx === i ? value : n)));
+  }
 
   const t = dark
     ? {
@@ -52,6 +68,7 @@ export default function RsvpForm({
         guest_name: name,
         guest_email: email || null,
         guest_count: count,
+        companion_names: companionNames.map((n) => n.trim()).filter(Boolean),
         attending,
         message,
       }),
@@ -145,13 +162,32 @@ export default function RsvpForm({
           <label className={`block text-xs uppercase tracking-widest mb-2 ${t.label}`}>Kaç kişi?</label>
           <select
             value={count}
-            onChange={(e) => setCount(Number(e.target.value))}
+            onChange={(e) => handleCountChange(Number(e.target.value))}
             className={`w-full px-4 py-3 rounded-xl border text-sm focus:outline-none ${t.input}`}
           >
             {[1, 2, 3, 4, 5].map((n) => (
               <option key={n} value={n}>{n} kişi</option>
             ))}
           </select>
+        </div>
+      )}
+
+      {attending && count > 1 && (
+        <div>
+          <label className={`block text-xs uppercase tracking-widest mb-2 ${t.label}`}>
+            Sizinle Gelecekler <span className={t.muted}>(isteğe bağlı)</span>
+          </label>
+          <div className="space-y-2">
+            {companionNames.map((cn, i) => (
+              <input
+                key={i}
+                value={cn}
+                onChange={(e) => updateCompanionName(i, e.target.value)}
+                placeholder={`${i + 2}. kişi — Ad Soyad`}
+                className={`w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-colors ${t.input}`}
+              />
+            ))}
+          </div>
         </div>
       )}
 

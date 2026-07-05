@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { invitation_id, guest_name, guest_email, guest_count, attending, message } = body;
+  const { invitation_id, guest_name, guest_email, guest_count, companion_names, attending, message } = body;
 
   if (!invitation_id || !guest_name || attending === undefined) {
     return NextResponse.json({ error: "Eksik alan" }, { status: 400 });
@@ -21,6 +21,13 @@ export async function POST(req: NextRequest) {
   if (guest_email && !EMAIL_RE.test(String(guest_email).trim())) {
     return NextResponse.json({ error: "Geçersiz e-posta adresi" }, { status: 400 });
   }
+
+  const cleanCompanionNames = Array.isArray(companion_names)
+    ? companion_names
+        .map((n) => String(n).trim().slice(0, 120))
+        .filter(Boolean)
+        .slice(0, 49)
+    : [];
 
   const supabase = createServiceClient();
 
@@ -31,14 +38,20 @@ export async function POST(req: NextRequest) {
     .eq("id", invitation_id)
     .single();
 
-  const { error } = await supabase.from("rsvp_responses").insert({
+  const baseRow = {
     invitation_id,
     guest_name: String(guest_name).trim().slice(0, 120),
     guest_email: guest_email ? String(guest_email).trim().slice(0, 200) : null,
     guest_count: Math.min(Math.max(Number(guest_count) || 1, 1), 50),
     attending: Boolean(attending),
     message: message ? String(message).trim().slice(0, 2000) : null,
-  });
+  };
+
+  // companion_names migration'ı henüz çalıştırılmadıysa o kolon olmadan dene
+  let { error } = await supabase.from("rsvp_responses").insert({ ...baseRow, companion_names: cleanCompanionNames });
+  if (error?.message.includes("column")) {
+    ({ error } = await supabase.from("rsvp_responses").insert(baseRow));
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

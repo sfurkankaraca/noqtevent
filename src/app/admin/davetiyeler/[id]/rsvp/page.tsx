@@ -63,6 +63,11 @@ export default async function RsvpListPage({ params }: Props) {
                   {r.attending ? `Geliyor · ${r.guest_count} kişi` : "Gelmiyor"}
                 </span>
               </div>
+              {Array.isArray(r.companion_names) && r.companion_names.length > 0 && (
+                <p className="text-muted-foreground text-xs mt-1">
+                  Beraberinde: {r.companion_names.join(", ")}
+                </p>
+              )}
               {r.message && <p className="text-muted-foreground text-xs mt-1">&ldquo;{r.message}&rdquo;</p>}
             </div>
             <p className="text-muted-foreground text-xs flex-shrink-0">
