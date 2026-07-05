@@ -36,8 +36,12 @@ export function estimateFeeRangeAcrossArtists(
   };
 }
 
+// Kaşe değerleri "bin ₺" biriminde saklanır (ör. 10 = 10.000 ₺).
+// Gösterimde tam TL'ye çevirmek için 1000 ile çarpılır.
+export const FEE_UNIT = 1000;
+
 export function formatFeeRange(range: FeeRange): string {
-  const fmt = (n: number) => n.toLocaleString("tr-TR");
+  const fmt = (n: number) => (n * FEE_UNIT).toLocaleString("tr-TR");
   if (range.min === range.max) return `${fmt(range.min)} ₺`;
   return `${fmt(range.min)}–${fmt(range.max)} ₺`;
 }

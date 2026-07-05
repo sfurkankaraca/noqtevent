@@ -719,12 +719,12 @@ export default function DjForm({ dj }: { dj?: Dj }) {
         <div>
           <h2 className="font-medium text-foreground">Kaşe Bedelleri</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Genel aralık, etkinlik türüne özel bedel girilmeyen türler için kullanılır. Planlayıcıda ve rezervasyon formunda müşteriye bu aralıklar tahmini olarak gösterilir.
+            Değerler <strong>bin ₺</strong> cinsindendir — ör. <strong>10</strong> girerseniz müşteriye <strong>10.000 ₺</strong> olarak gösterilir. Genel aralık, etkinlik türüne özel bedel girilmeyen türler için kullanılır. Planlayıcıda ve rezervasyon formunda müşteriye bu aralıklar tahmini olarak gösterilir.
           </p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Genel Aralık (₺)</label>
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Genel Aralık (bin ₺)</label>
           <div className="flex items-center gap-2">
             <input
               type="number" min={0} value={baseFeeMin} onChange={(e) => setBaseFeeMin(e.target.value)}
@@ -739,7 +739,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase">Etkinlik Türüne Özel (opsiyonel)</label>
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase">Etkinlik Türüne Özel — bin ₺ (opsiyonel)</label>
           {PLANNER_EVENT_TYPES.map((et) => {
             const range = eventTypeFees[et.id] ?? { min: 0, max: 0 };
             return (
