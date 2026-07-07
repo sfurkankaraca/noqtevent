@@ -9,7 +9,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 // presigned URL ile tarayıcıdan doğrudan R2'ye gider.
 
 const MAX_IMAGE = 20 * 1024 * 1024; // 20 MB
-const MAX_VIDEO = 500 * 1024 * 1024; // 500 MB
+const MAX_VIDEO = 200 * 1024 * 1024; // 200 MB
 const ALLOWED_MIME = [
   "image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic", "image/heif",
   "video/mp4", "video/mov", "video/quicktime", "video/webm",
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const maxSize = isVideo ? MAX_VIDEO : MAX_IMAGE;
   if (typeof size !== "number" || size <= 0 || size > maxSize) {
     return NextResponse.json(
-      { error: `Dosya boyutu çok büyük. Maks: ${isVideo ? "500MB" : "20MB"}` },
+      { error: `Dosya boyutu çok büyük. Maks: ${isVideo ? "200MB" : "20MB"}` },
       { status: 400 }
     );
   }
