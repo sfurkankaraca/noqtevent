@@ -25,7 +25,7 @@ export default function TemplateModern({ inv }: { inv: Record<string, any> }) {
           <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a2e] to-[#0d0d0d]" />
         )}
         <div className="relative z-10 max-w-2xl mx-auto px-8 pb-20 w-full">
-          <p className="text-white/40 text-xs tracking-[0.3em] uppercase mb-6">Düğün Daveti</p>
+          <p className="text-white/40 text-xs tracking-[0.3em] uppercase mb-6">Davet</p>
           <h1 className="text-6xl lg:text-8xl font-light leading-none" style={{ fontFamily: "Georgia, serif" }}>
             {inv.bride_name}
             <span className="block text-white/30 text-4xl lg:text-5xl my-3">&amp;</span>

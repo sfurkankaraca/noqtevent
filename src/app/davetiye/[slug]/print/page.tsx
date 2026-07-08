@@ -44,7 +44,7 @@ export default async function PrintPage({ params }: Props) {
         )}
 
         <p style={{ fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: "#aaa", marginBottom: 16 }}>
-          Düğün Daveti
+          Davet
         </p>
 
         <h1 style={{ fontSize: 48, fontWeight: 400, fontStyle: "italic", lineHeight: 1.2, margin: "0 0 8px" }}>

@@ -30,7 +30,7 @@ export default function TemplateClassic({ inv }: { inv: Record<string, any> }) {
           <h1 className="text-5xl lg:text-7xl font-light leading-tight" style={{ fontFamily: "Georgia, serif", fontStyle: "italic" }}>
             {inv.groom_name}
           </h1>
-          <p className="text-muted-foreground mt-4 text-sm">düğünlerine davet etmekten mutluluk duymaktadır.</p>
+          <p className="text-muted-foreground mt-4 text-sm">özel günlerine davet etmekten mutluluk duymaktadır.</p>
         </div>
 
         {/* Date & Venue */}

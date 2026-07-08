@@ -21,7 +21,7 @@ export default function TemplateMinimal({ inv }: { inv: Record<string, any> }) {
 
         {/* Title */}
         <div className="mb-16">
-          <p className="text-black/30 text-[10px] tracking-[0.4em] uppercase mb-8">Düğün Daveti</p>
+          <p className="text-black/30 text-[10px] tracking-[0.4em] uppercase mb-8">Davet</p>
           <h1 className="text-4xl lg:text-5xl font-light leading-tight">
             {inv.bride_name} <span className="text-black/25">&amp;</span> {inv.groom_name}
           </h1>
