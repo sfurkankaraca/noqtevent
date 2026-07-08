@@ -530,7 +530,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
                                 body: JSON.stringify({ profileId: dj.id, videoUrl: v.url }),
                               });
                               const j = await res.json();
-                              if (!res.ok) throw new Error(j.error || "Taşıma başarısız");
+                              if (!res.ok) throw new Error((j.error || "Taşıma başarısız") + (j.detail ? " — " + JSON.stringify(j.detail) : ""));
                               setVideos((p) => p.filter((_, idx) => idx !== i));
                               setYoutubeLinks((p) => {
                                 const cleaned = p.filter(Boolean);

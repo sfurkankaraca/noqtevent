@@ -111,7 +111,12 @@ export async function POST(req: NextRequest) {
     const friendly = msg.includes("quota")
       ? "YouTube günlük yükleme kotası doldu. Yarın tekrar deneyin."
       : msg;
-    return NextResponse.json({ error: friendly }, { status: 502 });
+    // Hata detayını genişlet — Google API errors.errors[] içinde reason/domain taşır
+    const detail = (e as { errors?: unknown; response?: { data?: unknown } })?.errors
+      ?? (e as { response?: { data?: unknown } })?.response?.data
+      ?? null;
+    console.error("[artist-video-to-youtube] insert error:", JSON.stringify(detail ?? msg));
+    return NextResponse.json({ error: friendly, detail }, { status: 502 });
   }
 
   // youtube_links'e ekle, videos'dan çıkar
