@@ -18,8 +18,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .single();
   if (!data) return { title: "Davetiye" };
   return {
-    title: `${data.bride_name} & ${data.groom_name} — Düğün Daveti`,
-    description: `${data.bride_name} ve ${data.groom_name}'in düğünlerine davetlisiniz.`,
+    title: `${data.bride_name} & ${data.groom_name} — Davet`,
+    description: `${data.bride_name} ve ${data.groom_name}'in özel gününe davetlisiniz.`,
   };
 }
 
