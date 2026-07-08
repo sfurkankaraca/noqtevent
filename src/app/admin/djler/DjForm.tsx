@@ -153,6 +153,8 @@ export default function DjForm({ dj }: { dj?: Dj }) {
     (dj?.videos ?? (dj?.preview_video_url ? [dj.preview_video_url] : [])).map((url: string) => ({ url }))
   );
   const [videoUploading, setVideoUploading] = useState(false);
+  const [ytBusy, setYtBusy] = useState<string | null>(null);
+  const [ytError, setYtError] = useState<string | null>(null);
   const [riderUrl, setRiderUrl] = useState<string>(dj?.rider_url ?? "");
   const [riderUploading, setRiderUploading] = useState(false);
   const [riderItems, setRiderItems] = useState<RiderItem[]>(
@@ -484,6 +486,7 @@ export default function DjForm({ dj }: { dj?: Dj }) {
           <h2 className="font-medium text-foreground">Videolar</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Birden fazla video yükleyebilirsiniz. İlk video kart hover'ında oynar. Max 500MB, MP4 önerilir.</p>
         </div>
+        {ytError && <p className="text-xs text-red-600">{ytError}</p>}
         <div className="space-y-3">
           {videos.map((v, i) => (
             <div key={i} className="relative rounded-xl overflow-hidden border border-border bg-secondary/20">
@@ -507,12 +510,46 @@ export default function DjForm({ dj }: { dj?: Dj }) {
                     muted controls preload="auto"
                   />
                   <div className="px-3 py-1.5 flex items-center justify-between gap-2 bg-secondary/30">
-                    <span className="text-[11px] text-muted-foreground truncate max-w-[80%]" title={v.url}>
+                    <span className="text-[11px] text-muted-foreground truncate max-w-[60%]" title={v.url}>
                       {i === 0 && <span className="mr-1.5 bg-foreground text-background text-[10px] px-1.5 py-0.5 rounded-full">Ana</span>}
                       {decodeURIComponent(v.url.split("/").pop() ?? v.url).slice(0, 60)}
                     </span>
-                    <button type="button" onClick={() => setVideos((p) => p.filter((_, idx) => idx !== i))}
-                      className="text-xs text-red-500 hover:text-red-600 flex-shrink-0">Kaldır</button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {dj?.id && (
+                        <button
+                          type="button"
+                          disabled={ytBusy === v.url}
+                          onClick={async () => {
+                            if (!confirm("Bu video YouTube'a (unlisted) taşınacak ve R2'deki kopyası silinecek. Devam?")) return;
+                            setYtError(null);
+                            setYtBusy(v.url);
+                            try {
+                              const res = await fetch("/api/admin/artist-video-to-youtube", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ profileId: dj.id, videoUrl: v.url }),
+                              });
+                              const j = await res.json();
+                              if (!res.ok) throw new Error(j.error || "Taşıma başarısız");
+                              setVideos((p) => p.filter((_, idx) => idx !== i));
+                              setYoutubeLinks((p) => {
+                                const cleaned = p.filter(Boolean);
+                                return [...cleaned, j.youtubeUrl];
+                              });
+                            } catch (e) {
+                              setYtError(e instanceof Error ? e.message : "Taşıma başarısız");
+                            } finally {
+                              setYtBusy(null);
+                            }
+                          }}
+                          className="text-xs border border-border px-2 py-1 rounded-full text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                        >
+                          {ytBusy === v.url ? "Taşınıyor…" : "YouTube'a taşı"}
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setVideos((p) => p.filter((_, idx) => idx !== i))}
+                        className="text-xs text-red-500 hover:text-red-600">Kaldır</button>
+                    </div>
                   </div>
                 </>
               )}
