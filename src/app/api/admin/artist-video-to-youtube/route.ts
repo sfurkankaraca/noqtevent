@@ -17,7 +17,21 @@ const YOUTUBE_REFRESH = (process.env.GOOGLE_YOUTUBE_REFRESH_TOKEN ?? process.env
 function r2PathFromUrl(url: string): string | null {
   const base = R2_PUBLIC_URL?.replace(/\/$/, "");
   if (!base || !url.startsWith(base)) return null;
-  return url.slice(base.length + 1); // remove leading slash
+  return url.slice(base.length + 1);
+}
+
+// GET: admin tanı — env vars + r2 erişimi kontrol
+export async function GET(req: NextRequest) {
+  if (!(await isAdmin())) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  const { searchParams } = new URL(req.url);
+  const testUrl = searchParams.get("url");
+  return NextResponse.json({
+    hasClientId: !!CLIENT_ID,
+    hasClientSecret: !!CLIENT_SECRET,
+    hasRefreshToken: !!YOUTUBE_REFRESH,
+    r2PublicUrl: R2_PUBLIC_URL ?? "(boş)",
+    r2PathFromUrl: testUrl ? r2PathFromUrl(testUrl) : "(url param verilmedi)",
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -41,7 +55,9 @@ export async function POST(req: NextRequest) {
 
   const r2Path = r2PathFromUrl(videoUrl);
   if (!r2Path) {
-    return NextResponse.json({ error: "Bu video R2'de değil, taşınamaz." }, { status: 400 });
+    return NextResponse.json({
+      error: `Bu video R2'de değil, taşınamaz. (R2_PUBLIC_URL: ${R2_PUBLIC_URL ?? "boş"}, videoUrl: ${videoUrl})`,
+    }, { status: 400 });
   }
 
   const supabase = createServiceClient();
