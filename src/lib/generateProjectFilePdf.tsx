@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
   checkboxEmpty: { fontSize: 9, color: palette.gray, width: 12 },
   itemText: { fontSize: 9, color: palette.black, flex: 1 },
   itemTextDone: { fontSize: 9, color: palette.gray, flex: 1 },
+  assigneeText: { fontSize: 8, color: palette.gray, fontStyle: "italic" },
 
   footer: { position: "absolute", bottom: 30, left: 56, right: 56, flexDirection: "row", justifyContent: "space-between" },
   footerText: { fontSize: 7.5, color: palette.gray },
@@ -78,7 +79,7 @@ export type ProjectFileData = {
     venueAddress?: string | null;
   };
   artist?: { name: string; performer_type?: string | null } | null;
-  items: { category: string; title: string; is_done: boolean }[];
+  items: { category: string; title: string; is_done: boolean; assignedTo?: string | null }[];
 };
 
 function ProjectFileDocument({ data }: { data: ProjectFileData }) {
@@ -138,6 +139,7 @@ function ProjectFileDocument({ data }: { data: ProjectFileData }) {
                 <View key={idx} style={styles.itemRow}>
                   <Text style={item.is_done ? styles.checkbox : styles.checkboxEmpty}>{item.is_done ? "✓" : "○"}</Text>
                   <Text style={item.is_done ? styles.itemTextDone : styles.itemText}>{item.title}</Text>
+                  {item.assignedTo && <Text style={styles.assigneeText}>{item.assignedTo}</Text>}
                 </View>
               ))}
             </View>

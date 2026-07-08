@@ -21,6 +21,16 @@ export const CATEGORY_ORDER: ChecklistCategory[] = [
   "fotograf", "davetiye", "gun_plani", "ulasim", "son_kontrol", "diger",
 ];
 
+// Sihirbazda adım adım sorulan kategoriler ("diger" hariç — o serbest ekleme için)
+export const WIZARD_CATEGORIES: ChecklistCategory[] = CATEGORY_ORDER.filter((c) => c !== "diger");
+
+export type CategoryDecision = {
+  included: boolean;
+  assignee?: string;
+  vendor?: string;
+  note?: string;
+};
+
 export const DEFAULT_CHECKLIST_TEMPLATE: { category: ChecklistCategory; title: string }[] = [
   { category: "mekan", title: "Mekan seçimi ve rezervasyonu" },
   { category: "mekan", title: "Etkinlik tarihi ve saati netleştirildi" },
