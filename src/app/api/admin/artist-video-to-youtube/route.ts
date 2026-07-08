@@ -20,17 +20,30 @@ function r2PathFromUrl(url: string): string | null {
   return url.slice(base.length + 1);
 }
 
-// GET: admin tanı — env vars + r2 erişimi kontrol
+// GET: admin tanı — env vars + r2 erişimi + gerçek token yenileme testi
 export async function GET(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const testUrl = searchParams.get("url");
+
+  let tokenTest: unknown = "(denenmedi)";
+  try {
+    const ytAuth = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
+    ytAuth.setCredentials({ refresh_token: YOUTUBE_REFRESH });
+    const { token } = await ytAuth.getAccessToken();
+    tokenTest = token ? "OK — access token alındı" : "Token boş döndü";
+  } catch (e) {
+    tokenTest = { error: e instanceof Error ? e.message : String(e) };
+  }
+
   return NextResponse.json({
     hasClientId: !!CLIENT_ID,
     hasClientSecret: !!CLIENT_SECRET,
     hasRefreshToken: !!YOUTUBE_REFRESH,
+    clientIdPrefix: CLIENT_ID?.slice(0, 20),
     r2PublicUrl: R2_PUBLIC_URL ?? "(boş)",
     r2PathFromUrl: testUrl ? r2PathFromUrl(testUrl) : "(url param verilmedi)",
+    tokenTest,
   });
 }
 
