@@ -1,11 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CATEGORY_LABELS, WIZARD_CATEGORIES, type ChecklistCategory, type CategoryDecision } from "@/lib/checklistTemplate";
 
 const CATEGORY_HINT: Partial<Record<ChecklistCategory, string>> = {
-  mekan: "Mekan adı",
   catering: "Catering firması",
   dekor: "Dekor/çiçek firması",
   muzik: "DJ / Sanatçı adı",
@@ -13,7 +12,15 @@ const CATEGORY_HINT: Partial<Record<ChecklistCategory, string>> = {
   gun_plani: "Koordinatör",
 };
 
-const EVENT_TYPES = ["Düğün", "Kına", "Nişan", "Mezuniyet", "Kurumsal Etkinlik", "Doğum Günü", "Diğer"];
+const EVENT_TYPES = [
+  { label: "Düğün", emoji: "💍" },
+  { label: "Kına", emoji: "🌙" },
+  { label: "Nişan", emoji: "💐" },
+  { label: "Mezuniyet", emoji: "🎓" },
+  { label: "Kurumsal Etkinlik", emoji: "🏢" },
+  { label: "Doğum Günü", emoji: "🎂" },
+  { label: "Diğer", emoji: "✨" },
+];
 const GUEST_RANGES = [
   { label: "0-50", value: "50" },
   { label: "50-100", value: "100" },
@@ -65,12 +72,15 @@ const EMPTY_BASICS: Basics = {
   booking_id: "",
 };
 
+// Organizatörün gerçek karar sırası: ne → ne zaman/kaç kişi → atmosfer → hizmetler → kayıt+onay
 const STEPS = [
-  { key: "basics", label: "Temel Bilgiler" },
-  { key: "concept", label: "Konsept" },
+  { key: "type", label: "Ne?" },
+  { key: "when", label: "Ne zaman?" },
+  { key: "concept", label: "Atmosfer" },
   { key: "services", label: "Hizmetler" },
-  { key: "review", label: "Özet & Onay" },
+  { key: "client", label: "Onay" },
 ] as const;
+type StepKey = (typeof STEPS)[number]["key"];
 
 export default function EventWizard({
   bookings, concepts,
@@ -80,10 +90,13 @@ export default function EventWizard({
 }) {
   const router = useRouter();
   const [stepIdx, setStepIdx] = useState(0);
+  const [maxVisited, setMaxVisited] = useState(0);
   const [basics, setBasics] = useState<Basics>(EMPTY_BASICS);
+  const [customType, setCustomType] = useState(false);
   const [selectedConcepts, setSelectedConcepts] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggesting, setSuggesting] = useState(false);
+  const suggestAttempted = useRef(false);
   const [openNotes, setOpenNotes] = useState<Record<string, boolean>>({});
   const [decisions, setDecisions] = useState<Record<string, CategoryDecision>>(
     Object.fromEntries(WIZARD_CATEGORIES.map((c) => [c, { included: true }]))
@@ -91,14 +104,19 @@ export default function EventWizard({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const step = STEPS[stepIdx].key;
+  const step: StepKey = STEPS[stepIdx].key;
+
+  const goTo = (idx: number) => {
+    setStepIdx(idx);
+    setMaxVisited((m) => Math.max(m, idx));
+  };
+
   const inputCls = "w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40";
   const labelCls = "text-xs text-muted-foreground mb-1.5 block";
   const chip = (active: boolean) =>
     `px-3 py-2 rounded-full text-sm border transition-colors ${
       active ? "bg-foreground text-background border-foreground" : "border-border text-foreground hover:bg-secondary"
     }`;
-  const isCustomEventType = basics.event_type !== "" && !EVENT_TYPES.slice(0, -1).includes(basics.event_type);
 
   const updateDecision = (cat: string, patch: Partial<CategoryDecision>) => {
     setDecisions((prev) => ({ ...prev, [cat]: { ...prev[cat], ...patch } }));
@@ -108,9 +126,8 @@ export default function EventWizard({
     setSelectedConcepts((prev) => prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]);
   };
 
-  const handleSuggest = async () => {
+  const fetchSuggestions = async () => {
     setSuggesting(true);
-    setError(null);
     try {
       const res = await fetch("/api/event-projects/concept-suggest", {
         method: "POST",
@@ -124,19 +141,35 @@ export default function EventWizard({
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Öneri alınamadı");
-      setSuggestions(json.suggestions ?? []);
-      if ((json.suggestions ?? []).length === 0) {
-        setError("AI net bir öneri veremedi — kartlardan kendiniz seçebilirsiniz.");
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Hata");
+      if (res.ok) setSuggestions(json.suggestions ?? []);
+      // hata durumunda sessizce katalog-only moda düş
+    } catch {
+      // sessiz — katalog zaten görünüyor
     } finally {
       setSuggesting(false);
     }
   };
 
-  const canGoNext = step === "basics" ? basics.client_name.trim().length > 0 : true;
+  // Konsept adımına girildiğinde AI önerileri otomatik yüklenir (bir kez)
+  useEffect(() => {
+    if (step === "concept" && !suggestAttempted.current && concepts.length > 0) {
+      suggestAttempted.current = true;
+      fetchSuggestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  const selectType = (label: string) => {
+    if (label === "Diğer") {
+      setCustomType(true);
+      setBasics((b) => ({ ...b, event_type: "" }));
+      return;
+    }
+    setCustomType(false);
+    setBasics((b) => ({ ...b, event_type: label }));
+    // Tek seçimlik ekran — otomatik ilerle
+    setTimeout(() => goTo(1), 250);
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -180,17 +213,55 @@ export default function EventWizard({
   };
 
   const suggestionFor = (slug: string) => suggestions.find((s) => s.slug === slug);
+  const suggestedConcepts = suggestions
+    .map((s) => concepts.find((c) => c.slug === s.slug))
+    .filter(Boolean) as Concept[];
   const conceptCategories = [...new Set(concepts.map((c) => c.category))];
+
+  const renderConceptCard = (c: Concept, highlight = false) => {
+    const selected = selectedConcepts.includes(c.slug);
+    const suggestion = suggestionFor(c.slug);
+    return (
+      <button key={c.slug} onClick={() => toggleConcept(c.slug)}
+        className={`text-left rounded-xl border p-3 space-y-1.5 transition-colors ${
+          selected ? "border-foreground bg-foreground/5" :
+          highlight ? "border-amber-400 bg-amber-50/50" : "border-border hover:bg-secondary/30"
+        }`}>
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-foreground">
+            {c.emoji} {c.name}
+            {c.is_signature && <span className="ml-1 text-[10px] text-amber-600">★</span>}
+          </p>
+          {selected && <span className="text-xs text-foreground">✓</span>}
+        </div>
+        {highlight && suggestion && (
+          <p className="text-[11px] text-amber-800">{suggestion.reason}</p>
+        )}
+        {!highlight && c.atmosphere && c.atmosphere.length > 0 && (
+          <p className="text-[11px] text-muted-foreground">{c.atmosphere.join(" · ")}</p>
+        )}
+        {c.energy_level !== null && (
+          <div className="flex items-center gap-1">
+            <div className="h-1 flex-1 rounded-full bg-secondary overflow-hidden">
+              <div className="h-full bg-foreground/60" style={{ width: `${(c.energy_level / 10) * 100}%` }} />
+            </div>
+            <span className="text-[10px] text-muted-foreground">enerji {c.energy_level}/10</span>
+          </div>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="max-w-3xl space-y-5">
-      {/* Adım göstergesi */}
+      {/* Adım göstergesi — soru odaklı pill'ler */}
       <div className="flex items-center gap-2 flex-wrap">
         {STEPS.map((s, i) => (
-          <button key={s.key} onClick={() => i < stepIdx && setStepIdx(i)}
+          <button key={s.key} onClick={() => i <= maxVisited && setStepIdx(i)}
+            disabled={i > maxVisited}
             className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full transition-colors ${
               i === stepIdx ? "bg-foreground text-background font-medium" :
-              i < stepIdx ? "bg-secondary text-foreground cursor-pointer hover:bg-secondary/70" :
+              i <= maxVisited ? "bg-secondary text-foreground cursor-pointer hover:bg-secondary/70" :
               "text-muted-foreground"
             }`}>
             <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${
@@ -206,53 +277,38 @@ export default function EventWizard({
       {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
 
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
-        {step === "basics" && (
+        {/* 1 — Ne planlıyoruz? */}
+        {step === "type" && (
           <>
-            <p className="text-sm font-medium text-foreground mb-1">Temel Bilgiler</p>
+            <p className="text-lg font-semibold text-foreground">Ne planlıyoruz?</p>
+            <p className="text-xs text-muted-foreground -mt-2">Seçince otomatik devam eder.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {EVENT_TYPES.map((t) => {
+                const active = t.label === "Diğer" ? customType : basics.event_type === t.label;
+                return (
+                  <button key={t.label} onClick={() => selectType(t.label)}
+                    className={`rounded-2xl border p-4 text-center space-y-1.5 transition-all ${
+                      active ? "border-foreground bg-foreground/5 scale-[1.02]" : "border-border hover:bg-secondary/30"
+                    }`}>
+                    <p className="text-2xl">{t.emoji}</p>
+                    <p className="text-sm font-medium text-foreground">{t.label}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {customType && (
+              <input className={inputCls} autoFocus value={basics.event_type}
+                onChange={(e) => setBasics((b) => ({ ...b, event_type: e.target.value }))}
+                placeholder="Etkinlik türünü yazın…" />
+            )}
+          </>
+        )}
+
+        {/* 2 — Ne zaman, kaç kişi? */}
+        {step === "when" && (
+          <>
+            <p className="text-lg font-semibold text-foreground">Ne zaman, kaç kişi?</p>
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <label className={labelCls}>Müşteri adı *</label>
-                <input className={inputCls} value={basics.client_name}
-                  onChange={(e) => setBasics((b) => ({ ...b, client_name: e.target.value }))} placeholder="Ayşe & Mehmet" />
-              </div>
-              <div>
-                <label className={labelCls}>E-posta</label>
-                <input className={inputCls} value={basics.client_email}
-                  onChange={(e) => setBasics((b) => ({ ...b, client_email: e.target.value }))} />
-              </div>
-              <div>
-                <label className={labelCls}>Telefon</label>
-                <input className={inputCls} value={basics.client_phone}
-                  onChange={(e) => setBasics((b) => ({ ...b, client_phone: e.target.value }))} />
-              </div>
-              <div className="col-span-2">
-                <label className={labelCls}>Etkinlik türü</label>
-                <div className="flex flex-wrap gap-2">
-                  {EVENT_TYPES.map((t) => (
-                    <button key={t} type="button"
-                      className={chip(t === "Diğer" ? isCustomEventType : basics.event_type === t)}
-                      onClick={() => setBasics((b) => ({ ...b, event_type: t === "Diğer" ? "" : t }))}>
-                      {t}
-                    </button>
-                  ))}
-                </div>
-                {(isCustomEventType || basics.event_type === "") && (
-                  <input className={`${inputCls} mt-2`} value={isCustomEventType ? basics.event_type : ""}
-                    onChange={(e) => setBasics((b) => ({ ...b, event_type: e.target.value }))}
-                    placeholder="Etkinlik türünü yazın…" />
-                )}
-              </div>
-              <div className="col-span-2">
-                <label className={labelCls}>Misafir sayısı</label>
-                <div className="flex flex-wrap gap-2">
-                  {GUEST_RANGES.map((g) => (
-                    <button key={g.value} type="button" className={chip(basics.guest_count === g.value)}
-                      onClick={() => setBasics((b) => ({ ...b, guest_count: g.value }))}>
-                      {g.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <div>
                 <label className={labelCls}>Tarih</label>
                 <input type="date" className={inputCls} value={basics.event_date}
@@ -263,74 +319,54 @@ export default function EventWizard({
                 <input type="time" className={inputCls} value={basics.event_time}
                   onChange={(e) => setBasics((b) => ({ ...b, event_time: e.target.value }))} />
               </div>
-              <div>
-                <label className={labelCls}>Mekan adı</label>
-                <input className={inputCls} value={basics.venue_name}
-                  onChange={(e) => setBasics((b) => ({ ...b, venue_name: e.target.value }))} />
-              </div>
-              <div>
-                <label className={labelCls}>Şehir</label>
-                <input className={inputCls} value={basics.venue_city}
-                  onChange={(e) => setBasics((b) => ({ ...b, venue_city: e.target.value }))} />
-              </div>
-              <div className="col-span-2">
-                <label className={labelCls}>Adres</label>
-                <input className={inputCls} value={basics.venue_address}
-                  onChange={(e) => setBasics((b) => ({ ...b, venue_address: e.target.value }))} />
-              </div>
-              <div className="col-span-2">
-                <label className={labelCls}>Bütçe</label>
-                <div className="flex flex-wrap gap-2">
-                  {BUDGET_RANGES.map((bud) => (
-                    <button key={bud.value} type="button" className={chip(basics.budget === bud.value)}
-                      onClick={() => setBasics((b) => ({ ...b, budget: bud.value }))}>
-                      {bud.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className={labelCls}>Bağlı booking (opsiyonel)</label>
-                <select className={inputCls} value={basics.booking_id}
-                  onChange={(e) => setBasics((b) => ({ ...b, booking_id: e.target.value }))}>
-                  <option value="">— Yok —</option>
-                  {bookings.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.client_name}{b.event_date ? ` — ${new Date(b.event_date).toLocaleDateString("tr-TR")}` : ""}
-                    </option>
-                  ))}
-                </select>
+            </div>
+            <div>
+              <label className={labelCls}>Misafir sayısı</label>
+              <div className="flex flex-wrap gap-2">
+                {GUEST_RANGES.map((g) => (
+                  <button key={g.value} type="button" className={chip(basics.guest_count === g.value)}
+                    onClick={() => setBasics((b) => ({ ...b, guest_count: g.value }))}>
+                    {g.label}
+                  </button>
+                ))}
               </div>
             </div>
+            <div>
+              <label className={labelCls}>Bütçe</label>
+              <div className="flex flex-wrap gap-2">
+                {BUDGET_RANGES.map((bud) => (
+                  <button key={bud.value} type="button" className={chip(basics.budget === bud.value)}
+                    onClick={() => setBasics((b) => ({ ...b, budget: bud.value }))}>
+                    {bud.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Hepsi opsiyonel — sonradan değiştirilebilir.</p>
           </>
         )}
 
+        {/* 3 — Atmosfer / Konsept */}
         {step === "concept" && (
           <>
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <p className="text-sm font-medium text-foreground">Konsept Seçimi</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Etkinliğin atmosferini belirleyin — birden fazla seçebilirsiniz (örn. karşılama + parti).
-                </p>
-              </div>
-              <button onClick={handleSuggest} disabled={suggesting}
-                className="text-xs px-4 py-2 rounded-full bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 transition-opacity">
-                {suggesting ? "Öneriler hazırlanıyor…" : "🤖 AI Konsept Önerisi Al"}
-              </button>
-            </div>
+            <p className="text-lg font-semibold text-foreground">Nasıl bir atmosfer?</p>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Birden fazla seçebilirsiniz — örn. karşılama için bir, parti için bir konsept.
+            </p>
 
-            {suggestions.length > 0 && (
-              <div className="bg-secondary/20 rounded-xl p-4 space-y-2">
-                <p className="text-xs font-medium text-foreground">AI önerileri:</p>
-                {suggestions.map((s) => (
-                  <button key={s.slug} onClick={() => !selectedConcepts.includes(s.slug) && toggleConcept(s.slug)}
-                    className="w-full text-left text-xs text-muted-foreground hover:text-foreground transition-colors">
-                    <span className="font-medium text-foreground">✨ {s.name}</span> — {s.reason}
-                    {!selectedConcepts.includes(s.slug) && <span className="text-foreground font-medium"> · Seç</span>}
-                    {selectedConcepts.includes(s.slug) && <span className="text-green-700 font-medium"> ✓ Seçildi</span>}
-                  </button>
-                ))}
+            {suggesting && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/20 rounded-xl px-4 py-3">
+                <div className="w-3.5 h-3.5 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
+                AI, etkinliğinize en uygun konseptleri seçiyor…
+              </div>
+            )}
+
+            {suggestedConcepts.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-amber-700 uppercase tracking-wide">✨ Size özel öneriler</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {suggestedConcepts.map((c) => renderConceptCard(c, true))}
+                </div>
               </div>
             )}
 
@@ -339,55 +375,30 @@ export default function EventWizard({
                 Konsept kataloğu boş — bu adımı atlayabilirsiniz. (Konseptler admin panelindeki Konseptler bölümünden eklenir.)
               </p>
             ) : (
-              conceptCategories.map((cat) => (
-                <div key={cat} className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    {CONCEPT_CATEGORY_LABELS[cat] ?? cat}
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {concepts.filter((c) => c.category === cat).map((c) => {
-                      const selected = selectedConcepts.includes(c.slug);
-                      const suggested = suggestionFor(c.slug);
-                      return (
-                        <button key={c.slug} onClick={() => toggleConcept(c.slug)}
-                          className={`text-left rounded-xl border p-3 space-y-1.5 transition-colors ${
-                            selected ? "border-foreground bg-foreground/5" :
-                            suggested ? "border-amber-400 bg-amber-50/50" : "border-border hover:bg-secondary/30"
-                          }`}>
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-foreground">
-                              {c.emoji} {c.name}
-                              {c.is_signature && <span className="ml-1 text-[10px] text-amber-600">★</span>}
-                            </p>
-                            {selected && <span className="text-xs text-foreground">✓</span>}
-                            {!selected && suggested && <span className="text-[10px] text-amber-600 font-medium">AI önerisi</span>}
-                          </div>
-                          {c.atmosphere && c.atmosphere.length > 0 && (
-                            <p className="text-[11px] text-muted-foreground">{c.atmosphere.join(" · ")}</p>
-                          )}
-                          {c.energy_level !== null && (
-                            <div className="flex items-center gap-1">
-                              <div className="h-1 flex-1 rounded-full bg-secondary overflow-hidden">
-                                <div className="h-full bg-foreground/60" style={{ width: `${(c.energy_level / 10) * 100}%` }} />
-                              </div>
-                              <span className="text-[10px] text-muted-foreground">enerji {c.energy_level}/10</span>
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
+              conceptCategories.map((cat) => {
+                const catConcepts = concepts.filter((c) => c.category === cat && !suggestionFor(c.slug));
+                if (catConcepts.length === 0) return null;
+                return (
+                  <div key={cat} className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      {CONCEPT_CATEGORY_LABELS[cat] ?? cat}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {catConcepts.map((c) => renderConceptCard(c))}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </>
         )}
 
+        {/* 4 — Hizmetler & görev dağılımı (mekan dahil) */}
         {step === "services" && (
           <>
-            <p className="text-sm font-medium text-foreground">Hizmetler & Görev Dağılımı</p>
+            <p className="text-lg font-semibold text-foreground">Nerede, hangi hizmetler, kim sorumlu?</p>
             <p className="text-xs text-muted-foreground -mt-2">
-              Bu etkinlikte hangi hizmetler var? Açık olanlar için firma ve sorumlu girin — checklist buna göre oluşur.
+              Bu etkinlikte olmayanları kapatın; olanlara firma ve sorumlu girin — checklist buna göre oluşur.
             </p>
             <div className="space-y-2">
               {WIZARD_CATEGORIES.map((cat) => {
@@ -407,6 +418,20 @@ export default function EventWizard({
                         </button>
                       )}
                     </div>
+                    {/* Mekan kartı: mekan bilgileri buraya gömülü */}
+                    {cat === "mekan" && d.included && (
+                      <div className="grid grid-cols-2 gap-2 pl-7">
+                        <input className={`${inputCls} py-2 text-xs`} value={basics.venue_name}
+                          onChange={(e) => setBasics((b) => ({ ...b, venue_name: e.target.value }))}
+                          placeholder="Mekan adı" />
+                        <input className={`${inputCls} py-2 text-xs`} value={basics.venue_city}
+                          onChange={(e) => setBasics((b) => ({ ...b, venue_city: e.target.value }))}
+                          placeholder="Şehir" />
+                        <input className={`${inputCls} py-2 text-xs col-span-2`} value={basics.venue_address}
+                          onChange={(e) => setBasics((b) => ({ ...b, venue_address: e.target.value }))}
+                          placeholder="Adres (opsiyonel)" />
+                      </div>
+                    )}
                     {d.included && (
                       <div className="flex gap-2 pl-7">
                         {vendorLabel && (
@@ -433,11 +458,41 @@ export default function EventWizard({
           </>
         )}
 
-        {step === "review" && (
+        {/* 5 — Müşteri bilgisi + özet + onay */}
+        {step === "client" && (
           <>
-            <p className="text-sm font-medium text-foreground mb-1">Özet & Onay</p>
-            <div className="space-y-2 text-sm">
-              <p className="text-foreground font-medium">{basics.client_name || "—"}</p>
+            <p className="text-lg font-semibold text-foreground">Kimin için? Son bir bakış.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className={labelCls}>Müşteri adı *</label>
+                <input className={inputCls} value={basics.client_name}
+                  onChange={(e) => setBasics((b) => ({ ...b, client_name: e.target.value }))} placeholder="Ayşe & Mehmet" />
+              </div>
+              <div>
+                <label className={labelCls}>E-posta</label>
+                <input className={inputCls} value={basics.client_email}
+                  onChange={(e) => setBasics((b) => ({ ...b, client_email: e.target.value }))} />
+              </div>
+              <div>
+                <label className={labelCls}>Telefon</label>
+                <input className={inputCls} value={basics.client_phone}
+                  onChange={(e) => setBasics((b) => ({ ...b, client_phone: e.target.value }))} />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Bağlı booking (opsiyonel)</label>
+                <select className={inputCls} value={basics.booking_id}
+                  onChange={(e) => setBasics((b) => ({ ...b, booking_id: e.target.value }))}>
+                  <option value="">— Yok —</option>
+                  {bookings.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.client_name}{b.event_date ? ` — ${new Date(b.event_date).toLocaleDateString("tr-TR")}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-4 space-y-2 text-sm">
               <p className="text-muted-foreground">
                 {basics.event_type || "Etkinlik türü belirtilmedi"}
                 {basics.event_date && ` · ${new Date(basics.event_date).toLocaleDateString("tr-TR")}`}
@@ -445,7 +500,7 @@ export default function EventWizard({
                 {basics.guest_count && ` · ~${basics.guest_count} misafir`}
               </p>
               {selectedConcepts.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                <div className="flex flex-wrap gap-1.5">
                   {selectedConcepts.map((slug) => {
                     const c = concepts.find((x) => x.slug === slug);
                     return c ? (
@@ -456,12 +511,12 @@ export default function EventWizard({
                   })}
                 </div>
               )}
-              <div className="border-t border-border pt-3 space-y-1.5">
+              <div className="space-y-1">
                 {WIZARD_CATEGORIES.map((cat) => {
                   const d = decisions[cat];
                   if (!d?.included) return null;
                   return (
-                    <div key={cat} className="flex justify-between gap-3">
+                    <div key={cat} className="flex justify-between gap-3 text-xs">
                       <span className="text-foreground">{CATEGORY_LABELS[cat]}</span>
                       <span className="text-muted-foreground text-right">
                         {d.vendor || d.assignee ? [d.vendor, d.assignee].filter(Boolean).join(" · ") : "—"}
@@ -470,27 +525,32 @@ export default function EventWizard({
                   );
                 })}
               </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                &quot;Planı Oluştur&quot; ile son tarihli checklist ve proje dosyası hazırlanır; gün planı ve AI içerikleri detay sayfasından üretilir.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground pt-2">
-              &quot;Planı Oluştur&quot; ile checklist (otomatik son tarihli) ve proje dosyası hazırlanır; gün planı ve AI içerikleri detay sayfasından üretilir.
-            </p>
           </>
         )}
       </div>
 
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center">
         <button onClick={() => setStepIdx((i) => Math.max(0, i - 1))} disabled={stepIdx === 0}
           className="px-4 py-2 rounded-full border border-border text-sm text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors">
           ← Geri
         </button>
-        {step === "review" ? (
-          <button onClick={handleSubmit} disabled={submitting}
-            className="px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity">
-            {submitting ? "Oluşturuluyor…" : "Planı Oluştur"}
-          </button>
+        {step === "client" ? (
+          <div className="flex items-center gap-3">
+            {!basics.client_name.trim() && (
+              <p className="text-xs text-muted-foreground">Müşteri adı gerekli</p>
+            )}
+            <button onClick={handleSubmit} disabled={submitting || !basics.client_name.trim()}
+              className="px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity">
+              {submitting ? "Oluşturuluyor…" : "Planı Oluştur"}
+            </button>
+          </div>
         ) : (
-          <button onClick={() => setStepIdx((i) => Math.min(STEPS.length - 1, i + 1))} disabled={!canGoNext}
-            className="px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity">
+          <button onClick={() => goTo(Math.min(STEPS.length - 1, stepIdx + 1))}
+            className="px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity">
             İleri →
           </button>
         )}
