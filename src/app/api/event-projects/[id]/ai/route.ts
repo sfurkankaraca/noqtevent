@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import {
-  buildEventContext, generateProjectBrief, generateSponsorDoc, generateStrategyDoc, generatePosterImage,
+  buildEventContext, generateProjectBrief, generateSponsorDoc, generateStrategyDoc, generatePosterImage, generateConceptDoc,
   type ChecklistItemRow, type ScheduleItemRow,
 } from "@/lib/aiContent";
 
 export const maxDuration = 120;
 
-const VALID_TYPES = ["project_brief", "sponsor_doc", "strategy", "poster"] as const;
+const VALID_TYPES = ["concept_doc", "project_brief", "sponsor_doc", "strategy", "poster"] as const;
 type OutputType = (typeof VALID_TYPES)[number];
 
 export async function GET(
@@ -68,6 +68,8 @@ export async function POST(
       if (uploadError) throw new Error(uploadError.message);
       const { data: pub } = supabase.storage.from(bucket).getPublicUrl(fileName);
       content = pub.publicUrl;
+    } else if (type === "concept_doc") {
+      content = await generateConceptDoc(context);
     } else if (type === "project_brief") {
       content = await generateProjectBrief(context);
     } else if (type === "sponsor_doc") {

@@ -216,6 +216,7 @@ export default function EventProjectDetail({
                 {[
                   ["Müşteri", project.client_name],
                   ["Tür", project.event_type],
+                  ["Konsept", (project.decisions?.konsept?.names ?? []).join(", ") || null],
                   ["Misafir", project.guest_count],
                   ["Mekan", project.venue_name],
                   ["Şehir", project.venue_city],

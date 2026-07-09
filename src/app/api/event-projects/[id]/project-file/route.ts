@@ -37,6 +37,7 @@ export async function POST(
       venueCity: project.venue_city,
       venueAddress: project.venue_address,
     },
+    concept: (project.decisions?.konsept?.names ?? []).join(", ") || null,
     items: (items ?? []).map((i) => ({ category: i.category, title: i.title, is_done: i.is_done, assignedTo: i.assigned_to, dueDate: i.due_date })),
     schedule: (schedule ?? []).map((s) => ({ time: s.time, title: s.title, assignedTo: s.assigned_to })),
   };

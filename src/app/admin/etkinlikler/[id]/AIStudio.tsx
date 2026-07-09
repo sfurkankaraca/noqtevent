@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
-type OutputType = "project_brief" | "sponsor_doc" | "strategy" | "poster";
+type OutputType = "concept_doc" | "project_brief" | "sponsor_doc" | "strategy" | "poster";
 type Output = { type: OutputType; content: string | null };
 
 const TYPE_META: Record<OutputType, { label: string; kind: "text" | "image" }> = {
+  concept_doc: { label: "Konsept & Dekor Önerileri", kind: "text" },
   project_brief: { label: "Proje Dosyası", kind: "text" },
   sponsor_doc: { label: "Sponsor Dosyası", kind: "text" },
   strategy: { label: "Paylaşım & Reklam Stratejisi", kind: "text" },

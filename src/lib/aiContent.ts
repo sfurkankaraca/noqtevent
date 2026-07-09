@@ -20,6 +20,9 @@ export function buildEventContext(project: EventProjectRow, items: ChecklistItem
   if (project.venue_name) lines.push(`Mekan: ${project.venue_name}${project.venue_city ? ` (${project.venue_city})` : ""}`);
   if (project.budget) lines.push(`Bütçe: ${Number(project.budget).toLocaleString("tr-TR")} ₺`);
 
+  const conceptNames: string[] = project.decisions?.konsept?.names ?? [];
+  if (conceptNames.length > 0) lines.push(`Seçilen konseptler: ${conceptNames.join(", ")}`);
+
   const decisions = (project.decisions ?? {}) as Record<string, CategoryDecision>;
   const categoriesInUse = new Set(items.map((i) => i.category));
   if (categoriesInUse.size > 0) {
@@ -73,6 +76,64 @@ export async function generateStrategyDoc(context: string): Promise<string> {
     "hedef kitle/reklam hedefleme önerileri ve bütçe dağılımı içersin.",
     `Aşağıdaki etkinlik bilgilerinden bir paylaşım/reklam stratejisi hazırla:\n\n${context}`
   );
+}
+
+export async function generateConceptDoc(context: string): Promise<string> {
+  return textGateway(
+    "Sen deneyimli bir etkinlik tasarımcısı ve kreatif direktörsün. Verilen etkinlik bilgilerinden (varsa seçilen " +
+    "konseptler ekseninde) Türkçe, markdown formatlı bir konsept & dekor öneri dokümanı hazırlıyorsun. Başlıklar: " +
+    "tema ve hikaye, renk paleti, dekor & sahneleme, ışık tasarımı, müzik akışı (bölüm bölüm), karşılama & aktivite " +
+    "fikirleri, misafir deneyimi dokunuşları. Somut ve uygulanabilir öneriler ver, bütçeye duyarlı ol.",
+    `Aşağıdaki etkinlik için detaylı konsept ve dekor önerileri hazırla:\n\n${context}`
+  );
+}
+
+export type ConceptRow = {
+  slug: string;
+  name: string;
+  category: string;
+  description: string | null;
+  atmosphere: string[] | null;
+  musical_direction: string[] | null;
+  energy_level: number | null;
+};
+
+export type ConceptSuggestion = { slug: string; reason: string };
+
+// Mevcut konsept kataloğundan etkinliğe en uygun 3 konsepti gerekçeleriyle seçer
+export async function suggestConcepts(
+  basics: { event_type?: string | null; guest_count?: number | null; budget?: number | null; venue_name?: string | null; event_date?: string | null },
+  concepts: ConceptRow[]
+): Promise<{ suggestions: ConceptSuggestion[]; raw?: string }> {
+  const catalog = concepts
+    .map((c) => `- slug: ${c.slug} | ${c.name} (${c.category}) | atmosfer: ${(c.atmosphere ?? []).join("/")} | müzik: ${(c.musical_direction ?? []).join("/")} | enerji: ${c.energy_level ?? "?"}/10 | ${c.description ?? ""}`)
+    .join("\n");
+  const basicsText = [
+    basics.event_type && `Etkinlik türü: ${basics.event_type}`,
+    basics.guest_count && `Misafir sayısı: ${basics.guest_count}`,
+    basics.budget && `Bütçe: ${Number(basics.budget).toLocaleString("tr-TR")} ₺`,
+    basics.venue_name && `Mekan: ${basics.venue_name}`,
+    basics.event_date && `Tarih: ${basics.event_date}`,
+  ].filter(Boolean).join("\n");
+
+  const raw = await textGateway(
+    "Sen bir etkinlik konsept danışmanısın. Sana bir konsept kataloğu ve etkinlik bilgileri verilecek. Katalogdan bu " +
+    "etkinliğe en uygun 3 konsepti seç. SADECE şu JSON formatında yanıt ver, başka hiçbir metin ekleme: " +
+    '{"suggestions":[{"slug":"...","reason":"tek cümlelik Türkçe gerekçe"}]}',
+    `Konsept kataloğu:\n${catalog}\n\nEtkinlik bilgileri:\n${basicsText || "Detay verilmedi"}\n\nEn uygun 3 konsepti seç.`
+  );
+
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    const valid = (parsed.suggestions ?? []).filter(
+      (s: ConceptSuggestion) => s.slug && concepts.some((c) => c.slug === s.slug)
+    );
+    if (valid.length > 0) return { suggestions: valid };
+  } catch {
+    // parse hatası — ham metin fallback'ine düş
+  }
+  return { suggestions: [], raw };
 }
 
 export async function generatePosterImage(context: string): Promise<{ uint8Array: Uint8Array; mediaType: string }> {

@@ -83,6 +83,7 @@ export type ProjectFileData = {
     venueAddress?: string | null;
   };
   artist?: { name: string; performer_type?: string | null } | null;
+  concept?: string | null;
   items: { category: string; title: string; is_done: boolean; assignedTo?: string | null; dueDate?: string | null }[];
   schedule?: { time: string; title: string; assignedTo?: string | null }[];
 };
@@ -128,6 +129,9 @@ function ProjectFileDocument({ data }: { data: ProjectFileData }) {
           )}
           {data.artist?.name && (
             <View style={styles.row}><Text style={styles.rowLabel}>Sanatçı</Text><Text style={styles.rowValue}>{data.artist.name}</Text></View>
+          )}
+          {data.concept && (
+            <View style={styles.row}><Text style={styles.rowLabel}>Konsept</Text><Text style={styles.rowValue}>{data.concept}</Text></View>
           )}
         </View>
 
