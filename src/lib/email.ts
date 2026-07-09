@@ -112,8 +112,8 @@ export async function sendArtistApplicationReceived(artist: {
   if (!resend) return;
 
   const typeLabels: Record<string, string> = {
-    dj: "DJ", artist: "Solo Sanatçı", trio: "Trio / Grup",
-    dance: "Dans Ekibi", band: "Bando / Orkestra",
+    dj: "DJ", artist: "Solo Sanatçı", trio: "Trio", grup: "Grup",
+    dance: "Dans Ekibi", bando: "Bando", orkestra: "Orkestra",
     host: "Sunucu / MC", moderator: "Moderatör",
   };
   const typeLabel = typeLabels[artist.performer_type] ?? artist.performer_type;

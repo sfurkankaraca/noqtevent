@@ -6,8 +6,8 @@ import RiderBuilder, { type RiderItem } from "@/components/admin/RiderBuilder";
 import { savePresskitAction } from "./actions";
 
 const PERFORMER_LABELS: Record<string, string> = {
-  dj: "DJ", artist: "Solo Sanatçı", trio: "Trio / Grup",
-  dance: "Dans Ekibi", band: "Bando / Orkestra",
+  dj: "DJ", artist: "Solo Sanatçı", trio: "Trio", grup: "Grup",
+  dance: "Dans Ekibi", bando: "Bando", orkestra: "Orkestra",
   host: "Sunucu / MC", moderator: "Moderatör",
 };
 

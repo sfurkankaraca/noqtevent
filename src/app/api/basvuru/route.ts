@@ -3,7 +3,7 @@ import { createServiceClient } from "@/lib/supabase";
 import { sendArtistApplicationReceived } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
-const VALID_PERFORMER_TYPES = ["dj", "artist", "trio", "dance", "band", "host", "moderator"];
+const VALID_PERFORMER_TYPES = ["dj", "artist", "trio", "grup", "dance", "bando", "orkestra", "host", "moderator"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function parseJsonArray(raw: FormDataEntryValue | null, maxItems = 20): string[] {

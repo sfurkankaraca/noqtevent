@@ -10,9 +10,11 @@ import ArtistBookingWizard from "@/components/artist-booking/ArtistBookingWizard
 const PERFORMER_TYPES = [
   { id: "dj", label: "DJ", emoji: "🎧" },
   { id: "artist", label: "Solo Sanatçı", emoji: "🎤" },
-  { id: "trio", label: "Trio / Grup", emoji: "🎶" },
+  { id: "trio", label: "Trio", emoji: "🎶" },
+  { id: "grup", label: "Grup", emoji: "👥" },
   { id: "dance", label: "Dans Ekibi", emoji: "💃" },
-  { id: "band", label: "Bando / Orkestra", emoji: "🎺" },
+  { id: "bando", label: "Bando", emoji: "🎺" },
+  { id: "orkestra", label: "Orkestra", emoji: "🎻" },
   { id: "host", label: "Sunucu / MC", emoji: "🎙️" },
   { id: "moderator", label: "Moderatör", emoji: "🗣️" },
 ];

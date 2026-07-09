@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
-import { deleteTestimonial } from "./actions";
+import DeleteTestimonialButton from "./DeleteTestimonialButton";
 
 export default async function TestimonialsAdminPage() {
   const supabase = createServiceClient();
@@ -86,13 +86,7 @@ export default async function TestimonialsAdminPage() {
                       <Link href={`/admin/testimonials/${t.id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
                         Düzenle
                       </Link>
-                      <form action={deleteTestimonial}>
-                        <input type="hidden" name="id" value={t.id} />
-                        <button type="submit" className="text-xs text-red-500 hover:text-red-700 transition-colors"
-                          onClick={(e) => { if (!confirm("Bu yorumu sil?")) e.preventDefault(); }}>
-                          Sil
-                        </button>
-                      </form>
+                      <DeleteTestimonialButton id={t.id} />
                     </div>
                   </td>
                 </tr>
