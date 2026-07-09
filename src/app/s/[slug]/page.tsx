@@ -26,9 +26,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const PERFORMER_LABELS: Record<string, string> = {
   dj: "DJ",
   artist: "Solo Sanatçı",
-  trio: "Trio / Grup",
+  trio: "Trio",
+  grup: "Grup",
   dance: "Dans Ekibi",
-  band: "Bando / Orkestra",
+  bando: "Bando",
+  orkestra: "Orkestra",
   host: "Sunucu / MC",
   moderator: "Moderatör",
 };

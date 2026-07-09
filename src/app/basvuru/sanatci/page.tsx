@@ -9,9 +9,11 @@ import RiderBuilder, { type RiderItem } from "@/components/admin/RiderBuilder";
 const PERFORMER_TYPES = [
   { id: "dj", label: "DJ", emoji: "🎧", desc: "Elektronik müzik, set performansı" },
   { id: "artist", label: "Solo Sanatçı", emoji: "🎤", desc: "Şarkıcı, enstrümantalist" },
-  { id: "trio", label: "Trio / Grup", emoji: "🎶", desc: "Küçük müzik grubu" },
+  { id: "trio", label: "Trio", emoji: "🎶", desc: "Üç kişilik müzik grubu" },
+  { id: "grup", label: "Grup", emoji: "👥", desc: "Küçük müzik grubu" },
   { id: "dance", label: "Dans Ekibi", emoji: "💃", desc: "Gösteri, dans performansı" },
-  { id: "band", label: "Bando / Orkestra", emoji: "🎺", desc: "Büyük müzik topluluğu" },
+  { id: "bando", label: "Bando", emoji: "🎺", desc: "Bando topluluğu" },
+  { id: "orkestra", label: "Orkestra", emoji: "🎻", desc: "Büyük müzik topluluğu" },
   { id: "host", label: "Sunucu / MC", emoji: "🎙️", desc: "Etkinlik sunumu, sahne yönetimi" },
   { id: "moderator", label: "Moderatör", emoji: "🗣️", desc: "Panel, konferans, kurumsal etkinlik" },
 ];
