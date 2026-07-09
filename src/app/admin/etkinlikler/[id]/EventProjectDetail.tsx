@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateEventProjectStatus } from "../actions";
 import EventChecklistManager from "./EventChecklistManager";
+import AIStudio from "./AIStudio";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   planning:  { label: "Planlanıyor", cls: "bg-blue-50 text-blue-700" },
@@ -103,6 +104,7 @@ export default function EventProjectDetail({ project }: { project: Record<string
         </div>
 
         <EventChecklistManager projectId={project.id} />
+        <AIStudio projectId={project.id} />
       </div>
 
       <div className="space-y-5">

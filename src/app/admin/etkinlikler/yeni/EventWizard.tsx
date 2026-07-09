@@ -17,6 +17,21 @@ const CATEGORY_HINT: Partial<Record<ChecklistCategory, { vendorLabel: string; qu
   son_kontrol: { vendorLabel: "", question: "Son kontrol listesi bu etkinliğe dahil mi?" },
 };
 
+const EVENT_TYPES = ["Düğün", "Kına", "Nişan", "Mezuniyet", "Kurumsal Etkinlik", "Doğum Günü", "Diğer"];
+const GUEST_RANGES = [
+  { label: "0-50", value: "50" },
+  { label: "50-100", value: "100" },
+  { label: "100-200", value: "200" },
+  { label: "200-400", value: "400" },
+  { label: "400+", value: "500" },
+];
+const BUDGET_RANGES = [
+  { label: "0-50.000₺", value: "50000" },
+  { label: "50-150.000₺", value: "150000" },
+  { label: "150-300.000₺", value: "300000" },
+  { label: "300.000₺+", value: "500000" },
+];
+
 type Basics = {
   client_name: string; client_email: string; client_phone: string;
   event_type: string; event_date: string; event_time: string;
@@ -47,6 +62,11 @@ export default function EventWizard({ bookings }: { bookings: { id: string; clie
   const step = steps[stepIdx];
   const inputCls = "w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40";
   const labelCls = "text-xs text-muted-foreground mb-1.5 block";
+  const chip = (active: boolean) =>
+    `px-3 py-2 rounded-full text-sm border transition-colors ${
+      active ? "bg-foreground text-background border-foreground" : "border-border text-foreground hover:bg-secondary"
+    }`;
+  const isCustomEventType = basics.event_type !== "" && !EVENT_TYPES.slice(0, -1).includes(basics.event_type);
 
   const updateDecision = (cat: string, patch: Partial<CategoryDecision>) => {
     setDecisions((prev) => ({ ...prev, [cat]: { ...prev[cat], ...patch } }));
@@ -121,15 +141,33 @@ export default function EventWizard({ bookings }: { bookings: { id: string; clie
                 <input className={inputCls} value={basics.client_phone}
                   onChange={(e) => setBasics((b) => ({ ...b, client_phone: e.target.value }))} />
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className={labelCls}>Etkinlik türü</label>
-                <input className={inputCls} value={basics.event_type}
-                  onChange={(e) => setBasics((b) => ({ ...b, event_type: e.target.value }))} placeholder="Düğün, kına, mezuniyet…" />
+                <div className="flex flex-wrap gap-2">
+                  {EVENT_TYPES.map((t) => (
+                    <button key={t} type="button"
+                      className={chip(t === "Diğer" ? isCustomEventType : basics.event_type === t)}
+                      onClick={() => setBasics((b) => ({ ...b, event_type: t === "Diğer" ? "" : t }))}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                {(isCustomEventType || basics.event_type === "") && (
+                  <input className={`${inputCls} mt-2`} value={isCustomEventType ? basics.event_type : ""}
+                    onChange={(e) => setBasics((b) => ({ ...b, event_type: e.target.value }))}
+                    placeholder="Etkinlik türünü yazın…" />
+                )}
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className={labelCls}>Misafir sayısı</label>
-                <input type="number" className={inputCls} value={basics.guest_count}
-                  onChange={(e) => setBasics((b) => ({ ...b, guest_count: e.target.value }))} />
+                <div className="flex flex-wrap gap-2">
+                  {GUEST_RANGES.map((g) => (
+                    <button key={g.value} type="button" className={chip(basics.guest_count === g.value)}
+                      onClick={() => setBasics((b) => ({ ...b, guest_count: g.value }))}>
+                      {g.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className={labelCls}>Tarih</label>
@@ -156,10 +194,16 @@ export default function EventWizard({ bookings }: { bookings: { id: string; clie
                 <input className={inputCls} value={basics.venue_address}
                   onChange={(e) => setBasics((b) => ({ ...b, venue_address: e.target.value }))} />
               </div>
-              <div>
-                <label className={labelCls}>Bütçe (₺)</label>
-                <input type="number" className={inputCls} value={basics.budget}
-                  onChange={(e) => setBasics((b) => ({ ...b, budget: e.target.value }))} />
+              <div className="col-span-2">
+                <label className={labelCls}>Bütçe</label>
+                <div className="flex flex-wrap gap-2">
+                  {BUDGET_RANGES.map((bud) => (
+                    <button key={bud.value} type="button" className={chip(basics.budget === bud.value)}
+                      onClick={() => setBasics((b) => ({ ...b, budget: bud.value }))}>
+                      {bud.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className={labelCls}>Bağlı booking (opsiyonel)</label>
