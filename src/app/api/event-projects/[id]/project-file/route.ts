@@ -15,9 +15,10 @@ export async function POST(
   const { id } = await params;
   const supabase = createServiceClient();
 
-  const [{ data: project }, { data: items }] = await Promise.all([
+  const [{ data: project }, { data: items }, { data: schedule }] = await Promise.all([
     supabase.from("event_projects").select("*").eq("id", id).single(),
-    supabase.from("checklist_items").select("category, title, is_done, assigned_to").eq("event_project_id", id).order("sort_order"),
+    supabase.from("checklist_items").select("category, title, is_done, assigned_to, due_date").eq("event_project_id", id).order("sort_order"),
+    supabase.from("event_schedule_items").select("time, title, assigned_to").eq("event_project_id", id).order("time").order("sort_order"),
   ]);
 
   if (!project) {
@@ -36,7 +37,8 @@ export async function POST(
       venueCity: project.venue_city,
       venueAddress: project.venue_address,
     },
-    items: (items ?? []).map((i) => ({ category: i.category, title: i.title, is_done: i.is_done, assignedTo: i.assigned_to })),
+    items: (items ?? []).map((i) => ({ category: i.category, title: i.title, is_done: i.is_done, assignedTo: i.assigned_to, dueDate: i.due_date })),
+    schedule: (schedule ?? []).map((s) => ({ time: s.time, title: s.title, assignedTo: s.assigned_to })),
   };
 
   try {

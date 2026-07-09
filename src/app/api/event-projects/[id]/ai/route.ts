@@ -3,7 +3,7 @@ import { isAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
 import {
   buildEventContext, generateProjectBrief, generateSponsorDoc, generateStrategyDoc, generatePosterImage,
-  type ChecklistItemRow,
+  type ChecklistItemRow, type ScheduleItemRow,
 } from "@/lib/aiContent";
 
 export const maxDuration = 120;
@@ -38,16 +38,17 @@ export async function POST(
   }
 
   const supabase = createServiceClient();
-  const [{ data: project }, { data: items }] = await Promise.all([
+  const [{ data: project }, { data: items }, { data: schedule }] = await Promise.all([
     supabase.from("event_projects").select("*").eq("id", id).single(),
     supabase.from("checklist_items").select("category, title, assigned_to").eq("event_project_id", id),
+    supabase.from("event_schedule_items").select("time, title, assigned_to").eq("event_project_id", id).order("time"),
   ]);
 
   if (!project) {
     return NextResponse.json({ error: "Etkinlik bulunamadı" }, { status: 404 });
   }
 
-  const context = buildEventContext(project, (items ?? []) as ChecklistItemRow[]);
+  const context = buildEventContext(project, (items ?? []) as ChecklistItemRow[], (schedule ?? []) as ScheduleItemRow[]);
 
   try {
     let content: string;

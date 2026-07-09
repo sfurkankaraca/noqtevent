@@ -7,7 +7,13 @@ export default async function EventProjectDetailPage({ params }: { params: Promi
   const { id } = await params;
   const supabase = createServiceClient();
 
-  const { data: project } = await supabase.from("event_projects").select("*").eq("id", id).single();
+  const [{ data: project }, { data: items }, { data: comments }, { data: schedule }] = await Promise.all([
+    supabase.from("event_projects").select("*").eq("id", id).single(),
+    supabase.from("checklist_items").select("*").eq("event_project_id", id).order("sort_order").order("created_at"),
+    supabase.from("checklist_comments").select("*").eq("event_project_id", id).order("created_at"),
+    supabase.from("event_schedule_items").select("*").eq("event_project_id", id).order("time").order("sort_order"),
+  ]);
+
   if (!project) notFound();
 
   return (
@@ -19,7 +25,12 @@ export default async function EventProjectDetailPage({ params }: { params: Promi
         <span className="text-muted-foreground/40">/</span>
         <h1 className="text-2xl font-semibold text-foreground">{project.client_name}</h1>
       </div>
-      <EventProjectDetail project={project} />
+      <EventProjectDetail
+        project={project}
+        initialItems={items ?? []}
+        initialComments={comments ?? []}
+        initialSchedule={schedule ?? []}
+      />
     </div>
   );
 }

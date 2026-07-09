@@ -61,6 +61,10 @@ const styles = StyleSheet.create({
   itemTextDone: { fontSize: 9, color: palette.gray, flex: 1 },
   assigneeText: { fontSize: 8, color: palette.gray, fontStyle: "italic" },
 
+  scheduleRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4, gap: 8 },
+  scheduleTime: { fontSize: 9, fontFamily: "Roboto", fontWeight: 700, color: palette.black, width: 40 },
+  scheduleTitle: { fontSize: 9, color: palette.black, flex: 1 },
+
   footer: { position: "absolute", bottom: 30, left: 56, right: 56, flexDirection: "row", justifyContent: "space-between" },
   footerText: { fontSize: 7.5, color: palette.gray },
 });
@@ -79,7 +83,8 @@ export type ProjectFileData = {
     venueAddress?: string | null;
   };
   artist?: { name: string; performer_type?: string | null } | null;
-  items: { category: string; title: string; is_done: boolean; assignedTo?: string | null }[];
+  items: { category: string; title: string; is_done: boolean; assignedTo?: string | null; dueDate?: string | null }[];
+  schedule?: { time: string; title: string; assignedTo?: string | null }[];
 };
 
 function ProjectFileDocument({ data }: { data: ProjectFileData }) {
@@ -126,6 +131,19 @@ function ProjectFileDocument({ data }: { data: ProjectFileData }) {
           )}
         </View>
 
+        {data.schedule && data.schedule.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Etkinlik Günü Planı</Text>
+            {data.schedule.map((s, idx) => (
+              <View key={idx} style={styles.scheduleRow}>
+                <Text style={styles.scheduleTime}>{s.time}</Text>
+                <Text style={styles.scheduleTitle}>{s.title}</Text>
+                {s.assignedTo && <Text style={styles.assigneeText}>{s.assignedTo}</Text>}
+              </View>
+            ))}
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Checklist Durumu</Text>
           <View style={styles.progressBox}>
@@ -139,6 +157,11 @@ function ProjectFileDocument({ data }: { data: ProjectFileData }) {
                 <View key={idx} style={styles.itemRow}>
                   <Text style={item.is_done ? styles.checkbox : styles.checkboxEmpty}>{item.is_done ? "✓" : "○"}</Text>
                   <Text style={item.is_done ? styles.itemTextDone : styles.itemText}>{item.title}</Text>
+                  {item.dueDate && !item.is_done && (
+                    <Text style={styles.assigneeText}>
+                      {new Date(item.dueDate).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
+                    </Text>
+                  )}
                   {item.assignedTo && <Text style={styles.assigneeText}>{item.assignedTo}</Text>}
                 </View>
               ))}

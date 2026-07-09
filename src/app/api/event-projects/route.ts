@@ -62,6 +62,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error?.message ?? "Etkinlik oluşturulamadı" }, { status: 500 });
   }
 
+  // Etkinlik tarihi belliyse her görev, şablondaki offset'e göre otomatik son tarih alır
+  const eventDateMs = event_date ? new Date(event_date).getTime() : null;
+  const dueDateFor = (offsetDays: number): string | null => {
+    if (!eventDateMs || Number.isNaN(eventDateMs)) return null;
+    const due = new Date(eventDateMs - offsetDays * 24 * 60 * 60 * 1000);
+    return due.toISOString().slice(0, 10);
+  };
+
   const rows = DEFAULT_CHECKLIST_TEMPLATE
     .filter((t) => decisions?.[t.category]?.included !== false)
     .map((t, i) => ({
@@ -70,6 +78,7 @@ export async function POST(req: NextRequest) {
       title: t.title,
       sort_order: i,
       assigned_to: decisions?.[t.category as ChecklistCategory]?.assignee || null,
+      due_date: dueDateFor(t.dueOffsetDays),
     }));
 
   if (rows.length > 0) {

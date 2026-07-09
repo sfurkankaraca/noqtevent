@@ -8,8 +8,9 @@ export const IMAGE_MODEL = "google/imagen-4.0-fast-generate-001";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EventProjectRow = Record<string, any>;
 export type ChecklistItemRow = { category: ChecklistCategory; title: string; assigned_to: string | null };
+export type ScheduleItemRow = { time: string; title: string; assigned_to: string | null };
 
-export function buildEventContext(project: EventProjectRow, items: ChecklistItemRow[]): string {
+export function buildEventContext(project: EventProjectRow, items: ChecklistItemRow[], schedule: ScheduleItemRow[] = []): string {
   const lines: string[] = [];
   lines.push(`Müşteri: ${project.client_name}`);
   if (project.event_type) lines.push(`Etkinlik türü: ${project.event_type}`);
@@ -28,6 +29,13 @@ export function buildEventContext(project: EventProjectRow, items: ChecklistItem
       const label = CATEGORY_LABELS[cat] ?? cat;
       const parts = [d?.vendor, d?.assignee ? `Sorumlu: ${d.assignee}` : null, d?.note].filter(Boolean);
       lines.push(`- ${label}${parts.length ? ` — ${parts.join(", ")}` : ""}`);
+    }
+  }
+
+  if (schedule.length > 0) {
+    lines.push("", "Etkinlik günü akışı:");
+    for (const s of schedule) {
+      lines.push(`- ${s.time} ${s.title}${s.assigned_to ? ` (${s.assigned_to})` : ""}`);
     }
   }
   return lines.join("\n");

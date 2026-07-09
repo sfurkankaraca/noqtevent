@@ -16,15 +16,17 @@ export default async function EventProjectsPage() {
 
   const { data: items } = await supabase
     .from("checklist_items")
-    .select("event_project_id, is_done")
+    .select("event_project_id, is_done, due_date")
     .not("event_project_id", "is", null);
 
-  const progressByProject = new Map<string, { done: number; total: number }>();
+  const today = new Date().toISOString().slice(0, 10);
+  const progressByProject = new Map<string, { done: number; total: number; overdue: number }>();
   for (const item of items ?? []) {
     const key = item.event_project_id as string;
-    const p = progressByProject.get(key) ?? { done: 0, total: 0 };
+    const p = progressByProject.get(key) ?? { done: 0, total: 0, overdue: 0 };
     p.total += 1;
     if (item.is_done) p.done += 1;
+    else if (item.due_date && item.due_date < today) p.overdue += 1;
     progressByProject.set(key, p);
   }
 
@@ -45,8 +47,15 @@ export default async function EventProjectsPage() {
           {p.event_date ? new Date(p.event_date).toLocaleDateString("tr-TR") : "—"}
         </td>
         <td className="px-4 py-4 text-muted-foreground">{p.venue_name ?? "—"}</td>
-        <td className="px-4 py-4 tabular-nums text-foreground">
-          {progress ? `${progress.done} / ${progress.total}` : "—"}
+        <td className="px-4 py-4">
+          <span className="tabular-nums text-foreground">{progress ? `${progress.done} / ${progress.total}` : "—"}</span>
+          {progress && p.status !== "completed" && (
+            progress.overdue > 0 ? (
+              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 font-medium">⚠ {progress.overdue} gecikmiş</span>
+            ) : (
+              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-medium">✓ yolunda</span>
+            )
+          )}
         </td>
         <td className="px-4 py-4">
           <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${meta.cls}`}>{meta.label}</span>
