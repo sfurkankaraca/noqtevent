@@ -19,6 +19,7 @@ const NAV = [
   { href: "/admin/inquiries", label: "Talepler", icon: "📋" },
   { href: "/admin/bookings", label: "Bookings", icon: "🎤" },
   { href: "/admin/etkinlikler", label: "Etkinlikler", icon: "🗂" },
+  { href: "/admin/hedefler", label: "Hedefler", icon: "🎯" },
   { href: "/admin/takvim", label: "Takvim", icon: "📅" },
   { href: "/admin/finans", label: "Finans", icon: "₺" },
   { href: "/admin/mesajlar", label: "Mesajlar", icon: "💬" },

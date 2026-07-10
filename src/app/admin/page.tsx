@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase";
 import Link from "next/link";
 import { EVENT_TYPE_LABELS as EVENT_LABELS } from "@/lib/eventTypeLabels";
+import { getYearMetrics } from "@/lib/companyMetrics";
 
 export default async function AdminDashboard() {
   const supabase = createServiceClient();
@@ -47,12 +48,80 @@ export default async function AdminDashboard() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  // Hedef kokpiti özeti — company_goals tablosu henüz yoksa sessizce gizlenir
+  const year = new Date().getFullYear();
+  const monthPeriod = `${year}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  let goalSummary: { label: string; pct: number; actual: number; target: number; isMoney: boolean } | null = null;
+  let goalsTableExists = false;
+  let pendingTaskCount = 0;
+  try {
+    const [{ data: goals, error: goalsError }, metrics, { data: tasks }, { data: completions }] = await Promise.all([
+      supabase.from("company_goals").select("*").eq("year", year).order("created_at").limit(1),
+      getYearMetrics(year),
+      supabase.from("company_tasks").select("id, recurrence, is_done, due_date").eq("is_active", true),
+      supabase.from("company_task_completions").select("task_id, period").eq("period", monthPeriod),
+    ]);
+    goalsTableExists = !goalsError;
+    const g = goals?.[0];
+    if (g) {
+      const actual = g.metric === "revenue" ? metrics.revenueTotal
+        : g.metric === "bookings" ? metrics.bookingsTotal
+        : Number(g.manual_actual) || 0;
+      goalSummary = {
+        label: g.metric === "revenue" ? "Ciro hedefi" : g.metric === "bookings" ? "Booking hedefi" : g.label ?? "Hedef",
+        pct: Math.min(100, Math.round((actual / (Number(g.target) || 1)) * 100)),
+        actual,
+        target: Number(g.target),
+        isMoney: g.metric === "revenue",
+      };
+    }
+    pendingTaskCount = (tasks ?? []).filter((t) =>
+      t.recurrence === "monthly" ? !(completions ?? []).some((c) => c.task_id === t.id) :
+      t.recurrence === "once" ? !t.is_done : false
+    ).length;
+  } catch {
+    // migration çalıştırılmamış — kart gösterilmez
+  }
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">NOQT Admin Paneli</p>
       </div>
+
+      {/* Hedef kokpiti özeti */}
+      {goalsTableExists && (
+        <Link href="/admin/hedefler"
+          className="block bg-white rounded-2xl border border-border p-5 hover:border-foreground/20 transition-colors">
+          {goalSummary ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-foreground">🎯 {goalSummary.label} — {year}</p>
+                <p className="text-xs text-muted-foreground">
+                  {pendingTaskCount > 0 && `${pendingTaskCount} bekleyen şirket görevi · `}Kokpite git →
+                </p>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-xl font-semibold text-foreground tabular-nums">
+                  {goalSummary.actual.toLocaleString("tr-TR")}{goalSummary.isMoney ? " ₺" : ""}
+                </p>
+                <p className="text-sm text-muted-foreground tabular-nums">
+                  / {goalSummary.target.toLocaleString("tr-TR")}{goalSummary.isMoney ? " ₺" : ""} · %{goalSummary.pct}
+                </p>
+              </div>
+              <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full bg-foreground transition-all" style={{ width: `${goalSummary.pct}%` }} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-foreground">🎯 {year} için henüz hedef belirlenmedi</p>
+              <p className="text-xs text-muted-foreground">Hedef belirle →</p>
+            </div>
+          )}
+        </Link>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 lg:grid-cols-4 gap-4">
