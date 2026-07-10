@@ -80,7 +80,16 @@ export default function EventProjectDetail({
         throw new Error(json.error ?? "PDF oluşturulamadı");
       }
       const blob = await res.blob();
-      window.open(URL.createObjectURL(blob), "_blank");
+      // Safari, async fetch sonrası window.open'ı popup sayıp engelliyor —
+      // indirme bağlantısı tetiklemek her tarayıcıda çalışır
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `noqt-${endpoint === "run-sheet" ? "gun-plani" : "proje-dosyasi"}-${project.id.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Hata");
     } finally {

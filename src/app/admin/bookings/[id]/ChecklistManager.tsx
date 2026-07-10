@@ -151,7 +151,15 @@ export default function ChecklistManager({ bookingId, clientName }: { bookingId:
       const res = await fetch(`/api/bookings/${bookingId}/project-file`, { method: "POST" });
       if (!res.ok) throw new Error("PDF oluşturulamadı");
       const blob = await res.blob();
-      window.open(URL.createObjectURL(blob), "_blank");
+      // Safari, async fetch sonrası window.open'ı popup sayıp engelliyor
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `noqt-proje-dosyasi-${bookingId.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Hata");
     } finally {
