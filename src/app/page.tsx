@@ -113,19 +113,12 @@ export default async function Home() {
       }
     : null;
 
-  const firstHeroImage = heroImages[0];
-
   return (
     <>
-      {firstHeroImage && (
-        <link
-          rel="preload"
-          as="image"
-          href={`/_next/image?url=${encodeURIComponent(firstHeroImage)}&w=828&q=75`}
-          // @ts-expect-error - fetchpriority is valid but not in React types yet
-          fetchpriority="high"
-        />
-      )}
+      {/* LCP görseli için elle preload eklemiyoruz — Hero'daki <Image priority>
+          zaten aynı `sizes` mantığıyla doğru eşleşen bir preload üretir. Elle
+          sabit genişlikli (w=828) bir preload eklemek gerçek srcset'le
+          eşleşmediği için tarayıcının LCP isteğini erken keşfetmesini engelliyordu. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       {ratingSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ratingSchema) }} />
