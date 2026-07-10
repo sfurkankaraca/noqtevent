@@ -44,7 +44,7 @@ export default function EventProjectDetail({
   // Sayfa açılış anına sabitlenir — render sırasında Date.now() saf olmadığı için state'te tutulur
   const [now] = useState(() => Date.now());
   const [isPending, startTransition] = useTransition();
-  const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [pdfGenerating, setPdfGenerating] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -70,18 +70,21 @@ export default function EventProjectDetail({
     });
   };
 
-  const handleDownloadPdf = async () => {
-    setPdfGenerating(true);
+  const handleDownloadPdf = async (endpoint: "project-file" | "run-sheet") => {
+    setPdfGenerating(endpoint);
     setErr(null);
     try {
-      const res = await fetch(`/api/event-projects/${project.id}/project-file`, { method: "POST" });
-      if (!res.ok) throw new Error("PDF oluşturulamadı");
+      const res = await fetch(`/api/event-projects/${project.id}/${endpoint}`, { method: "POST" });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error ?? "PDF oluşturulamadı");
+      }
       const blob = await res.blob();
       window.open(URL.createObjectURL(blob), "_blank");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Hata");
     } finally {
-      setPdfGenerating(false);
+      setPdfGenerating(null);
     }
   };
 
@@ -233,9 +236,13 @@ export default function EventProjectDetail({
             {/* Hızlı aksiyonlar */}
             <div className="bg-white rounded-2xl border border-border p-5 space-y-2.5">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hızlı Aksiyonlar</p>
-              <button onClick={handleDownloadPdf} disabled={pdfGenerating}
+              <button onClick={() => handleDownloadPdf("project-file")} disabled={pdfGenerating !== null}
                 className="w-full py-2.5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
-                {pdfGenerating ? "Oluşturuluyor…" : "📄 Proje Dosyası (PDF)"}
+                {pdfGenerating === "project-file" ? "Oluşturuluyor…" : "📄 Sunum / Proje Dosyası (PDF)"}
+              </button>
+              <button onClick={() => handleDownloadPdf("run-sheet")} disabled={pdfGenerating !== null}
+                className="w-full py-2.5 rounded-xl border border-border text-sm text-foreground hover:bg-secondary transition-colors disabled:opacity-50">
+                {pdfGenerating === "run-sheet" ? "Oluşturuluyor…" : "🗓 Gün Planı (PDF)"}
               </button>
               {project.checklist_token && (
                 <button onClick={handleCopyLink}
