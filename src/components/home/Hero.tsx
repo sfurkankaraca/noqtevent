@@ -86,10 +86,16 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             <button
               key={i}
               onClick={() => setCurrent(i)}
-              className={`h-1 rounded-full transition-all duration-300 ${
-                i === current ? "w-6 bg-white" : "w-1.5 bg-white/40"
-              }`}
-            />
+              aria-label={`${i + 1}. görsele geç`}
+              aria-current={i === current}
+              className="p-2.5 -m-2.5 flex items-center"
+            >
+              <span
+                className={`h-1 rounded-full transition-all duration-300 block ${
+                  i === current ? "w-6 bg-white" : "w-1.5 bg-white/40"
+                }`}
+              />
+            </button>
           ))}
         </div>
       )}

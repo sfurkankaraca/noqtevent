@@ -118,8 +118,8 @@ export default function PartnerEcosystem({
                     src={logo.url}
                     alt={logo.label ?? `Partner ${i + 1}`}
                     fill
+                    sizes="128px"
                     className="object-contain"
-                    unoptimized
                   />
                 </div>
               ))}

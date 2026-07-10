@@ -91,12 +91,12 @@ export default function SegmentGate() {
                       {seg.tag}
                     </span>
                   </div>
-                  <h3
+                  <h2
                     className={`text-2xl lg:text-3xl leading-snug ${text} mb-3`}
                     style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
                   >
                     {seg.headline}
-                  </h3>
+                  </h2>
                   <p className={`text-sm leading-relaxed ${muted} mb-8 max-w-xs`}>
                     {seg.desc}
                   </p>

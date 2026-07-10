@@ -86,6 +86,7 @@ export default function Artists({ djs }: { djs: Dj[] }) {
                             src={dj.photo_url}
                             alt={dj.name}
                             fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                             className="object-cover"
                             style={{
                               objectPosition: (() => {
@@ -93,7 +94,6 @@ export default function Artists({ djs }: { djs: Dj[] }) {
                                 return fp ? `${fp.x}% ${fp.y}%` : "center";
                               })(),
                             }}
-                            unoptimized
                           />
                         ) : (
                           <span

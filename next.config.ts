@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
       },
     ],
     formats: ["image/avif", "image/webp"],
+    // Optimize edilmiş görsellerin tarayıcı/CDN önbelleğinde kalma süresi.
+    // Kaynak dosyalar (upload'lar) değişmez isimlerle üretiliyor (rastgele
+    // ek), bu yüzden agresif önbellekleme güvenli — Lighthouse'un "verimli
+    // önbellek süreleri" uyarısını giderir.
+    minimumCacheTTL: 60 * 60 * 24 * 365,
   },
   experimental: {
     serverActions: {
@@ -75,6 +80,13 @@ const nextConfig: NextConfig = {
         source: "/(admin|sign-in)(.*)",
         headers: [
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
+        // /public altındaki statik görseller/ikonlar — içerik değişirse dosya adı da değişir
+        source: "/:path*.(png|jpg|jpeg|webp|avif|svg|ico|gif|woff|woff2)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
       },
     ];

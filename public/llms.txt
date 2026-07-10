@@ -1,0 +1,28 @@
+# NOQT
+
+> NOQT, Kayseri ve Nevşehir merkezli DJ ve sanatçı booking ajansı. Etkinlik türüne
+> (düğün, kına, festival, kulüp gecesi, açılış, mezuniyet, kurumsal etkinlik) ve
+> mekanlara uygun sanatçı temini yapar; teklif, sözleşme ve ödeme süreçlerini
+> baştan sona online yönetir.
+
+## Hizmetler
+
+- [Sanatçılar](https://www.noqt.events/sanatcilar): DJ ve canlı müzisyen kadrosu, profiller ve setler
+- [Etkinlik Türleri](https://www.noqt.events/etkinlikler): düğün, kına, festival, kulüp gecesi, açılış, kurumsal etkinlik sayfaları
+- [Paketler](https://www.noqt.events/paketler): hazır etkinlik paketleri ve kapsamları
+- [Fiyatlar](https://www.noqt.events/fiyatlar): bütçe seviyeleri ve fiyatı etkileyen faktörler
+- [Konseptler](https://www.noqt.events/konseptler): müzik ve atmosfer konseptleri
+- [Mekanlar](https://www.noqt.events/salonlar): mekan ortaklığı ve sanatçı temini
+- [Etkinliğimi Planla](https://www.noqt.events/planla): 2 dakikalık planlama sihirbazı, aynı gün teklif
+- [Journal](https://www.noqt.events/journal): etkinlik planlama rehberleri ve ilham içerikleri
+
+## İletişim
+
+- WhatsApp: https://wa.me/905417997973
+- E-posta: booking@noqt.events
+
+## Notlar
+
+- /admin/ altındaki sayfalar yönetim paneli olup dizinlenmemelidir.
+- Fiyatlar etkinlik türüne, mekana ve tarihe göre değişir; kesin teklif için
+  planlama sihirbazının kullanılması önerilir.
