@@ -8,28 +8,9 @@ export type ContractResult = {
   booking: Record<string, any>;
 };
 
-// Booking'ten (varsa son dijital onayla birlikte) sözleşme PDF'i üretir,
-// private "contracts" bucket'ına yükler, 1 yıllık imzalı URL'i booking'e yazar.
-export async function createAndStoreContract(bookingId: string): Promise<ContractResult | null> {
-  const supabase = createServiceClient();
-
-  const { data: booking, error } = await supabase
-    .from("bookings")
-    .select("*, dj_profiles(name, performer_type, city, email)")
-    .eq("id", bookingId)
-    .single();
-
-  if (error || !booking) return null;
-
-  const { data: agreement } = await supabase
-    .from("booking_agreements")
-    .select("*")
-    .eq("booking_id", bookingId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const contractData: ContractData = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildContractData(booking: Record<string, any>, agreement: Record<string, any> | null): ContractData {
+  return {
     bookingId: booking.id,
     contractDate: new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
     client: {
@@ -73,8 +54,54 @@ export async function createAndStoreContract(bookingId: string): Promise<Contrac
         }
       : null,
   };
+}
 
-  const pdfBuffer = await generateContractPdf(contractData);
+// Teklif sayfasında (onaydan önce/sonra) müşterinin görüntüleyip indirebileceği
+// sözleşme PDF'ini üretir — depolamaya yazmaz, sadece buffer döner.
+// offer_slug ile arar (public sayfadan çağrılır, booking id'sine güvenilmez).
+export async function generateContractPreview(offerSlug: string): Promise<Buffer | null> {
+  const supabase = createServiceClient();
+
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("*, dj_profiles(name, performer_type, city, email)")
+    .eq("offer_slug", offerSlug)
+    .single();
+  if (error || !booking) return null;
+
+  const { data: agreement } = await supabase
+    .from("booking_agreements")
+    .select("*")
+    .eq("booking_id", booking.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return generateContractPdf(buildContractData(booking, agreement));
+}
+
+// Booking'ten (varsa son dijital onayla birlikte) sözleşme PDF'i üretir,
+// private "contracts" bucket'ına yükler, 1 yıllık imzalı URL'i booking'e yazar.
+export async function createAndStoreContract(bookingId: string): Promise<ContractResult | null> {
+  const supabase = createServiceClient();
+
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("*, dj_profiles(name, performer_type, city, email)")
+    .eq("id", bookingId)
+    .single();
+
+  if (error || !booking) return null;
+
+  const { data: agreement } = await supabase
+    .from("booking_agreements")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const pdfBuffer = await generateContractPdf(buildContractData(booking, agreement));
 
   // Sözleşmeler PII içerdiği için private bucket'ta tutulur; erişim imzalı URL ile
   const bucket = "contracts";

@@ -222,7 +222,19 @@ export default function OfferView({
                 className="mt-0.5 rounded border-border" />
               <span className="text-xs text-muted-foreground leading-relaxed">
                 Yukarıdaki fiyatı ve rezervasyon koşullarını okudum, {selectedPlan === "cash" ? "peşin" : "ön ödemeli"} plan ile
-                <strong className="text-foreground"> {fmt(agreedPrice)}</strong> bedeli kabul ediyorum. Bu onay, taraflar arasında bağlayıcı bir sözleşme oluşturur.
+                <strong className="text-foreground"> {fmt(agreedPrice)}</strong> bedeli kabul ediyorum. Bu onay, taraflar arasında bağlayıcı bir sözleşme oluşturur
+                {" "}(
+                <a
+                  href={`/api/teklif/${slug}/sozlesme`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={`noqt-sozlesme-${slug}.pdf`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-foreground underline underline-offset-2 hover:text-foreground/80"
+                >
+                  sözleşmenin PDF&apos;ini indir
+                </a>
+                ).
               </span>
             </label>
             {!otpSent ? (
@@ -272,7 +284,16 @@ export default function OfferView({
             </div>
             <p className="text-xs text-muted-foreground">
               {selectedPlan === "cash" ? "Peşin" : "Ön ödemeli"} plan ile <strong className="text-foreground">{fmt(agreedPrice)}</strong> tutarını kabul ettiniz.
-              Sözleşmeniz PDF olarak e-posta adresinize gönderildi.
+              Sözleşmeniz PDF olarak e-posta adresinize gönderildi — dilerseniz{" "}
+              <a
+                href={`/api/teklif/${slug}/sozlesme`}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={`noqt-sozlesme-${slug}.pdf`}
+                className="text-foreground underline underline-offset-2 hover:text-foreground/80"
+              >
+                buradan da indirebilirsiniz
+              </a>.
             </p>
 
             <div className="border-t border-border pt-4">
