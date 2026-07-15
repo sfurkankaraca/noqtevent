@@ -24,11 +24,11 @@ const LIVE_PERFORMER_TYPES = ["artist", "trio", "grup", "bando", "orkestra"];
 
 const stepTitles = [
   "Ne planlıyorsun?",
+  "Hangi hizmetlere ihtiyacın var?",
   "Misafirlerin kim?",
   "Gecenin müzik konseptlerine karar verelim",
   "Önemli anlarını planla",
   "Mekanın var mı?",
-  "Hangi alanlarda rehberlik ister misin?",
   "Senin için hazırladık",
   "Deneyim taslağın hazır",
 ];
@@ -248,19 +248,19 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
               <Step1EventType data={data} update={update} onNext={next} />
             )}
             {step === 2 && (
-              <Step2Guests data={data} update={update} onNext={next} />
+              <Step6Services data={data} update={update} onNext={next} />
             )}
             {step === 3 && (
-              <Step3EventSections data={data} update={update} onNext={next} conceptCovers={conceptCovers} activeSlugs={activeSlugs} djs={djs} />
+              <Step2Guests data={data} update={update} onNext={next} />
             )}
             {step === 4 && (
-              <Step4Moments data={data} update={update} onNext={next} />
+              <Step3EventSections data={data} update={update} onNext={next} conceptCovers={conceptCovers} activeSlugs={activeSlugs} djs={djs} />
             )}
             {step === 5 && (
-              <Step5Venue data={data} update={update} onNext={next} />
+              <Step4Moments data={data} update={update} onNext={next} />
             )}
             {step === 6 && (
-              <Step6Services data={data} update={update} onNext={next} />
+              <Step5Venue data={data} update={update} onNext={next} />
             )}
             {step === 7 && (
               <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} djs={djs} venues={venues} conceptCovers={conceptCovers} />

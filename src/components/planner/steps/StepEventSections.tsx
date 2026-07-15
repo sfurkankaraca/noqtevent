@@ -429,8 +429,14 @@ function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, a
   const [modernExpanded, setModernExpanded] = useState(false);
   const [tradExpanded, setTradExpanded] = useState(false);
 
+  const style = sections.anaKutlama.style;
+
   const setMode = (m: "dj" | "live") => {
-    onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, performanceMode: m, conceptIds: [] } });
+    onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, performanceMode: m, style: "", conceptIds: [] } });
+  };
+
+  const setStyle = (s: "modern" | "traditional") => {
+    onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, style: s, conceptIds: [] } });
   };
 
   const toggleConcept = (id: string) => {
@@ -442,130 +448,147 @@ function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, a
 
   return (
     <div className="space-y-6">
+      <TimePicker
+        label="Başlangıç saati"
+        value={sections.anaKutlama.startTime}
+        onChange={(v) => onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, startTime: v } })}
+      />
+
+      <div>
+        <p className="text-sm font-medium text-foreground mb-2">DJ mi, canlı müzik mi olsun?</p>
+        <ModeToggle mode={mode} onChange={setMode} />
+      </div>
+
+      {/* DJ: modern mi geleneksel mi? */}
+      {mode === "dj" && (
+        <div>
+          <p className="text-sm font-medium text-foreground mb-2">Geleneksel mi, modern mi?</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setStyle("modern")}
+              className={`rounded-2xl border-2 p-4 text-left transition-all ${
+                style === "modern" ? "border-foreground bg-foreground/5" : "border-border hover:border-foreground/25"
+              }`}
+            >
+              <p className="text-xl mb-1">✨</p>
+              <p className="text-sm font-semibold text-foreground">Modern</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStyle("traditional")}
+              className={`rounded-2xl border-2 p-4 text-left transition-all ${
+                style === "traditional" ? "border-foreground bg-foreground/5" : "border-border hover:border-foreground/25"
+              }`}
+            >
+              <p className="text-xl mb-1">🔥</p>
+              <p className="text-sm font-semibold text-foreground">Geleneksel</p>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Modern */}
-      <div className="space-y-3">
-        <div>
-          <p className="text-sm font-medium text-foreground">✨ Modern</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Birden fazla seçebilirsin</p>
-        </div>
+      {((mode === "dj" && style === "modern") || mode === "live") && (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Birden fazla seçebilirsin</p>
 
-        <TimePicker
-          label="Başlangıç saati"
-          value={sections.anaKutlama.startTime}
-          onChange={(v) => onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, startTime: v } })}
-        />
-
-        <div>
-          <p className="text-xs text-muted-foreground mb-2">DJ mi, canlı müzik mi olsun?</p>
-          <ModeToggle mode={mode} onChange={setMode} />
-        </div>
-
-        {mode && (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {modernRec.map((c) => (
-                <div key={c.id}>
-                  <ConceptCard
-                    concept={c}
-                    selected={selected.includes(c.id)}
-                    onSelect={() => toggleConcept(c.id)}
-                    coverUrl={coverMap[c.id]}
-                    isRecommended
-                    recommendText={recommendReason(c, eventType)}
-                  />
-                  {selected.includes(c.id) && (
-                    <ArtistMiniStrip concept={c} mode={mode} djs={djs} selectedIds={selectedDjIds} onToggle={onToggleDj} />
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {modernOther.length > 0 && (
-              <div className="space-y-3">
-                <ExpandButton expanded={modernExpanded} count={modernOther.length} onToggle={() => setModernExpanded((p) => !p)} />
-                <AnimatePresence>
-                  {modernExpanded && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.25 }}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
-                    >
-                      {modernOther.map((c) => (
-                        <div key={c.id}>
-                          <ConceptCard
-                            concept={c}
-                            selected={selected.includes(c.id)}
-                            onSelect={() => toggleConcept(c.id)}
-                            coverUrl={coverMap[c.id]}
-                          />
-                          {selected.includes(c.id) && (
-                            <ArtistMiniStrip concept={c} mode={mode} djs={djs} selectedIds={selectedDjIds} onToggle={onToggleDj} />
-                          )}
-                        </div>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {modernRec.map((c) => (
+              <div key={c.id}>
+                <ConceptCard
+                  concept={c}
+                  selected={selected.includes(c.id)}
+                  onSelect={() => toggleConcept(c.id)}
+                  coverUrl={coverMap[c.id]}
+                  isRecommended
+                  recommendText={recommendReason(c, eventType)}
+                />
+                {selected.includes(c.id) && (
+                  <ArtistMiniStrip concept={c} mode={mode} djs={djs} selectedIds={selectedDjIds} onToggle={onToggleDj} />
+                )}
               </div>
-            )}
-          </>
-        )}
-      </div>
+            ))}
+          </div>
 
-      {/* Divider */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-xs text-muted-foreground font-medium">Geleneksel</span>
-        <div className="flex-1 h-px bg-border" />
-      </div>
+          {modernOther.length > 0 && (
+            <div className="space-y-3">
+              <ExpandButton expanded={modernExpanded} count={modernOther.length} onToggle={() => setModernExpanded((p) => !p)} />
+              <AnimatePresence>
+                {modernExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
+                  >
+                    {modernOther.map((c) => (
+                      <div key={c.id}>
+                        <ConceptCard
+                          concept={c}
+                          selected={selected.includes(c.id)}
+                          onSelect={() => toggleConcept(c.id)}
+                          coverUrl={coverMap[c.id]}
+                        />
+                        {selected.includes(c.id) && (
+                          <ArtistMiniStrip concept={c} mode={mode} djs={djs} selectedIds={selectedDjIds} onToggle={onToggleDj} />
+                        )}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Traditional */}
-      <div className="space-y-3">
-        <p className="text-xs text-muted-foreground">🔥 Geleneksel dokunuşlar eklemek ister misin?</p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {tradRec.map((c) => (
-            <ConceptCard
-              key={c.id}
-              concept={c}
-              selected={selected.includes(c.id)}
-              onSelect={() => toggleConcept(c.id)}
-              coverUrl={coverMap[c.id]}
-              isRecommended
-              recommendText={recommendReason(c, eventType)}
-            />
-          ))}
-        </div>
-
-        {tradOther.length > 0 && (
-          <div className="space-y-3">
-            <ExpandButton expanded={tradExpanded} count={tradOther.length} onToggle={() => setTradExpanded((p) => !p)} />
-            <AnimatePresence>
-              {tradExpanded && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
-                >
-                  {tradOther.map((c) => (
-                    <ConceptCard
-                      key={c.id}
-                      concept={c}
-                      selected={selected.includes(c.id)}
-                      onSelect={() => toggleConcept(c.id)}
-                      coverUrl={coverMap[c.id]}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+      {mode === "dj" && style === "traditional" && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {tradRec.map((c) => (
+              <ConceptCard
+                key={c.id}
+                concept={c}
+                selected={selected.includes(c.id)}
+                onSelect={() => toggleConcept(c.id)}
+                coverUrl={coverMap[c.id]}
+                isRecommended
+                recommendText={recommendReason(c, eventType)}
+              />
+            ))}
           </div>
-        )}
-      </div>
+
+          {tradOther.length > 0 && (
+            <div className="space-y-3">
+              <ExpandButton expanded={tradExpanded} count={tradOther.length} onToggle={() => setTradExpanded((p) => !p)} />
+              <AnimatePresence>
+                {tradExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
+                  >
+                    {tradOther.map((c) => (
+                      <ConceptCard
+                        key={c.id}
+                        concept={c}
+                        selected={selected.includes(c.id)}
+                        onSelect={() => toggleConcept(c.id)}
+                        coverUrl={coverMap[c.id]}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Devam button */}
       <button
