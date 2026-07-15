@@ -12,6 +12,10 @@ type Props = {
 const categories = [...new Set(PARTNER_SERVICES.map((s) => s.category))];
 
 export default function Step6Services({ data, update, onNext }: Props) {
+  const relevantServices = PARTNER_SERVICES.filter(
+    (s) => !s.eventTypes || !data.eventType || s.eventTypes.includes(data.eventType)
+  );
+
   const toggle = (id: string) => {
     const current = data.services;
     update({
@@ -29,7 +33,8 @@ export default function Step6Services({ data, update, onNext }: Props) {
       </p>
 
       {categories.map((cat, ci) => {
-        const items = PARTNER_SERVICES.filter((s) => s.category === cat);
+        const items = relevantServices.filter((s) => s.category === cat);
+        if (items.length === 0) return null;
         return (
           <motion.div
             key={cat}

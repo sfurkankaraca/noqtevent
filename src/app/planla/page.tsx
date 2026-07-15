@@ -17,7 +17,7 @@ export default async function PlanlaPage() {
     supabase.from("concepts").select("slug, cover_image_url, name").eq("is_active", true),
     supabase
       .from("dj_profiles")
-      .select("id, name, bio, performer_type, speciality, city, photo_url, photos, focal_points, instagram_url, spotify_url, website_url, soundcloud_url, mixcloud_url, youtube_url, concept_tags, base_fee_min, base_fee_max, event_type_fees")
+      .select("id, name, bio, performer_type, speciality, city, photo_url, photos, focal_points, preview_video_url, instagram_url, spotify_url, website_url, soundcloud_url, mixcloud_url, youtube_url, concept_tags, base_fee_min, base_fee_max, event_type_fees")
       .eq("is_active", true)
       .eq("application_status", "approved"),
     supabase

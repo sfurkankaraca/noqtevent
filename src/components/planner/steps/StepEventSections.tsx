@@ -3,13 +3,31 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { type PlannerData, MUSIC_CONCEPTS, type MusicConcept, type EventSections, getConceptMode } from "../PlannerStore";
 
 type Dj = {
   id: string; name: string; performer_type: string | null;
-  city: string | null; photo_url: string | null;
+  city: string | null; speciality: string | null; photo_url: string | null;
+  photos?: string[] | null; focal_points?: Record<string, { x: number; y: number }> | null;
+  preview_video_url?: string | null;
   concept_tags: string[] | null;
 };
+
+const PERFORMER_TYPE_LABELS: Record<string, string> = {
+  dj: "DJ", artist: "Solo Sanatçı", trio: "Trio", grup: "Grup",
+  dance: "Dans Ekibi", bando: "Bando", orkestra: "Orkestra",
+  host: "Sunucu / MC", moderator: "Moderatör",
+};
+
+const CARD_BG_COLORS = [
+  "bg-[oklch(0.88_0.05_75)]",
+  "bg-[oklch(0.92_0.02_320)]",
+  "bg-[oklch(0.94_0.01_200)]",
+  "bg-[oklch(0.91_0.025_160)]",
+  "bg-[oklch(0.90_0.04_55)]",
+  "bg-[oklch(0.93_0.008_280)]",
+];
 
 type Props = {
   data: PlannerData;
@@ -47,6 +65,112 @@ function ModeToggle({ mode, onChange }: { mode: "dj" | "live" | ""; onChange: (m
   );
 }
 
+// ─── SANATÇI FOTOĞRAF GALERİSİ ────────────────────────────────────────────────
+
+function PhotoGallery({ photos, name, bgColor, focalPoints }: {
+  photos: string[]; name: string; bgColor: string;
+  focalPoints?: Record<string, { x: number; y: number }> | null;
+}) {
+  const [active, setActive] = useState(0);
+  const fp = focalPoints?.[photos[active]] ?? { x: 50, y: 50 };
+  return (
+    <div className={`${bgColor} h-40 relative overflow-hidden`}>
+      <Image src={photos[active]} alt={name} fill className="object-cover" style={{ objectPosition: `${fp.x}% ${fp.y}%` }} unoptimized />
+      {photos.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+          {photos.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActive(i); }}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${i === active ? "bg-white scale-125" : "bg-white/50"}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SANATÇI KARTI (sanatçılar sayfasındaki gibi — foto galeri + hover video) ──
+
+function ArtistCard({ dj, selected, onToggle, bgColor }: {
+  dj: Dj; selected: boolean; onToggle: () => void; bgColor: string;
+}) {
+  const allPhotos = dj.photos && dj.photos.length > 0 ? dj.photos : dj.photo_url ? [dj.photo_url] : [];
+  const initials = dj.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+
+  return (
+    <div className={`rounded-2xl overflow-hidden border-2 bg-card transition-all ${
+      selected ? "border-foreground" : "border-border hover:border-foreground/30"
+    }`}>
+      <div className="relative group cursor-pointer" onClick={onToggle}>
+        {allPhotos.length > 0 ? (
+          <PhotoGallery photos={allPhotos} name={dj.name} bgColor={bgColor} focalPoints={dj.focal_points} />
+        ) : (
+          <div className={`${bgColor} h-40 flex items-center justify-center`}>
+            <span className="text-3xl font-light text-foreground/30" style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}>
+              {initials}
+            </span>
+          </div>
+        )}
+
+        {dj.preview_video_url && (
+          <video
+            src={dj.preview_video_url}
+            muted loop playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play()}
+            onMouseLeave={(e) => { const v = e.currentTarget as HTMLVideoElement; v.pause(); v.currentTime = 0; }}
+          />
+        )}
+
+        <span className={`absolute top-3 right-3 z-10 w-6 h-6 rounded-full border flex items-center justify-center text-xs ${
+          selected ? "bg-foreground text-background border-foreground" : "bg-background/80 backdrop-blur-sm border-border text-transparent"
+        }`}>
+          ✓
+        </span>
+      </div>
+
+      <div className="p-3.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-foreground">{dj.name}</p>
+          {dj.performer_type && (
+            <span className="text-[10px] px-2 py-0.5 bg-secondary rounded-full text-muted-foreground">
+              {PERFORMER_TYPE_LABELS[dj.performer_type] ?? dj.performer_type}
+            </span>
+          )}
+        </div>
+        {(dj.city || dj.speciality) && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {[dj.city ? `📍 ${dj.city}` : null, dj.speciality].filter(Boolean).join(" · ")}
+          </p>
+        )}
+        <div className="flex items-center gap-2 mt-3">
+          <button
+            type="button"
+            onClick={onToggle}
+            className={`flex-1 text-xs py-2 rounded-full font-medium transition-all ${
+              selected ? "bg-foreground text-background" : "bg-secondary text-foreground hover:bg-foreground/10"
+            }`}
+          >
+            {selected ? "Seçildi ✓" : "Seç"}
+          </button>
+          <Link
+            href={`/sanatcilar/${dj.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs py-2 px-3 rounded-full border border-border text-foreground hover:border-foreground/40 transition-colors whitespace-nowrap"
+          >
+            Profile git →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── EŞLEŞEN SANATÇI/GRUP ŞERİDİ ──────────────────────────────────────────────
 
 function ArtistMiniStrip({ concept, mode, djs, selectedIds, onToggle }: {
@@ -68,29 +192,16 @@ function ArtistMiniStrip({ concept, mode, djs, selectedIds, onToggle }: {
       <p className="text-[10px] font-medium text-foreground/50 uppercase tracking-wide">
         {mode === "dj" ? "Bu konsept için önerdiğimiz DJ'ler" : "Bu konsept için önerdiğimiz sanatçı/gruplar"}
       </p>
-      <div className="flex flex-wrap gap-2">
-        {matches.map((dj) => {
-          const selected = selectedIds.includes(dj.id);
-          return (
-            <button
-              key={dj.id}
-              onClick={(e) => { e.stopPropagation(); onToggle(dj.id); }}
-              className={`flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full border text-xs transition-colors ${
-                selected ? "border-foreground bg-foreground text-background" : "border-black/10 bg-white/70 text-foreground hover:bg-white"
-              }`}
-            >
-              {dj.photo_url ? (
-                <span className="relative w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
-                  <Image src={dj.photo_url} alt={dj.name} fill className="object-cover" unoptimized />
-                </span>
-              ) : (
-                <span className="w-6 h-6 rounded-full bg-secondary flex-shrink-0" />
-              )}
-              <span className="font-medium">{dj.name}</span>
-              {selected && <span>✓</span>}
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" onClick={(e) => e.stopPropagation()}>
+        {matches.map((dj, i) => (
+          <ArtistCard
+            key={dj.id}
+            dj={dj}
+            selected={selectedIds.includes(dj.id)}
+            onToggle={() => onToggle(dj.id)}
+            bgColor={CARD_BG_COLORS[i % CARD_BG_COLORS.length]}
+          />
+        ))}
       </div>
     </div>
   );

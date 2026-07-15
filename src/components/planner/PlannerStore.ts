@@ -1129,6 +1129,7 @@ export const VENUE_TYPES = [
   { id: "rooftop", label: "Rooftop" },
 ];
 
+// eventTypes belirtilmemişse hizmet tüm etkinlik türlerinde gösterilir.
 export const PARTNER_SERVICES = [
   { id: "venue-search", label: "Mekan Seçimi", category: "Mekan" },
   { id: "hotel", label: "Otel", category: "Mekan" },
@@ -1136,7 +1137,10 @@ export const PARTNER_SERVICES = [
   { id: "villa", label: "Villa", category: "Mekan" },
   { id: "restaurant", label: "Restoran", category: "Mekan" },
   { id: "dj", label: "DJ", category: "Müzik & Teknik" },
-  { id: "live-music", label: "Canlı Müzik", category: "Müzik & Teknik" },
+  { id: "bando", label: "Bando", category: "Müzik & Teknik" },
+  { id: "davul-zurna", label: "Davul & Zurna", category: "Müzik & Teknik" },
+  { id: "trio", label: "Trio", category: "Müzik & Teknik" },
+  { id: "live-music", label: "Canlı Müzik (Solist / Orkestra)", category: "Müzik & Teknik" },
   { id: "sound", label: "Ses Sistemi", category: "Müzik & Teknik" },
   { id: "lighting", label: "Işık Tasarımı", category: "Müzik & Teknik" },
   { id: "stage", label: "Sahne Tasarımı", category: "Müzik & Teknik" },
@@ -1147,16 +1151,18 @@ export const PARTNER_SERVICES = [
   { id: "cocktail-bar", label: "Kokteyl Bar", category: "Yeme & İçme" },
   { id: "floral", label: "Çiçek Tasarımı", category: "Dekorasyon" },
   { id: "decoration", label: "Dekorasyon", category: "Dekorasyon" },
-  { id: "dance-class", label: "Dans Kursu", category: "Deneyim" },
-  { id: "bridal-dress", label: "Gelinlik", category: "Stil" },
-  { id: "groom-suit", label: "Damat Takımı", category: "Stil" },
+  { id: "interactive-areas", label: "Etkileşimli Alanlar", category: "Dekorasyon" },
+  { id: "tag-area", label: "Tag Alanı", category: "Dekorasyon" },
+  { id: "dance-class", label: "Dans Kursu", category: "Deneyim", eventTypes: ["wedding", "engagement", "kina-gecesi"] },
+  { id: "bridal-dress", label: "Gelinlik", category: "Stil", eventTypes: ["wedding", "engagement", "kina-gecesi", "bride"] },
+  { id: "groom-suit", label: "Damat Takımı", category: "Stil", eventTypes: ["wedding", "engagement", "kina-gecesi"] },
   { id: "hair-makeup", label: "Saç & Makyaj", category: "Stil" },
   { id: "transportation", label: "Ulaşım", category: "Lojistik" },
   { id: "accommodation", label: "Konaklama", category: "Lojistik" },
-  { id: "honeymoon", label: "Balayı Planlaması", category: "Lojistik" },
+  { id: "honeymoon", label: "Balayı Planlaması", category: "Lojistik", eventTypes: ["wedding", "engagement"] },
   { id: "digital-invite", label: "Dijital Davetiye", category: "Dijital" },
   { id: "memory-drive", label: "Memory Drive", category: "Dijital" },
-];
+] satisfies { id: string; label: string; category: string; eventTypes?: string[] }[];
 
 export const CONCERNS = [
   { id: "bored", label: "Misafirlerin sıkılması" },
@@ -1179,10 +1185,10 @@ export const PARTNER_SERVICE_GROUP_ORDER = [
 
 export const PARTNER_SERVICE_GROUP_META: Record<string, { emoji: string; desc: string }> = {
   "Mekan": { emoji: "🏛️", desc: "Düğün salonları, açık hava alanları, oteller, villalar, restoranlar." },
-  "Müzik & Teknik": { emoji: "🎧", desc: "DJ, canlı müzik, ses sistemi, ışık ve sahne tasarımı." },
+  "Müzik & Teknik": { emoji: "🎧", desc: "DJ, bando, davul-zurna, trio, canlı müzik, ses sistemi, ışık ve sahne tasarımı." },
   "Görsel": { emoji: "📸", desc: "Fotoğraf, video ve içerik üretimi." },
   "Yeme & İçme": { emoji: "🍽️", desc: "Catering ve kokteyl bar hizmetleri." },
-  "Dekorasyon": { emoji: "🌸", desc: "Çiçek tasarımı ve mekan dekorasyonu." },
+  "Dekorasyon": { emoji: "🌸", desc: "Çiçek tasarımı, mekan dekorasyonu, etkileşimli alanlar ve tag alanı." },
   "Deneyim": { emoji: "💃", desc: "Düğün dansı ve özel kurslar." },
   "Stil": { emoji: "👗", desc: "Gelinlik, damat takımı, saç ve makyaj." },
   "Lojistik": { emoji: "🚗", desc: "Ulaşım, konaklama ve balayı planlaması." },
