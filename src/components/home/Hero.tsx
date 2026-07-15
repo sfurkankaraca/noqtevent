@@ -135,11 +135,11 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             className="text-4xl sm:text-5xl lg:text-5xl xl:text-6xl leading-[1.12] tracking-tight text-white lg:text-foreground"
             style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
           >
-            Fikirden son alkışa kadar,
+            Uçtan uca
             <br />
-            etkinliğinizin her anını
+            etkinlik tasarımı
             <br />
-            <em className="italic">tasarlıyor ve yönetiyoruz.</em>
+            <em className="italic">ve yönetimi.</em>
             <span className="sr-only">
               {" "}— Kayseri ve Nevşehir&apos;de uçtan uca etkinlik tasarımı ve yönetimi: konsept geliştirme, mekan
               ve sanatçı kürasyonu, teknik prodüksiyon, koordinasyon; düğün, kurumsal etkinlik, marka lansmanı ve
@@ -154,8 +154,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             transition={{ duration: 0.7, delay: 0.25 }}
             className="mt-8 text-lg text-white/80 lg:text-muted-foreground leading-relaxed max-w-lg"
           >
-            Konsept tasarımından mekan ve sanatçı seçimlerine, teknik prodüksiyondan etkinlik koordinasyonuna kadar
-            tüm süreci tek çatı altında yönetiyoruz.
+            Mekan, sanatçı, teknik ekip ve koordinasyon. Etkinliğiniz için gereken her şey tek noktada.
           </motion.p>
 
           {/* CTAs */}
