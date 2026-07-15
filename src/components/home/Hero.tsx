@@ -42,7 +42,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             >
               <Image
                 src={src}
-                alt="NOQT — Kayseri ve Nevşehir DJ performansı, etkinlik atmosferi"
+                alt="NOQT — Kayseri ve Nevşehir&apos;de premium etkinlik organizasyonu, misafir deneyimi"
                 fill
                 className="object-cover"
                 priority={i === 0}
@@ -65,7 +65,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               >
                 <Image
                   src={src}
-                  alt="NOQT — Kayseri ve Nevşehir DJ performansı, etkinlik atmosferi"
+                  alt="NOQT — Kayseri ve Nevşehir&apos;de premium etkinlik organizasyonu, misafir deneyimi"
                   fill
                   className="object-cover"
                   priority={i === 0}
@@ -108,9 +108,12 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
         }}
       />
 
-      {/* Content */}
-      <div className="relative flex-1 flex flex-col justify-center max-w-7xl mx-auto px-6 lg:px-8 pt-32 pb-24 w-full">
-        <div className="max-w-xl lg:max-w-2xl">
+      {/* Content — lg+ ekranlarda metin kolonu tam 50vw ile sınırlanır ki arka plandaki
+          split görselle (grid-cols-2, her kolon 50vw) her zaman hizalı kalsın ve başlık
+          geniş ekranlarda görselin altında/üstünde kesilmesin. */}
+      <div className="relative flex-1 flex flex-col justify-center pt-32 pb-24 w-full">
+        <div className="px-6 lg:w-1/2 lg:pl-12 xl:pl-20 lg:pr-10">
+        <div className="max-w-xl">
           {/* Eyebrow */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -120,7 +123,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
           >
             <div className="h-px w-12 bg-foreground/30" />
             <span className="text-xs tracking-[0.25em] uppercase text-white/60 lg:text-muted-foreground font-medium">
-              Uçtan Uca Etkinlik Organizasyonu
+              Uçtan Uca Etkinlik Tasarımı ve Yönetimi
             </span>
           </motion.div>
 
@@ -129,14 +132,18 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl leading-[1.05] tracking-tight text-white lg:text-foreground"
+            className="text-4xl sm:text-5xl lg:text-5xl xl:text-6xl leading-[1.12] tracking-tight text-white lg:text-foreground"
             style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
           >
-            Etkinliğinizi tasarlayalım,{" "}
-            <em className="italic">kusursuzca yönetelim</em>
+            Fikirden son alkışa kadar,
+            <br />
+            etkinliğinizin her anını
+            <br />
+            <em className="italic">tasarlıyor ve yönetiyoruz.</em>
             <span className="sr-only">
-              {" "}— Kayseri ve Nevşehir&apos;de uçtan uca etkinlik organizasyonu: konsept, mekan, DJ ve sanatçı
-              booking, dekor, koordinasyon; düğün, festival, kulüp gecesi, açılış ve kurumsal etkinlik yönetimi
+              {" "}— Kayseri ve Nevşehir&apos;de uçtan uca etkinlik tasarımı ve yönetimi: konsept geliştirme, mekan
+              ve sanatçı kürasyonu, teknik prodüksiyon, koordinasyon; düğün, kurumsal etkinlik, marka lansmanı ve
+              özel davet organizasyonu
             </span>
           </motion.h1>
 
@@ -147,7 +154,8 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             transition={{ duration: 0.7, delay: 0.25 }}
             className="mt-8 text-lg text-white/80 lg:text-muted-foreground leading-relaxed max-w-lg"
           >
-            Konsept tasarımından mekana, sanatçıdan koordinasyona — etkinliğinizin her aşamasını baştan sona biz yönetiriz.
+            Konsept tasarımından mekan ve sanatçı seçimlerine, teknik prodüksiyondan etkinlik koordinasyonuna kadar
+            tüm süreci tek çatı altında yönetiyoruz.
           </motion.p>
 
           {/* CTAs */}
@@ -228,7 +236,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             </Link>
           </motion.div>
         </div>
-
+        </div>
       </div>
 
       {/* Scroll indicator */}
