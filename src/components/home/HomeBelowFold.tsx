@@ -9,6 +9,7 @@ import type FeaturedExperiencesComponent from "./FeaturedExperiences";
 
 // Below-fold sections — code-split via dynamic(), SSR stays on by default.
 const SegmentGate = dynamic(() => import("./SegmentGate"));
+const HowItWorks = dynamic(() => import("./HowItWorks"));
 const Artists = dynamic(() => import("./Artists"));
 const FeaturedExperiences = dynamic(() => import("./FeaturedExperiences"));
 const Testimonials = dynamic(() => import("./Testimonials"));
@@ -27,10 +28,11 @@ export default function HomeBelowFold({ testimonials, djs, categories, logos, co
   return (
     <>
       <SegmentGate />
-      <Artists djs={djs} />
+      <HowItWorks />
       <FeaturedExperiences concepts={concepts} />
-      <Testimonials testimonials={testimonials} />
       <PartnerEcosystem categories={categories} logos={logos} />
+      <Artists djs={djs} />
+      <Testimonials testimonials={testimonials} />
       <HomeCTA />
     </>
   );

@@ -28,16 +28,24 @@ export type MusicConcept = {
   color: string;
   dark: boolean;
   signature?: boolean; // NOQT imza konsepti
+  performanceMode?: "dj" | "live"; // belirtilmezse "dj" sayılır — getConceptMode() ile okunur
 };
+
+// performanceMode belirtilmemiş (mevcut) konseptler DJ konsepti sayılır
+export function getConceptMode(c: MusicConcept): "dj" | "live" {
+  return c.performanceMode ?? "dj";
+}
 
 export type EventSections = {
   karsilama: {
     startTime: string;
+    performanceMode: "dj" | "live" | "";
     conceptIds: string[];
   };
   anaKutlama: {
     style: "modern" | "traditional" | "";
     startTime: string;
+    performanceMode: "dj" | "live" | "";
     conceptIds: string[];
   };
   afterParti: {
@@ -71,8 +79,8 @@ export const initialData: PlannerData = {
   guestType: "",
   hasChildren: false,
   eventSections: {
-    karsilama: { startTime: "", conceptIds: [] },
-    anaKutlama: { style: "", startTime: "", conceptIds: [] },
+    karsilama: { startTime: "", performanceMode: "", conceptIds: [] },
+    anaKutlama: { style: "", startTime: "", performanceMode: "", conceptIds: [] },
     afterParti: { musicPref: "", conceptIds: [] },
   },
   momentSelections: {},
@@ -286,6 +294,87 @@ export const MUSIC_CONCEPTS: MusicConcept[] = [
     idealAudience: ["35-60 yaş", "Müzik tutkunları", "Kurumsal gruplar"],
     spotifyPlaylistId: "37i9dQZF1DXcBWIGoYBM5M",
     suggestedArtistIds: ["zeynep-arslan"],
+    references: [],
+    color: "bg-[oklch(0.91_0.015_70)]",
+    dark: false,
+  },
+
+  {
+    id: "akustik-sohbet",
+    name: "Akustik Sohbet",
+    emoji: "🎸",
+    category: "cocktail",
+    performanceMode: "live",
+    description:
+      "Canlı gitar ve vokal düetiyle sıcak, samimi bir karşılama. Sohbeti bastırmayan, tam tersine atmosferi zenginleştiren akustik bir eşlik.",
+    atmosphere: ["Sıcak", "Samimi", "Canlı", "Zamansız"],
+    musicalDirection: ["Akustik Pop", "Cover", "Unplugged"],
+    tags: ["#akustik", "#canli", "#duet"],
+    energyLevel: 3,
+    danceability: 1,
+    cocktailFit: 10,
+    dinnerFit: 9,
+    weddingFit: 9,
+    corporateFit: 8,
+    afterPartyFit: 0,
+    idealEventTypes: ["wedding", "engagement", "corporate", "cocktail"],
+    idealAudience: ["Tüm yaşlar", "Aile grupları", "Profesyoneller"],
+    spotifyPlaylistId: "37i9dQZF1DX4wta20PHgwo",
+    suggestedArtistIds: [],
+    references: [],
+    color: "bg-[oklch(0.92_0.03_75)]",
+    dark: false,
+  },
+
+  {
+    id: "yayli-calgilar",
+    name: "Yaylı Çalgılar Zarafeti",
+    emoji: "🎻",
+    category: "cocktail",
+    performanceMode: "live",
+    description:
+      "Keman ve çello eşliğinde klasik, zarif bir karşılama. Şıklığı ve inceliği bir arada hissettiren asil bir atmosfer.",
+    atmosphere: ["Zarif", "Klasik", "Şık", "Asil"],
+    musicalDirection: ["Klasik", "Enstrümantal Pop Cover", "Film Müzikleri"],
+    tags: ["#yayli", "#klasik", "#canli"],
+    energyLevel: 2,
+    danceability: 1,
+    cocktailFit: 10,
+    dinnerFit: 9,
+    weddingFit: 10,
+    corporateFit: 8,
+    afterPartyFit: 0,
+    idealEventTypes: ["wedding", "engagement", "corporate", "opening"],
+    idealAudience: ["Tüm yaşlar", "Profesyoneller", "Modern çiftler"],
+    spotifyPlaylistId: "37i9dQZF1DXcBWIGoYBM5M",
+    suggestedArtistIds: [],
+    references: [],
+    color: "bg-[oklch(0.93_0.008_280)]",
+    dark: false,
+  },
+
+  {
+    id: "canli-caz-trio",
+    name: "Canlı Caz Trio",
+    emoji: "🎹",
+    category: "cocktail",
+    performanceMode: "live",
+    description:
+      "Piyano, bas ve vokalden oluşan canlı caz trio. Karakterli, rafine ve zamansız bir kokteyl atmosferi.",
+    atmosphere: ["Zamansız", "Rafine", "Canlı", "Derin"],
+    musicalDirection: ["Jazz", "Soul", "Bossa Nova"],
+    tags: ["#jazz", "#canli", "#trio"],
+    energyLevel: 4,
+    danceability: 2,
+    cocktailFit: 10,
+    dinnerFit: 9,
+    weddingFit: 7,
+    corporateFit: 9,
+    afterPartyFit: 0,
+    idealEventTypes: ["wedding", "corporate", "cocktail", "opening"],
+    idealAudience: ["35-60 yaş", "Müzik tutkunları", "Kurumsal gruplar"],
+    spotifyPlaylistId: "37i9dQZF1DXcBWIGoYBM5M",
+    suggestedArtistIds: [],
     references: [],
     color: "bg-[oklch(0.91_0.015_70)]",
     dark: false,
@@ -525,6 +614,60 @@ export const MUSIC_CONCEPTS: MusicConcept[] = [
     references: ["Queen", "Bon Jovi", "The Killers", "Duman", "Mor ve Ötesi"],
     color: "bg-[oklch(0.22_0.012_60)]",
     dark: true,
+  },
+
+  {
+    id: "turkce-pop-canli-grup",
+    name: "Türkçe Pop Canlı Grup",
+    emoji: "🎤",
+    category: "celebration",
+    performanceMode: "live",
+    description:
+      "Canlı vokal, gitar, bas ve davuldan oluşan grup eşliğinde Türkçe pop coverlar. Sahne enerjisi ve canlı performansın gücünü bir arada sunar.",
+    atmosphere: ["Enerjik", "Canlı", "Kapsayıcı", "Sahne Odaklı"],
+    musicalDirection: ["Türkçe Pop", "Cover", "Canlı Performans"],
+    tags: ["#canligrup", "#turkcepop", "#cover"],
+    energyLevel: 8,
+    danceability: 8,
+    cocktailFit: 3,
+    dinnerFit: 4,
+    weddingFit: 10,
+    corporateFit: 7,
+    afterPartyFit: 5,
+    idealEventTypes: ["wedding", "engagement", "corporate", "private-party"],
+    idealAudience: ["Tüm yaşlar", "Karma kitlesi", "Aile grupları"],
+    spotifyPlaylistId: "37i9dQZF1DXcBWIGoYBM5M",
+    suggestedArtistIds: [],
+    references: [],
+    color: "bg-[oklch(0.90_0.03_55)]",
+    dark: false,
+  },
+
+  {
+    id: "uluslararasi-cover-grubu",
+    name: "Uluslararası Cover Grubu",
+    emoji: "🎺",
+    category: "celebration",
+    performanceMode: "live",
+    description:
+      "Global hitlerden Latin ritimlere geniş bir repertuvarı canlı seslendiren profesyonel cover grubu. Sahne şovuyla dans pistini canlı tutar.",
+    atmosphere: ["Kozmopolit", "Enerjik", "Canlı", "Şaşırtıcı"],
+    musicalDirection: ["Pop Cover", "Latin", "Funk", "Canlı Performans"],
+    tags: ["#canligrup", "#cover", "#latin"],
+    energyLevel: 9,
+    danceability: 9,
+    cocktailFit: 2,
+    dinnerFit: 3,
+    weddingFit: 9,
+    corporateFit: 8,
+    afterPartyFit: 6,
+    idealEventTypes: ["wedding", "corporate", "brand-launch", "private-party"],
+    idealAudience: ["25-50 yaş", "Kozmopolit gruplar", "Kurumsal gruplar"],
+    spotifyPlaylistId: "37i9dQZF1DX3rxVfibe1L0",
+    suggestedArtistIds: [],
+    references: [],
+    color: "bg-[oklch(0.89_0.035_320)]",
+    dark: false,
   },
 
   // ── GELENEKSEL DOKUNUŞLAR ────────────────────────────────────────────────────

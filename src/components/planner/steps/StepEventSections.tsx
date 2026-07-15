@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { type PlannerData, MUSIC_CONCEPTS, type MusicConcept, type EventSections } from "../PlannerStore";
+import { type PlannerData, MUSIC_CONCEPTS, type MusicConcept, type EventSections, getConceptMode } from "../PlannerStore";
+
+type Dj = {
+  id: string; name: string; performer_type: string | null;
+  city: string | null; photo_url: string | null;
+  concept_tags: string[] | null;
+};
 
 type Props = {
   data: PlannerData;
@@ -11,7 +17,84 @@ type Props = {
   onNext: () => void;
   conceptCovers?: Record<string, string>;
   activeSlugs?: string[];
+  djs?: Dj[];
 };
+
+const LIVE_PERFORMER_TYPES = ["artist", "trio", "grup", "bando", "orkestra"];
+
+// ─── MOD SEÇİMİ (DJ / Canlı Müzik) ────────────────────────────────────────────
+
+function ModeToggle({ mode, onChange }: { mode: "dj" | "live" | ""; onChange: (m: "dj" | "live") => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {([
+        { id: "dj" as const, emoji: "🎧", label: "DJ", desc: "Elektronik müzik, mix ve set" },
+        { id: "live" as const, emoji: "🎸", label: "Canlı Müzik", desc: "Canlı çalgı, vokal, grup" },
+      ]).map((opt) => (
+        <button
+          key={opt.id}
+          onClick={() => onChange(opt.id)}
+          className={`rounded-2xl border-2 p-4 text-left transition-all ${
+            mode === opt.id ? "border-foreground bg-foreground/5" : "border-border hover:border-foreground/25"
+          }`}
+        >
+          <p className="text-xl mb-1">{opt.emoji}</p>
+          <p className="text-sm font-semibold text-foreground">{opt.label}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── EŞLEŞEN SANATÇI/GRUP ŞERİDİ ──────────────────────────────────────────────
+
+function ArtistMiniStrip({ concept, mode, djs, selectedIds, onToggle }: {
+  concept: MusicConcept;
+  mode: "dj" | "live";
+  djs: Dj[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+}) {
+  const matches = djs.filter((dj) => {
+    const modeOk = mode === "dj" ? dj.performer_type === "dj" : LIVE_PERFORMER_TYPES.includes(dj.performer_type ?? "");
+    return modeOk && (dj.concept_tags ?? []).includes(concept.id);
+  });
+
+  if (matches.length === 0) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-black/8 space-y-2">
+      <p className="text-[10px] font-medium text-foreground/50 uppercase tracking-wide">
+        {mode === "dj" ? "Bu konsept için önerdiğimiz DJ'ler" : "Bu konsept için önerdiğimiz sanatçı/gruplar"}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {matches.map((dj) => {
+          const selected = selectedIds.includes(dj.id);
+          return (
+            <button
+              key={dj.id}
+              onClick={(e) => { e.stopPropagation(); onToggle(dj.id); }}
+              className={`flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full border text-xs transition-colors ${
+                selected ? "border-foreground bg-foreground text-background" : "border-black/10 bg-white/70 text-foreground hover:bg-white"
+              }`}
+            >
+              {dj.photo_url ? (
+                <span className="relative w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                  <Image src={dj.photo_url} alt={dj.name} fill className="object-cover" unoptimized />
+                </span>
+              ) : (
+                <span className="w-6 h-6 rounded-full bg-secondary flex-shrink-0" />
+              )}
+              <span className="font-medium">{dj.name}</span>
+              {selected && <span>✓</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ─── RECOMMENDATION LOGIC ─────────────────────────────────────────────────────
 
@@ -194,15 +277,20 @@ function TimePicker({ label, value, onChange }: { label: string; value: string; 
 
 // ─── KARŞILAMA PANEL ──────────────────────────────────────────────────────────
 
-function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, activeSlugs }: {
+function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, activeSlugs, djs, selectedDjIds, onToggleDj }: {
   sections: EventSections;
   onChange: (s: EventSections) => void;
   coverMap: Record<string, string>;
   onAdvance: () => void;
   eventType: string;
   activeSlugs?: string[];
+  djs: Dj[];
+  selectedDjIds: string[];
+  onToggleDj: (id: string) => void;
 }) {
-  const allConcepts = MUSIC_CONCEPTS.filter((c) => c.category === "cocktail" && (!activeSlugs || activeSlugs.includes(c.id)));
+  const mode = sections.karsilama.performanceMode;
+  const categoryConcepts = MUSIC_CONCEPTS.filter((c) => c.category === "cocktail" && (!activeSlugs || activeSlugs.includes(c.id)));
+  const allConcepts = categoryConcepts.filter((c) => getConceptMode(c) === mode);
   const recommendedIds = getTop(allConcepts, eventType, 2);
   const recommended = allConcepts.filter((c) => recommendedIds.includes(c.id));
   const others = allConcepts.filter((c) => !recommendedIds.includes(c.id));
@@ -210,10 +298,16 @@ function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, ac
   const selected = sections.karsilama.conceptIds;
   const [expanded, setExpanded] = useState(false);
 
+  const setMode = (m: "dj" | "live") => {
+    onChange({ ...sections, karsilama: { ...sections.karsilama, performanceMode: m, conceptIds: [] } });
+  };
+
   const selectConcept = (id: string) => {
     const next = selected.includes(id) ? [] : [id];
     onChange({ ...sections, karsilama: { ...sections.karsilama, conceptIds: next } });
   };
+
+  const selectedConcept = allConcepts.find((c) => selected.includes(c.id));
 
   return (
     <div className="space-y-5">
@@ -231,53 +325,68 @@ function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, ac
       />
 
       <div>
-        <p className="text-sm font-medium text-foreground mb-3">Nasıl bir atmosfer olsun?</p>
-
-        {/* Recommended */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {recommended.map((c) => (
-            <ConceptCard
-              key={c.id}
-              concept={c}
-              selected={selected.includes(c.id)}
-              onSelect={() => selectConcept(c.id)}
-              coverUrl={coverMap[c.id]}
-              isRecommended
-              recommendText={recommendReason(c, eventType)}
-            />
-          ))}
-        </div>
-
-        {/* Expand */}
-        {others.length > 0 && (
-          <div className="mt-3 space-y-3">
-            <ExpandButton expanded={expanded} count={others.length} onToggle={() => setExpanded((p) => !p)} />
-            <AnimatePresence>
-              {expanded && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
-                >
-                  {others.map((c) => (
-                    <ConceptCard
-                      key={c.id}
-                      concept={c}
-                      selected={selected.includes(c.id)}
-                      onSelect={() => selectConcept(c.id)}
-                      coverUrl={coverMap[c.id]}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+        <p className="text-sm font-medium text-foreground mb-3">DJ mi, canlı müzik mi olsun?</p>
+        <ModeToggle mode={mode} onChange={setMode} />
       </div>
 
-      {selected.length > 0 && (
+      {mode && (
+        <div>
+          <p className="text-sm font-medium text-foreground mb-3">Nasıl bir atmosfer olsun?</p>
+
+          {/* Recommended */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {recommended.map((c) => (
+              <div key={c.id}>
+                <ConceptCard
+                  concept={c}
+                  selected={selected.includes(c.id)}
+                  onSelect={() => selectConcept(c.id)}
+                  coverUrl={coverMap[c.id]}
+                  isRecommended
+                  recommendText={recommendReason(c, eventType)}
+                />
+                {selected.includes(c.id) && (
+                  <ArtistMiniStrip concept={c} mode={mode} djs={djs} selectedIds={selectedDjIds} onToggle={onToggleDj} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Expand */}
+          {others.length > 0 && (
+            <div className="mt-3 space-y-3">
+              <ExpandButton expanded={expanded} count={others.length} onToggle={() => setExpanded((p) => !p)} />
+              <AnimatePresence>
+                {expanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
+                  >
+                    {others.map((c) => (
+                      <div key={c.id}>
+                        <ConceptCard
+                          concept={c}
+                          selected={selected.includes(c.id)}
+                          onSelect={() => selectConcept(c.id)}
+                          coverUrl={coverMap[c.id]}
+                        />
+                        {selected.includes(c.id) && (
+                          <ArtistMiniStrip concept={c} mode={mode} djs={djs} selectedIds={selectedDjIds} onToggle={onToggleDj} />
+                        )}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedConcept && (
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -292,15 +401,20 @@ function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, ac
 
 // ─── ANA KUTLAMA PANEL ────────────────────────────────────────────────────────
 
-function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, activeSlugs }: {
+function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, activeSlugs, djs, selectedDjIds, onToggleDj }: {
   sections: EventSections;
   onChange: (s: EventSections) => void;
   coverMap: Record<string, string>;
   onAdvance: () => void;
   eventType: string;
   activeSlugs?: string[];
+  djs: Dj[];
+  selectedDjIds: string[];
+  onToggleDj: (id: string) => void;
 }) {
-  const modernAll = MUSIC_CONCEPTS.filter((c) => (c.category === "celebration" || c.category === "after-party") && (!activeSlugs || activeSlugs.includes(c.id)));
+  const mode = sections.anaKutlama.performanceMode;
+  const modernCategory = MUSIC_CONCEPTS.filter((c) => (c.category === "celebration" || c.category === "after-party") && (!activeSlugs || activeSlugs.includes(c.id)));
+  const modernAll = modernCategory.filter((c) => getConceptMode(c) === mode);
   const traditionalAll = MUSIC_CONCEPTS.filter((c) => c.category === "traditional" && (!activeSlugs || activeSlugs.includes(c.id)));
 
   const modernRecIds = getTop(modernAll, eventType, 2);
@@ -314,6 +428,10 @@ function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, a
   const selected = sections.anaKutlama.conceptIds;
   const [modernExpanded, setModernExpanded] = useState(false);
   const [tradExpanded, setTradExpanded] = useState(false);
+
+  const setMode = (m: "dj" | "live") => {
+    onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, performanceMode: m, conceptIds: [] } });
+  };
 
   const toggleConcept = (id: string) => {
     const next = selected.includes(id)
@@ -337,45 +455,62 @@ function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, a
           onChange={(v) => onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, startTime: v } })}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {modernRec.map((c) => (
-            <ConceptCard
-              key={c.id}
-              concept={c}
-              selected={selected.includes(c.id)}
-              onSelect={() => toggleConcept(c.id)}
-              coverUrl={coverMap[c.id]}
-              isRecommended
-              recommendText={recommendReason(c, eventType)}
-            />
-          ))}
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">DJ mi, canlı müzik mi olsun?</p>
+          <ModeToggle mode={mode} onChange={setMode} />
         </div>
 
-        {modernOther.length > 0 && (
-          <div className="space-y-3">
-            <ExpandButton expanded={modernExpanded} count={modernOther.length} onToggle={() => setModernExpanded((p) => !p)} />
-            <AnimatePresence>
-              {modernExpanded && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
-                >
-                  {modernOther.map((c) => (
-                    <ConceptCard
-                      key={c.id}
-                      concept={c}
-                      selected={selected.includes(c.id)}
-                      onSelect={() => toggleConcept(c.id)}
-                      coverUrl={coverMap[c.id]}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+        {mode && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {modernRec.map((c) => (
+                <div key={c.id}>
+                  <ConceptCard
+                    concept={c}
+                    selected={selected.includes(c.id)}
+                    onSelect={() => toggleConcept(c.id)}
+                    coverUrl={coverMap[c.id]}
+                    isRecommended
+                    recommendText={recommendReason(c, eventType)}
+                  />
+                  {selected.includes(c.id) && (
+                    <ArtistMiniStrip concept={c} mode={mode} djs={djs} selectedIds={selectedDjIds} onToggle={onToggleDj} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {modernOther.length > 0 && (
+              <div className="space-y-3">
+                <ExpandButton expanded={modernExpanded} count={modernOther.length} onToggle={() => setModernExpanded((p) => !p)} />
+                <AnimatePresence>
+                  {modernExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden"
+                    >
+                      {modernOther.map((c) => (
+                        <div key={c.id}>
+                          <ConceptCard
+                            concept={c}
+                            selected={selected.includes(c.id)}
+                            onSelect={() => toggleConcept(c.id)}
+                            coverUrl={coverMap[c.id]}
+                          />
+                          {selected.includes(c.id) && (
+                            <ArtistMiniStrip concept={c} mode={mode} djs={djs} selectedIds={selectedDjIds} onToggle={onToggleDj} />
+                          )}
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -541,13 +676,19 @@ const slideVariants = {
   exit: (d: number) => ({ opacity: 0, x: d > 0 ? -40 : 40 }),
 };
 
-export default function StepEventSections({ data, update, onNext, conceptCovers = {}, activeSlugs }: Props) {
+export default function StepEventSections({ data, update, onNext, conceptCovers = {}, activeSlugs, djs = [] }: Props) {
   const [subStep, setSubStep] = useState(0);
   const [direction, setDirection] = useState(1);
 
   const sections = data.eventSections;
   const setSection = (s: EventSections) => update({ eventSections: s });
   const eventType = data.eventType;
+  const toggleDj = (id: string) =>
+    update({
+      selectedDjIds: data.selectedDjIds.includes(id)
+        ? data.selectedDjIds.filter((d) => d !== id)
+        : [...data.selectedDjIds, id],
+    });
 
   const advance = () => {
     setDirection(1);
@@ -601,10 +742,10 @@ export default function StepEventSections({ data, update, onNext, conceptCovers 
           transition={{ duration: 0.28, ease: "easeInOut" }}
         >
           {subStep === 0 && (
-            <KarsilamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} activeSlugs={activeSlugs} />
+            <KarsilamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} activeSlugs={activeSlugs} djs={djs} selectedDjIds={data.selectedDjIds} onToggleDj={toggleDj} />
           )}
           {subStep === 1 && (
-            <AnaKutlamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} activeSlugs={activeSlugs} />
+            <AnaKutlamaPanel sections={sections} onChange={setSection} coverMap={conceptCovers} onAdvance={advance} eventType={eventType} activeSlugs={activeSlugs} djs={djs} selectedDjIds={data.selectedDjIds} onToggleDj={toggleDj} />
           )}
           {subStep === 2 && (
             <AfterPartiPanel sections={sections} onChange={setSection} coverMap={conceptCovers} eventType={eventType} activeSlugs={activeSlugs} />

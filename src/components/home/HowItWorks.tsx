@@ -48,7 +48,7 @@ export default function HowItWorks() {
   const inView = useInView(ref, { once: true, margin: "-60px" });
 
   return (
-    <section ref={ref} className="py-24 lg:py-36 bg-background overflow-hidden">
+    <section id="nasil-calisir" ref={ref} className="py-24 lg:py-36 bg-background overflow-hidden scroll-mt-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
         {/* Header */}

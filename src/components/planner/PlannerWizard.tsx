@@ -12,20 +12,20 @@ import { getArtistFeeRange, estimateFeeRangeAcrossArtists, formatFeeRange, type 
 import Step1EventType from "./steps/Step1EventType";
 import Step2Guests from "./steps/Step3Guests";
 import Step3EventSections from "./steps/StepEventSections";
-import StepDjSelection from "./steps/StepDjSelection";
 import Step4Moments from "./steps/StepMoments";
 import Step5Venue from "./steps/Step5Venue";
 import Step6Services from "./steps/Step6Services";
 import Step7Recommendations from "./steps/Step9Recommendations";
 import Step8Contact from "./steps/Step10Contact";
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 8;
+
+const LIVE_PERFORMER_TYPES = ["artist", "trio", "grup", "bando", "orkestra"];
 
 const stepTitles = [
   "Ne planlıyorsun?",
   "Misafirlerin kim?",
   "Gecenin müzik konseptlerine karar verelim",
-  "Sahnede kimi görmek istersin?",
   "Önemli anlarını planla",
   "Mekanın var mı?",
   "Hangi alanlarda rehberlik ister misin?",
@@ -79,14 +79,23 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
 
   const progress = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
 
-  // Bütçe tahmini: bir sanatçı seçildiyse onun kaşesi, seçilmediyse tüm sanatçılar arası aralık
+  // Bütçe tahmini: bir sanatçı seçildiyse onun kaşesi; seçilmediyse karşılama/ana kutlamada
+  // seçilen DJ/Canlı Müzik tercihine göre daraltılmış sanatçı havuzunun aralığı
   const feeRange: FeeRange | null = (() => {
     if (!data.eventType) return null;
     const selectedDj = data.selectedDjIds?.length
       ? djs.find((d) => data.selectedDjIds.includes(d.id))
       : null;
     if (selectedDj) return getArtistFeeRange(selectedDj, data.eventType);
-    return estimateFeeRangeAcrossArtists(djs, data.eventType);
+
+    const modes = [data.eventSections.karsilama.performanceMode, data.eventSections.anaKutlama.performanceMode]
+      .filter((m): m is "dj" | "live" => m === "dj" || m === "live");
+    const pool = modes.length === 0
+      ? djs
+      : djs.filter((d) => modes.some((m) =>
+          m === "dj" ? d.performer_type === "dj" : LIVE_PERFORMER_TYPES.includes(d.performer_type ?? "")
+        ));
+    return estimateFeeRangeAcrossArtists(pool, data.eventType);
   })();
 
   const variants = {
@@ -242,24 +251,21 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
               <Step2Guests data={data} update={update} onNext={next} />
             )}
             {step === 3 && (
-              <Step3EventSections data={data} update={update} onNext={next} conceptCovers={conceptCovers} activeSlugs={activeSlugs} />
+              <Step3EventSections data={data} update={update} onNext={next} conceptCovers={conceptCovers} activeSlugs={activeSlugs} djs={djs} />
             )}
             {step === 4 && (
-              <StepDjSelection data={data} update={update} onNext={next} djs={djs} />
-            )}
-            {step === 5 && (
               <Step4Moments data={data} update={update} onNext={next} />
             )}
-            {step === 6 && (
+            {step === 5 && (
               <Step5Venue data={data} update={update} onNext={next} />
             )}
-            {step === 7 && (
+            {step === 6 && (
               <Step6Services data={data} update={update} onNext={next} />
             )}
-            {step === 8 && (
+            {step === 7 && (
               <Step7Recommendations data={data} onNext={next} activeSlugs={activeSlugs} djs={djs} venues={venues} conceptCovers={conceptCovers} />
             )}
-            {step === 9 && (
+            {step === 8 && (
               <Step8Contact
                 data={data}
                 update={update}

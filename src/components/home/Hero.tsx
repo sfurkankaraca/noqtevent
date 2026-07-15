@@ -120,7 +120,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
           >
             <div className="h-px w-12 bg-foreground/30" />
             <span className="text-xs tracking-[0.25em] uppercase text-white/60 lg:text-muted-foreground font-medium">
-              DJ &amp; Sanatçı Booking · Etkinlik Yönetimi
+              Uçtan Uca Etkinlik Organizasyonu
             </span>
           </motion.div>
 
@@ -132,11 +132,11 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl leading-[1.05] tracking-tight text-white lg:text-foreground"
             style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
           >
-            Sahnede doğru sanatçı,{" "}
-            <em className="italic">kusursuz bir etkinlik</em>
+            Etkinliğinizi tasarlayalım,{" "}
+            <em className="italic">kusursuzca yönetelim</em>
             <span className="sr-only">
-              {" "}— Kayseri ve Nevşehir&apos;de DJ ve sanatçı booking; düğün, festival, kulüp gecesi,
-              açılış ve kurumsal etkinlik yönetimi
+              {" "}— Kayseri ve Nevşehir&apos;de uçtan uca etkinlik organizasyonu: konsept, mekan, DJ ve sanatçı
+              booking, dekor, koordinasyon; düğün, festival, kulüp gecesi, açılış ve kurumsal etkinlik yönetimi
             </span>
           </motion.h1>
 
@@ -147,7 +147,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             transition={{ duration: 0.7, delay: 0.25 }}
             className="mt-8 text-lg text-white/80 lg:text-muted-foreground leading-relaxed max-w-lg"
           >
-            Etkinliğinize ya da mekanınıza doğru sanatçıyı bulur, organizasyonu baştan sona yönetiriz.
+            Konsept tasarımından mekana, sanatçıdan koordinasyona — etkinliğinizin her aşamasını baştan sona biz yönetiriz.
           </motion.p>
 
           {/* CTAs */}
@@ -180,13 +180,13 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               </svg>
             </Link>
 
-            <Link
-              href="/sanatcilar"
-              onClick={() => trackEvent("cta_click", { location: "hero", target: "sanatcilar" })}
+            <a
+              href="#nasil-calisir"
+              onClick={() => trackEvent("cta_click", { location: "hero", target: "nasil-calisir" })}
               className="inline-flex items-center gap-2 border border-white/30 lg:border-border text-white lg:text-foreground px-6 py-4 rounded-full text-sm font-medium tracking-wide hover:border-white/60 lg:hover:border-foreground/40 transition-colors"
             >
-              Sanatçıları Keşfet
-            </Link>
+              Nasıl Çalışıyoruz
+            </a>
 
             <a
               href="https://wa.me/905417997973"
@@ -210,14 +210,22 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             className="mt-8 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5 text-sm"
           >
             <Link
-              href="/fiyatlar"
-              onClick={() => trackEvent("cta_click", { location: "hero", target: "fiyatlar" })}
+              href="/planla"
+              onClick={() => trackEvent("cta_click", { location: "hero", target: "ucretsiz-kesif" })}
               className="text-white/75 lg:text-muted-foreground hover:text-white lg:hover:text-foreground transition-colors underline underline-offset-4 decoration-white/30 lg:decoration-border"
             >
-              DJ hizmetleri 7.500 ₺&apos;den başlar
+              Ücretsiz keşif görüşmesiyle başlar
             </Link>
             <span className="hidden sm:inline text-white/30 lg:text-border">·</span>
             <span className="text-white/75 lg:text-muted-foreground">Aynı gün teklif</span>
+            <span className="hidden sm:inline text-white/30 lg:text-border">·</span>
+            <Link
+              href="/sanatcilar"
+              onClick={() => trackEvent("cta_click", { location: "hero", target: "sanatcilar" })}
+              className="text-white/75 lg:text-muted-foreground hover:text-white lg:hover:text-foreground transition-colors underline underline-offset-4 decoration-white/30 lg:decoration-border"
+            >
+              Sanatçı kadromuzu incele →
+            </Link>
           </motion.div>
         </div>
 
