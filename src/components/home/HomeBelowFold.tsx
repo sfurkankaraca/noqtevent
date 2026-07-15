@@ -12,7 +12,8 @@ const SegmentGate = dynamic(() => import("./SegmentGate"));
 const HowItWorks = dynamic(() => import("./HowItWorks"));
 const Artists = dynamic(() => import("./Artists"));
 const FeaturedExperiences = dynamic(() => import("./FeaturedExperiences"));
-const Testimonials = dynamic(() => import("./Testimonials"));
+// Testimonials şimdilik gizli — geri almak için import'u aç
+// const Testimonials = dynamic(() => import("./Testimonials"));
 const PartnerEcosystem = dynamic(() => import("./PartnerEcosystem"));
 const HomeCTA = dynamic(() => import("./HomeCTA"));
 
@@ -24,6 +25,7 @@ type Props = {
   concepts: ComponentProps<typeof FeaturedExperiencesComponent>["concepts"];
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- testimonials geri açılınca kullanılacak
 export default function HomeBelowFold({ testimonials, djs, categories, logos, concepts }: Props) {
   return (
     <>
@@ -32,7 +34,8 @@ export default function HomeBelowFold({ testimonials, djs, categories, logos, co
       <FeaturedExperiences concepts={concepts} />
       <PartnerEcosystem categories={categories} logos={logos} />
       <Artists djs={djs} />
-      <Testimonials testimonials={testimonials} />
+      {/* Testimonials şimdilik gizli — geri almak için bu satırı aç */}
+      {/* <Testimonials testimonials={testimonials} /> */}
       <HomeCTA />
     </>
   );
