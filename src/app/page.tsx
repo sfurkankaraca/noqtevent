@@ -2,7 +2,7 @@ import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
 import HomeBelowFold from "@/components/home/HomeBelowFold";
-import { HeroProof, EventLinks, HomeFaq, JournalTeaser } from "@/components/home/HomeSeoSections";
+import { EventLinks, HomeFaq, JournalTeaser } from "@/components/home/HomeSeoSections";
 import { HOME_FAQ } from "@/lib/homeFaq";
 import { createServiceClient } from "@/lib/supabase";
 
@@ -126,7 +126,8 @@ export default async function Home() {
       <Navigation />
       <main>
         <Hero heroImages={heroImages} />
-        <HeroProof testimonial={testimonials[0] ?? null} />
+        {/* HeroProof (tek yorumluk şerit) şimdilik gizli — geri almak için satırı aç */}
+        {/* <HeroProof testimonial={testimonials[0] ?? null} /> */}
         <HomeBelowFold
           testimonials={testimonials}
           djs={djs ?? []}
