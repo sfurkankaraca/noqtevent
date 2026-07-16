@@ -39,6 +39,8 @@ type Props = {
 };
 
 const LIVE_PERFORMER_TYPES = ["artist", "trio", "grup", "bando", "orkestra"];
+const KARSILAMA_LIVE_PERFORMER_TYPES = ["trio", "bando"];
+const ANA_KUTLAMA_LIVE_PERFORMER_TYPES = ["artist", "grup", "orkestra"];
 
 // ─── MOD SEÇİMİ (DJ / Canlı Müzik) ────────────────────────────────────────────
 
@@ -423,6 +425,8 @@ function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, ac
   const recommended = allConcepts.filter((c) => recommendedIds.includes(c.id));
   const others = allConcepts.filter((c) => !recommendedIds.includes(c.id));
 
+  const liveArtists = djs.filter((dj) => KARSILAMA_LIVE_PERFORMER_TYPES.includes(dj.performer_type ?? ""));
+
   const selected = sections.karsilama.conceptIds;
   const [expanded, setExpanded] = useState(false);
 
@@ -436,6 +440,7 @@ function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, ac
   };
 
   const selectedConcept = allConcepts.find((c) => selected.includes(c.id));
+  const hasLiveSelection = mode === "live" && liveArtists.some((a) => selectedDjIds.includes(a.id));
 
   return (
     <div className="space-y-5">
@@ -457,7 +462,7 @@ function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, ac
         <ModeToggle mode={mode} onChange={setMode} />
       </div>
 
-      {mode && (
+      {mode === "dj" && (
         <div>
           <p className="text-sm font-medium text-foreground mb-3">Nasıl bir atmosfer olsun?</p>
 
@@ -514,7 +519,31 @@ function KarsilamaPanel({ sections, onChange, coverMap, onAdvance, eventType, ac
         </div>
       )}
 
-      {selectedConcept && (
+      {/* Canlı müzik: doğrudan kataloğumuzdaki uygun sanatçılar (trio / bando) */}
+      {mode === "live" && (
+        <div>
+          <p className="text-sm font-medium text-foreground mb-3">Kadromuzdan trio ve bando ekipleri</p>
+          {liveArtists.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {liveArtists.map((dj, i) => (
+                <ArtistCard
+                  key={dj.id}
+                  dj={dj}
+                  selected={selectedDjIds.includes(dj.id)}
+                  onToggle={() => onToggleDj(dj.id)}
+                  bgColor={CARD_BG_COLORS[i % CARD_BG_COLORS.length]}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Bu kategoride şu an kadromuzda görünen sanatçı yok — talebini aldıktan sonra ekibimiz sana uygun ismi önerecek.
+            </p>
+          )}
+        </div>
+      )}
+
+      {(selectedConcept || hasLiveSelection) && (
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -553,11 +582,15 @@ function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, a
   const tradRec = traditionalAll.filter((c) => tradRecIds.includes(c.id));
   const tradOther = traditionalAll.filter((c) => !tradRecIds.includes(c.id));
 
+  const liveArtists = djs.filter((dj) => ANA_KUTLAMA_LIVE_PERFORMER_TYPES.includes(dj.performer_type ?? ""));
+
   const selected = sections.anaKutlama.conceptIds;
   const [modernExpanded, setModernExpanded] = useState(false);
   const [tradExpanded, setTradExpanded] = useState(false);
 
   const style = sections.anaKutlama.style;
+  const hasLiveSelection = mode === "live" && liveArtists.some((a) => selectedDjIds.includes(a.id));
+  const hasSelection = selected.length > 0 || hasLiveSelection;
 
   const setMode = (m: "dj" | "live") => {
     onChange({ ...sections, anaKutlama: { ...sections.anaKutlama, performanceMode: m, style: "", conceptIds: [] } });
@@ -617,7 +650,7 @@ function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, a
       )}
 
       {/* Modern */}
-      {((mode === "dj" && style === "modern") || mode === "live") && (
+      {mode === "dj" && style === "modern" && (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">Birden fazla seçebilirsin</p>
 
@@ -718,17 +751,41 @@ function AnaKutlamaPanel({ sections, onChange, coverMap, onAdvance, eventType, a
         </div>
       )}
 
+      {/* Canlı müzik: doğrudan kataloğumuzdaki uygun sanatçılar (solist / grup / orkestra) */}
+      {mode === "live" && (
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-foreground">Kadromuzdan solist, grup ve orkestralar</p>
+          {liveArtists.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {liveArtists.map((dj, i) => (
+                <ArtistCard
+                  key={dj.id}
+                  dj={dj}
+                  selected={selectedDjIds.includes(dj.id)}
+                  onToggle={() => onToggleDj(dj.id)}
+                  bgColor={CARD_BG_COLORS[i % CARD_BG_COLORS.length]}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Bu kategoride şu an kadromuzda görünen sanatçı yok — talebini aldıktan sonra ekibimiz sana uygun ismi önerecek.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Devam button */}
       <button
         onClick={onAdvance}
         className={`w-full py-3 rounded-2xl text-sm font-medium transition-all ${
-          selected.length > 0
+          hasSelection
             ? "bg-foreground text-background hover:opacity-90"
             : "bg-foreground/10 text-foreground/50"
         }`}
       >
-        {selected.length > 0
-          ? `${selected.length} seçim yapıldı — After Parti'ye geç →`
+        {hasSelection
+          ? "Seçim yapıldı — After Parti'ye geç →"
           : "Seçim yapmadan geç →"}
       </button>
     </div>
@@ -852,9 +909,13 @@ export default function StepEventSections({ data, update, onNext, conceptCovers 
   };
 
   const isLast = subStep === SUB_STEPS.length - 1;
+  const hasKarsilamaLiveSelection = sections.karsilama.performanceMode === "live"
+    && djs.some((d) => KARSILAMA_LIVE_PERFORMER_TYPES.includes(d.performer_type ?? "") && data.selectedDjIds.includes(d.id));
+  const hasAnaKutlamaLiveSelection = sections.anaKutlama.performanceMode === "live"
+    && djs.some((d) => ANA_KUTLAMA_LIVE_PERFORMER_TYPES.includes(d.performer_type ?? "") && data.selectedDjIds.includes(d.id));
   const hasSelection =
-    subStep === 0 ? sections.karsilama.conceptIds.length > 0
-    : subStep === 1 ? sections.anaKutlama.conceptIds.length > 0
+    subStep === 0 ? (sections.karsilama.conceptIds.length > 0 || hasKarsilamaLiveSelection)
+    : subStep === 1 ? (sections.anaKutlama.conceptIds.length > 0 || hasAnaKutlamaLiveSelection)
     : sections.afterParti.conceptIds.length > 0;
 
   return (
