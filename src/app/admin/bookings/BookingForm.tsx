@@ -90,9 +90,11 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
   const feeNum = items.length > 0 ? itemsTotal : parseFloat(fee) || 0;
   const commission = feeNum * (parseFloat(commissionRate) / 100);
   const artistNet = feeNum - commission;
-  const deposit = feeNum * (parseFloat(depositRate) / 100);
-  const remaining = feeNum - deposit;
   const prepayPrice = calcPrepayPrice(feeNum, parseFloat(prepayMarkupRate) || 25);
+  // Kapora yalnızca ön ödemeli (kaporalı) planda uygulanır — bu yüzden vade
+  // farklı toplamdan hesaplanır, peşin ücretten değil (paymentPlan.ts ile aynı mantık)
+  const deposit = prepayPrice * (parseFloat(depositRate) / 100);
+  const remaining = prepayPrice - deposit;
 
   // Tam aktarım (sanatçı, mekan, notlar dahil) server tarafında yapılır
   const fillFromInquiry = (id: string) => {
@@ -372,17 +374,18 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
               </div>
             </div>
             <div className="space-y-1.5 border-l border-border pl-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Ön Ödemeli (Kaporalı) Plan</p>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Vade farklı toplam (%{prepayMarkupRate})</span>
+                <span className="font-medium">{prepayPrice.toLocaleString("tr-TR")} ₺</span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Kapora ({depositRate}%)</span>
                 <span className="font-medium">{deposit.toLocaleString("tr-TR")} ₺</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between pt-1 border-t border-border/60">
                 <span className="text-muted-foreground">Kalan ödeme</span>
                 <span className="font-medium">{remaining.toLocaleString("tr-TR")} ₺</span>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-border/60">
-                <span className="text-muted-foreground">Ön ödemeli toplam (%{prepayMarkupRate})</span>
-                <span className="font-medium">{prepayPrice.toLocaleString("tr-TR")} ₺</span>
               </div>
             </div>
           </div>
