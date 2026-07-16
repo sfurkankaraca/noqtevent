@@ -30,8 +30,11 @@ export async function upsertDj(formData: FormData) {
   })();
   const base_fee_min_raw = formData.get("base_fee_min") as string;
   const base_fee_max_raw = formData.get("base_fee_max") as string;
+  // Boş bırakılırsa dokunma: yeni kayıt DB default'u ile listenin sonuna düşer
+  const sort_order_raw = formData.get("sort_order") as string | null;
 
   const payload = {
+    ...(sort_order_raw !== null && sort_order_raw !== "" ? { sort_order: Number(sort_order_raw) } : {}),
     name: formData.get("name") as string,
     bio: (formData.get("bio") as string) || null,
     performer_type: (formData.get("performer_type") as string) || "dj",
@@ -76,8 +79,8 @@ export async function upsertDj(formData: FormData) {
 
     const { error } = await supabase.from("dj_profiles").update(payload).eq("id", id);
     if (error) {
-      if (error.message.includes("photos") || error.message.includes("focal_points") || error.message.includes("base_fee") || error.message.includes("event_type_fees")) {
-        const { photos: _p, focal_points: _fp, base_fee_min: _bmin, base_fee_max: _bmax, event_type_fees: _etf, ...safe } = payload;
+      if (error.message.includes("photos") || error.message.includes("focal_points") || error.message.includes("base_fee") || error.message.includes("event_type_fees") || error.message.includes("sort_order")) {
+        const { photos: _p, focal_points: _fp, base_fee_min: _bmin, base_fee_max: _bmax, event_type_fees: _etf, sort_order: _so, ...safe } = payload;
         const { error: e2 } = await supabase.from("dj_profiles").update(safe).eq("id", id);
         if (e2) throw new Error(e2.message);
       } else {
@@ -100,8 +103,8 @@ export async function upsertDj(formData: FormData) {
       clerk_id: `admin-${Date.now()}`,
     });
     if (error) {
-      if (error.message.includes("photos") || error.message.includes("focal_points") || error.message.includes("base_fee") || error.message.includes("event_type_fees")) {
-        const { photos: _p, focal_points: _fp, base_fee_min: _bmin, base_fee_max: _bmax, event_type_fees: _etf, ...safe } = payload;
+      if (error.message.includes("photos") || error.message.includes("focal_points") || error.message.includes("base_fee") || error.message.includes("event_type_fees") || error.message.includes("sort_order")) {
+        const { photos: _p, focal_points: _fp, base_fee_min: _bmin, base_fee_max: _bmax, event_type_fees: _etf, sort_order: _so, ...safe } = payload;
         const { error: e2 } = await supabase.from("dj_profiles").insert({
           ...safe,
           clerk_id: `admin-${Date.now()}`,
@@ -114,6 +117,60 @@ export async function upsertDj(formData: FormData) {
   }
 
   revalidatePath("/admin/djler");
+}
+
+// Sanatçıyı görünen listede bir yukarı/aşağı taşır. scopeTypes verilirse
+// (ör. Canlı Müzik sekmesi: artist+grup+orkestra) taşıma o alt küme içinde
+// yapılır; sort_order global tutulduğu için public sayfadaki sıra da değişir.
+export async function moveDj(
+  id: string,
+  direction: "up" | "down",
+  scopeTypes?: string[]
+): Promise<{ error?: string }> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from("dj_profiles")
+    .select("id, performer_type, sort_order")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) {
+    return {
+      error: error.message.includes("sort_order")
+        ? "Sıralama için önce supabase-migration-dj-sort-order.sql migration'ını çalıştırın."
+        : error.message,
+    };
+  }
+
+  const all = data ?? [];
+  // Global normalizasyon: 0..n, mevcut görünen sıra korunur
+  const updates: PromiseLike<unknown>[] = [];
+  all.forEach((row, i) => {
+    if (row.sort_order !== i) {
+      row.sort_order = i;
+      updates.push(supabase.from("dj_profiles").update({ sort_order: i }).eq("id", row.id));
+    }
+  });
+  await Promise.all(updates);
+
+  const subset = scopeTypes?.length
+    ? all.filter((r) => scopeTypes.includes(r.performer_type ?? "dj"))
+    : all;
+  const idx = subset.findIndex((r) => r.id === id);
+  if (idx === -1) return { error: "Sanatçı bulunamadı" };
+  const other = subset[direction === "up" ? idx - 1 : idx + 1];
+  if (!other) return {}; // zaten en başta/sonda
+
+  const current = subset[idx];
+  const [a, b] = [current.sort_order, other.sort_order];
+  const { error: e1 } = await supabase.from("dj_profiles").update({ sort_order: b }).eq("id", current.id);
+  const { error: e2 } = await supabase.from("dj_profiles").update({ sort_order: a }).eq("id", other.id);
+  if (e1 || e2) return { error: (e1 ?? e2)!.message };
+
+  revalidatePath("/admin/djler");
+  revalidatePath("/sanatcilar");
+  return {};
 }
 
 export async function deleteDj(formData: FormData) {

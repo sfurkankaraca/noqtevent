@@ -6,18 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ArtistBookingWizard from "@/components/artist-booking/ArtistBookingWizard";
-
-const PERFORMER_TYPES = [
-  { id: "dj", label: "DJ", emoji: "🎧" },
-  { id: "artist", label: "Solo Sanatçı", emoji: "🎤" },
-  { id: "trio", label: "Trio", emoji: "🎶" },
-  { id: "grup", label: "Grup", emoji: "👥" },
-  { id: "dance", label: "Dans Ekibi", emoji: "💃" },
-  { id: "bando", label: "Bando", emoji: "🎺" },
-  { id: "orkestra", label: "Orkestra", emoji: "🎻" },
-  { id: "host", label: "Sunucu / MC", emoji: "🎙️" },
-  { id: "moderator", label: "Moderatör", emoji: "🗣️" },
-];
+import { PERFORMER_TYPE_LABELS as PERFORMER_TYPES, PERFORMER_TABS } from "@/lib/performerTypes";
 
 type Dj = {
   id: string;
@@ -597,7 +586,7 @@ export default function ArtistsClient({ djs, activeType }: { djs: Dj[]; activeTy
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-12">
-        {PERFORMER_TYPES.map((pt) => {
+        {PERFORMER_TABS.map((pt) => {
           const isActive = pt.id === activeType;
           return (
             <button

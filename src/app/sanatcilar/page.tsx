@@ -5,6 +5,7 @@ import ArtistsClient from "@/components/sections/ArtistsClient";
 import ArtistsPage from "@/components/sections/ArtistsPage";
 import JoinPlatform from "@/components/home/JoinPlatform";
 import { createServiceClient } from "@/lib/supabase";
+import { resolveTabId, tabTypes } from "@/lib/performerTypes";
 
 export const metadata: Metadata = {
   title: "Sanatçılar — DJ, Solo Sanatçı, Dans Ekibi | NOQT",
@@ -16,19 +17,27 @@ type Props = { searchParams: Promise<{ type?: string }> };
 
 export default async function Page({ searchParams }: Props) {
   const { type } = await searchParams;
-  const activeType = type && type !== "all" ? type : "dj";
+  // Eski ?type=artist|grup|orkestra linkleri birleşik sekmeye çözülür
+  const activeType = resolveTabId(type && type !== "all" ? type : "dj");
+  const performerTypes = tabTypes(activeType);
+
+  const BASE_COLS = "id, name, bio, photo_url, photos, focal_points, concept_tags, soundcloud_url, mixcloud_url, youtube_url, instagram_url, spotify_url, website_url, performer_type, city, speciality, preview_video_url, videos, youtube_links";
 
   const supabase = createServiceClient();
-  let query = supabase
-    .from("dj_profiles")
-    .select("id, name, bio, photo_url, photos, focal_points, concept_tags, soundcloud_url, mixcloud_url, youtube_url, instagram_url, spotify_url, website_url, performer_type, city, speciality, preview_video_url, videos, youtube_links")
-    .eq("is_active", true)
-    .eq("application_status", "approved")
-    .order("created_at", { ascending: true });
+  const buildQuery = (withSort: boolean) => {
+    let q = supabase
+      .from("dj_profiles")
+      .select(BASE_COLS)
+      .eq("is_active", true)
+      .eq("application_status", "approved")
+      .in("performer_type", performerTypes);
+    if (withSort) q = q.order("sort_order", { ascending: true });
+    return q.order("created_at", { ascending: true });
+  };
 
-  if (activeType) query = query.eq("performer_type", activeType);
-
-  const { data: rawDjs, error } = await query;
+  // sort_order kolonu henüz eklenmediyse eski sıralamaya düş
+  let { data: rawDjs, error } = await buildQuery(true);
+  if (error) ({ data: rawDjs, error } = await buildQuery(false));
 
   // Sadece sorgu tamamen başarısızsa statik sayfaya düş
   if (error || rawDjs === null) {
@@ -41,18 +50,11 @@ export default async function Page({ searchParams }: Props) {
     );
   }
 
-  // DJ'leri öne al, diğerleri sonrasında
-  const djs = [...rawDjs].sort((a, b) => {
-    const aIsDj = a.performer_type === "dj" ? 0 : 1;
-    const bIsDj = b.performer_type === "dj" ? 0 : 1;
-    return aIsDj - bIsDj;
-  });
-
   return (
     <>
       <Navigation />
       <main className="pt-20">
-        <ArtistsClient djs={djs} activeType={activeType} />
+        <ArtistsClient djs={rawDjs} activeType={activeType} />
         <JoinPlatform />
       </main>
       <Footer />

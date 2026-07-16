@@ -73,6 +73,7 @@ type Dj = {
   base_fee_min?: number;
   base_fee_max?: number;
   event_type_fees?: Record<string, FeeRange>;
+  sort_order?: number;
 };
 
 interface PhotoEntry {
@@ -326,6 +327,16 @@ export default function DjForm({ dj }: { dj?: Dj }) {
               className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2">Gösterim Sırası</label>
+          <input
+            type="number" name="sort_order" defaultValue={dj?.sort_order ?? ""} min={0}
+            placeholder="Boş bırakılırsa listenin sonuna eklenir"
+            className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1.5">Küçük numara sitede önce gösterilir. Listedeki ↑↓ oklarıyla da sıralayabilirsin.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

@@ -3,19 +3,10 @@ import Image from "next/image";
 import { createServiceClient } from "@/lib/supabase";
 import DeleteDjButton from "./DeleteDjButton";
 import ApplyRiderTemplateButton from "./ApplyRiderTemplateButton";
+import ReorderButtons from "./ReorderButtons";
+import { PERFORMER_TYPE_LABELS as PERFORMER_TYPES, PERFORMER_TABS, resolveTabId, tabTypes } from "@/lib/performerTypes";
 
-const PERFORMER_TYPES = [
-  { id: "all", label: "Tümü", emoji: "✨" },
-  { id: "dj", label: "DJ", emoji: "🎧" },
-  { id: "artist", label: "Solo Sanatçı", emoji: "🎤" },
-  { id: "trio", label: "Trio", emoji: "🎶" },
-  { id: "grup", label: "Grup", emoji: "👥" },
-  { id: "dance", label: "Dans Ekibi", emoji: "💃" },
-  { id: "bando", label: "Bando", emoji: "🎺" },
-  { id: "orkestra", label: "Orkestra", emoji: "🎻" },
-  { id: "host", label: "Sunucu / MC", emoji: "🎙️" },
-  { id: "moderator", label: "Moderatör", emoji: "🗣️" },
-];
+const FILTER_TABS = [{ id: "all", label: "Tümü", emoji: "✨" }, ...PERFORMER_TABS];
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   approved: { label: "Onaylandı", cls: "bg-green-100 text-green-700" },
@@ -27,13 +18,22 @@ type Props = { searchParams: Promise<{ type?: string }> };
 
 export default async function DjlerPage({ searchParams }: Props) {
   const { type } = await searchParams;
-  const activeType = type && type !== "all" ? type : null;
+  const activeType = type && type !== "all" ? resolveTabId(type) : null;
+  const scopeTypes = activeType ? tabTypes(activeType) : undefined;
 
   const supabase = createServiceClient();
-  let query = supabase.from("dj_profiles").select("*").order("created_at", { ascending: false });
-  if (activeType) query = query.eq("performer_type", activeType);
+  const buildQuery = (withSort: boolean) => {
+    let q = supabase.from("dj_profiles").select("*");
+    q = withSort
+      ? q.order("sort_order", { ascending: true }).order("created_at", { ascending: true })
+      : q.order("created_at", { ascending: false });
+    if (scopeTypes) q = q.in("performer_type", scopeTypes);
+    return q;
+  };
 
-  const { data: djs, error } = await query;
+  // sort_order kolonu henüz eklenmediyse eski sıralamaya düş
+  let { data: djs, error } = await buildQuery(true);
+  if (error) ({ data: djs, error } = await buildQuery(false));
 
   const pendingCount = djs?.filter((d) => d.application_status === "pending").length ?? 0;
 
@@ -64,7 +64,7 @@ export default async function DjlerPage({ searchParams }: Props) {
 
       {/* Type filter tabs */}
       <div className="flex flex-wrap gap-2">
-        {PERFORMER_TYPES.map((pt) => {
+        {FILTER_TABS.map((pt) => {
           const isActive = (pt.id === "all" && !activeType) || pt.id === activeType;
           return (
             <Link
@@ -181,6 +181,7 @@ export default async function DjlerPage({ searchParams }: Props) {
                   </div>
 
                   <div className="flex items-center gap-2 pt-1 border-t border-border">
+                    <ReorderButtons id={dj.id} scopeTypes={scopeTypes} />
                     <Link
                       href={`/admin/djler/${dj.id}/edit`}
                       className="flex-1 text-center py-2 rounded-xl text-xs font-medium border border-border hover:bg-secondary transition-colors"
