@@ -62,6 +62,8 @@ export default function OfferView({
   const prepayAvailable = isPrepayAvailable(booking.event_date);
   const daysLeft = daysUntil(booking.event_date);
   const agreedPrice = selectedPlan === "cash" ? cashPrice : prepayPrice;
+  const depositRate = booking.deposit_rate ?? 30;
+  const prepayDeposit = Math.round(prepayPrice * (depositRate / 100));
 
   const eventDateStr = booking.event_date
     ? new Date(booking.event_date).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
@@ -230,7 +232,7 @@ export default function OfferView({
             <p className="text-2xl font-semibold text-foreground tabular-nums">{fmt(prepayPrice)}</p>
             <p className="text-xs text-muted-foreground mt-2">
               {prepayAvailable
-                ? `Kapora ile rezervasyon, kalan etkinliğe ${FINAL_PAYMENT_DEADLINE_DAYS} gün kala`
+                ? `Kapora (%${depositRate}): ${fmt(prepayDeposit)} — kalan ödeme etkinliğe ${FINAL_PAYMENT_DEADLINE_DAYS} gün kala`
                 : `Etkinliğe ${daysLeft ?? 0} gün kaldığı için bu seçenek kapandı`}
             </p>
           </button>

@@ -327,29 +327,9 @@ function ContractDocument({ data }: { data: ContractData }) {
           <Text style={styles.sectionTitle}>
             Genel Koşullar{agreement ? ` (${agreement.termsVersion})` : ""}
           </Text>
-          {agreement ? (
-            TERMS_TEXT.split("\n\n").map((p, i) => (
-              <Text key={i} style={styles.termsText}>{p.trim()}</Text>
-            ))
-          ) : (
-            <>
-          <Text style={styles.termsText}>
-            1. Kapora ödemesi yapılmadan booking rezervasyonu kesinleşmez. Kapora iadesi, etkinlik tarihinden 30 günden az süre kala yapılan iptallerde gerçekleştirilmez.
-          </Text>
-          <Text style={styles.termsText}>
-            2. Kalan ödeme, etkinlik tarihinden en az 7 gün önce NOQT Experience hesabına aktarılır. Ödemeler onaylanana kadar sanatçıya ödeme yapılmaz.
-          </Text>
-          <Text style={styles.termsText}>
-            3. Etkinliğin mücbir sebep (doğal afet, salgın, devlet kararı vb.) nedeniyle iptal edilmesi halinde taraflar müzakere yoluyla çözüm arar.
-          </Text>
-          <Text style={styles.termsText}>
-            4. NOQT Experience, sanatçıyla müşteri arasında aracılık yapar; etkinliğin sorunsuz gerçekleşmesi için teknik gereksinimler (rider) müşteri tarafından sağlanır.
-          </Text>
-          <Text style={styles.termsText}>
-            5. Sanatçı, belirlenen süre ve koşullarda performans gerçekleştirmeyi kabul eder. Süre uzatımı ek ücrete tabidir.
-          </Text>
-            </>
-          )}
+          {TERMS_TEXT.split("\n\n").map((p, i) => (
+            <Text key={i} style={styles.termsText}>{p.trim()}</Text>
+          ))}
           {data.notes && (
             <Text style={[styles.termsText, { marginTop: 8, fontFamily: "Roboto", fontWeight: 700 }]}>
               Özel Not: {data.notes}
