@@ -19,7 +19,7 @@ const TYPE_LABEL: Record<string, string> = {
 type Row = Record<string, any>;
 
 function planTotal(b: Row): number {
-  return b.payment_plan === "prepay" ? calcPrepayPrice(b.fee ?? 0) : calcCashPrice(b.fee ?? 0);
+  return b.payment_plan === "prepay" ? calcPrepayPrice(b.fee ?? 0, b.prepay_markup_rate) : calcCashPrice(b.fee ?? 0);
 }
 
 function artistNet(b: Row): number {
@@ -29,10 +29,10 @@ function artistNet(b: Row): number {
 export default async function FinansPage() {
   const supabase = createServiceClient();
 
-  const [{ data: bookings }, { data: payments }] = await Promise.all([
+  const [bookingsResult, { data: payments }] = await Promise.all([
     supabase
       .from("bookings")
-      .select("id, client_name, event_date, fee, commission_rate, payment_plan, status, advance_amount, dj_profiles(name)")
+      .select("id, client_name, event_date, fee, commission_rate, payment_plan, prepay_markup_rate, status, advance_amount, dj_profiles(name)")
       .not("status", "in", "(draft,offer_sent,cancelled)")
       .order("event_date", { ascending: true }),
     supabase
@@ -40,6 +40,17 @@ export default async function FinansPage() {
       .select("*, bookings(client_name, dj_profiles(name))")
       .order("created_at", { ascending: false }),
   ]);
+  let bookings = bookingsResult.data;
+
+  if (bookings === null) {
+    // prepay_markup_rate migration'ı henüz çalıştırılmadıysa onsuz dene
+    const fallback = await supabase
+      .from("bookings")
+      .select("id, client_name, event_date, fee, commission_rate, payment_plan, status, advance_amount, dj_profiles(name)")
+      .not("status", "in", "(draft,offer_sent,cancelled)")
+      .order("event_date", { ascending: true });
+    bookings = fallback.data as typeof bookings;
+  }
 
   const allBookings: Row[] = bookings ?? [];
   const allPayments: Row[] = payments ?? [];

@@ -39,6 +39,7 @@ export type BookingPayload = {
   fee: number;
   commission_rate: number;
   deposit_rate: number;
+  prepay_markup_rate: number;
   travel_required: boolean;
   accommodation_required: boolean;
   advance_amount: number;
@@ -65,12 +66,24 @@ export async function upsertBooking(payload: BookingPayload) {
   let bookingId = id;
   if (id) {
     const { error } = await supabase.from("bookings").update(data).eq("id", id);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.message.includes("prepay_markup_rate")) {
+        const { prepay_markup_rate: _pmr, ...safe } = data;
+        const { error: e2 } = await supabase.from("bookings").update(safe).eq("id", id);
+        if (e2) throw new Error(e2.message);
+      } else {
+        throw new Error(error.message);
+      }
+    }
   } else {
-    const { data: inserted, error } = await supabase
+    let { data: inserted, error } = await supabase
       .from("bookings").insert(data).select("id").single();
+    if (error?.message.includes("prepay_markup_rate")) {
+      const { prepay_markup_rate: _pmr, ...safe } = data;
+      ({ data: inserted, error } = await supabase.from("bookings").insert(safe).select("id").single());
+    }
     if (error) throw new Error(error.message);
-    bookingId = inserted.id;
+    bookingId = inserted!.id;
   }
 
   if (items !== undefined && bookingId) {
@@ -142,11 +155,21 @@ export async function addPayment(bookingId: string, data: {
 
 async function sendManualPaymentReceipt(bookingId: string, amount: number) {
   const supabase = createServiceClient();
-  const { data: booking } = await supabase
+  const result = await supabase
     .from("bookings")
-    .select("id, client_name, client_email, fee, payment_plan, deposit_rate, contract_url, dj_profiles(name, slug)")
+    .select("id, client_name, client_email, fee, payment_plan, deposit_rate, prepay_markup_rate, contract_url, dj_profiles(name, slug)")
     .eq("id", bookingId)
     .single();
+  let booking = result.data;
+  if (result.error?.message.includes("column")) {
+    // prepay_markup_rate migration'ı henüz çalıştırılmadıysa onsuz dene
+    const fallback = await supabase
+      .from("bookings")
+      .select("id, client_name, client_email, fee, payment_plan, deposit_rate, contract_url, dj_profiles(name, slug)")
+      .eq("id", bookingId)
+      .single();
+    booking = fallback.data as typeof booking;
+  }
   if (!booking) return;
 
   const { data: payments } = await supabase

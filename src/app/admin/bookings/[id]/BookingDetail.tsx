@@ -465,6 +465,7 @@ export default function BookingDetail({ booking, payments, artists, items = [] }
           clientName={booking.client_name}
           clientEmail={booking.client_email}
           fee={booking.fee ?? 0}
+          prepayMarkupRate={booking.prepay_markup_rate ?? 25}
           initialSlug={booking.offer_slug}
           paymentPlan={booking.payment_plan}
         />

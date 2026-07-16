@@ -71,11 +71,11 @@ export async function acceptOffer(data: {
   // Booking'i slug üzerinden bul — client'tan gelen id/fiyata güvenilmez
   let bookingQuery = await supabase
     .from("bookings")
-    .select("id, fee, status, event_date, event_type, deposit_rate, client_email, offer_expires_at, dj_profiles(name)")
+    .select("id, fee, status, event_date, event_type, deposit_rate, prepay_markup_rate, client_email, offer_expires_at, dj_profiles(name)")
     .eq("offer_slug", data.slug)
     .single();
   if (bookingQuery.error?.message.includes("column")) {
-    // offer_expires_at migration'ı henüz çalıştırılmadıysa onsuz dene
+    // offer_expires_at / prepay_markup_rate migration'ı henüz çalıştırılmadıysa onsuz dene
     bookingQuery = await supabase
       .from("bookings")
       .select("id, fee, status, event_date, event_type, deposit_rate, client_email, dj_profiles(name)")
@@ -94,7 +94,7 @@ export async function acceptOffer(data: {
   }
 
   // Fiyat sunucu tarafında hesaplanır
-  const agreedPrice = data.plan === "cash" ? calcCashPrice(booking.fee ?? 0) : calcPrepayPrice(booking.fee ?? 0);
+  const agreedPrice = data.plan === "cash" ? calcCashPrice(booking.fee ?? 0) : calcPrepayPrice(booking.fee ?? 0, booking.prepay_markup_rate);
 
   const baseAgreement = {
     booking_id: booking.id,
@@ -175,14 +175,22 @@ export async function notifyPaymentClaim(slug: string, plan: "cash" | "prepay") 
   if (plan !== "cash" && plan !== "prepay") throw new Error("Geçersiz ödeme planı.");
 
   const supabase = createServiceClient();
-  const { data: booking, error } = await supabase
+  let { data: booking, error } = await supabase
     .from("bookings")
-    .select("id, client_name, fee")
+    .select("id, client_name, fee, prepay_markup_rate")
     .eq("offer_slug", slug)
     .single();
+  if (error?.message.includes("column")) {
+    // prepay_markup_rate migration'ı henüz çalıştırılmadıysa onsuz dene
+    ({ data: booking, error } = await supabase
+      .from("bookings")
+      .select("id, client_name, fee")
+      .eq("offer_slug", slug)
+      .single());
+  }
   if (error || !booking) throw new Error("Teklif bulunamadı.");
 
-  const amount = plan === "cash" ? calcCashPrice(booking.fee ?? 0) : calcPrepayPrice(booking.fee ?? 0);
+  const amount = plan === "cash" ? calcCashPrice(booking.fee ?? 0) : calcPrepayPrice(booking.fee ?? 0, booking.prepay_markup_rate);
 
   await sendPaymentClaimNotification({
     clientName: booking.client_name,
@@ -204,11 +212,19 @@ export async function startOnlinePayment(slug: string): Promise<{ paymentPageUrl
   }
 
   const supabase = createServiceClient();
-  const { data: booking, error } = await supabase
+  let { data: booking, error } = await supabase
     .from("bookings")
-    .select("id, fee, status, payment_plan, deposit_rate, client_name, client_email, venue_city, event_type, dj_profiles(name)")
+    .select("id, fee, status, payment_plan, deposit_rate, prepay_markup_rate, client_name, client_email, venue_city, event_type, dj_profiles(name)")
     .eq("offer_slug", slug)
     .single();
+  if (error?.message.includes("column")) {
+    // prepay_markup_rate migration'ı henüz çalıştırılmadıysa onsuz dene
+    ({ data: booking, error } = await supabase
+      .from("bookings")
+      .select("id, fee, status, payment_plan, deposit_rate, client_name, client_email, venue_city, event_type, dj_profiles(name)")
+      .eq("offer_slug", slug)
+      .single());
+  }
   if (error || !booking) throw new Error("Teklif bulunamadı.");
 
   // Ödeme yalnızca onaylanmış teklifler için

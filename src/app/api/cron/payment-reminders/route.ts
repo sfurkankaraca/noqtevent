@@ -24,15 +24,30 @@ export async function GET(req: NextRequest) {
   const supabase = createServiceClient();
   const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
-  const { data: bookings, error } = await supabase
+  let { data: bookings, error } = await supabase
     .from("bookings")
     .select(
-      "id, offer_slug, client_name, client_email, event_date, fee, payment_plan, deposit_rate, status, reminder_7d_sent_at, reminder_3d_sent_at, dj_profiles(name)"
+      "id, offer_slug, client_name, client_email, event_date, fee, payment_plan, deposit_rate, prepay_markup_rate, status, reminder_7d_sent_at, reminder_3d_sent_at, dj_profiles(name)"
     )
     .in("status", ACTIVE_STATUSES)
     .not("event_date", "is", null)
     .not("payment_plan", "is", null)
     .not("client_email", "is", null);
+
+  if (error?.message.includes("column")) {
+    // prepay_markup_rate migration'ı henüz çalıştırılmadıysa onsuz dene
+    const fallback = await supabase
+      .from("bookings")
+      .select(
+        "id, offer_slug, client_name, client_email, event_date, fee, payment_plan, deposit_rate, status, reminder_7d_sent_at, reminder_3d_sent_at, dj_profiles(name)"
+      )
+      .in("status", ACTIVE_STATUSES)
+      .not("event_date", "is", null)
+      .not("payment_plan", "is", null)
+      .not("client_email", "is", null);
+    bookings = fallback.data as typeof bookings;
+    error = fallback.error;
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

@@ -12,11 +12,11 @@ export type DuePayment = {
 // Booking'in planına ve tamamlanmış tahsilatlara göre sıradaki ödemeyi hesaplar.
 // null → tahsil edilecek bir şey kalmadı.
 export function calcDuePayment(
-  booking: { fee: number | null; payment_plan: string | null; deposit_rate: number | null },
+  booking: { fee: number | null; payment_plan: string | null; deposit_rate: number | null; prepay_markup_rate?: number | null },
   completedInboundTotal: number
 ): DuePayment | null {
   const plan = booking.payment_plan === "prepay" ? "prepay" : "cash";
-  const total = plan === "cash" ? calcCashPrice(booking.fee ?? 0) : calcPrepayPrice(booking.fee ?? 0);
+  const total = plan === "cash" ? calcCashPrice(booking.fee ?? 0) : calcPrepayPrice(booking.fee ?? 0, booking.prepay_markup_rate);
   if (total <= 0) return null;
 
   const paid = Math.max(0, completedInboundTotal);

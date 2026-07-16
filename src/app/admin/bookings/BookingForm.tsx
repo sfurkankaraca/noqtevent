@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upsertBooking, type BookingPayload, type BookingItemPayload } from "./actions";
 import type { BookingItem } from "@/lib/bookingItems";
+import { calcPrepayPrice } from "@/lib/bookingTerms";
 
 const EVENT_TYPE_LABELS = [
   "Düğün", "Düğün / Nikah", "Nişan", "Kına Gecesi", "Doğum Günü",
@@ -56,6 +57,7 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
   const [fee, setFee] = useState(String(booking?.fee ?? ""));
   const [commissionRate, setCommissionRate] = useState(String(booking?.commission_rate ?? "15"));
   const [depositRate, setDepositRate] = useState(String(booking?.deposit_rate ?? "30"));
+  const [prepayMarkupRate, setPrepayMarkupRate] = useState(String(booking?.prepay_markup_rate ?? "25"));
   const [travel, setTravel] = useState(booking?.travel_required ?? false);
   const [accommodation, setAccommodation] = useState(booking?.accommodation_required ?? false);
   const [advance, setAdvance] = useState(String(booking?.advance_amount ?? "0"));
@@ -90,6 +92,7 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
   const artistNet = feeNum - commission;
   const deposit = feeNum * (parseFloat(depositRate) / 100);
   const remaining = feeNum - deposit;
+  const prepayPrice = calcPrepayPrice(feeNum, parseFloat(prepayMarkupRate) || 25);
 
   // Tam aktarım (sanatçı, mekan, notlar dahil) server tarafında yapılır
   const fillFromInquiry = (id: string) => {
@@ -133,6 +136,7 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
           fee: feeNum,
           commission_rate: parseFloat(commissionRate) || 15,
           deposit_rate: parseFloat(depositRate) || 30,
+          prepay_markup_rate: parseFloat(prepayMarkupRate) || 25,
           travel_required: travel,
           accommodation_required: accommodation,
           advance_amount: parseFloat(advance) || 0,
@@ -343,6 +347,12 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
             <input type="number" min="0" max="100" value={depositRate}
               onChange={(e) => setDepositRate(e.target.value)} className={inputCls} />
           </div>
+          <div>
+            <label className={labelCls}>Ön Ödeme Vade Farkı %</label>
+            <input type="number" min="0" max="100" value={prepayMarkupRate}
+              onChange={(e) => setPrepayMarkupRate(e.target.value)} className={inputCls} />
+            <p className="text-[10px] text-muted-foreground mt-1">Ön ödemeli (kaporalı) planda toplam ücrete eklenen oran.</p>
+          </div>
         </div>
 
         {feeNum > 0 && (
@@ -369,6 +379,10 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Kalan ödeme</span>
                 <span className="font-medium">{remaining.toLocaleString("tr-TR")} ₺</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-border/60">
+                <span className="text-muted-foreground">Ön ödemeli toplam (%{prepayMarkupRate})</span>
+                <span className="font-medium">{prepayPrice.toLocaleString("tr-TR")} ₺</span>
               </div>
             </div>
           </div>

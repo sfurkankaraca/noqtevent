@@ -57,8 +57,9 @@ export default function OfferView({
     }
   };
 
+  const prepayMarkupRate = booking.prepay_markup_rate ?? 25;
   const cashPrice = calcCashPrice(booking.fee ?? 0);
-  const prepayPrice = calcPrepayPrice(booking.fee ?? 0);
+  const prepayPrice = calcPrepayPrice(booking.fee ?? 0, prepayMarkupRate);
   const prepayAvailable = isPrepayAvailable(booking.event_date);
   const daysLeft = daysUntil(booking.event_date);
   const agreedPrice = selectedPlan === "cash" ? cashPrice : prepayPrice;

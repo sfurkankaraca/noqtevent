@@ -9,11 +9,12 @@ type Props = {
   clientName: string;
   clientEmail: string | null;
   fee: number;
+  prepayMarkupRate: number;
   initialSlug: string | null;
   paymentPlan: string | null;
 };
 
-export default function OfferManager({ bookingId, clientName, clientEmail, fee, initialSlug, paymentPlan }: Props) {
+export default function OfferManager({ bookingId, clientName, clientEmail, fee, prepayMarkupRate, initialSlug, paymentPlan }: Props) {
   const toSlug = (s: string) =>
     s.toLowerCase()
       .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
@@ -65,7 +66,7 @@ export default function OfferManager({ bookingId, clientName, clientEmail, fee, 
       <div>
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Teklif & Ödeme Linki</p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Peşin {calcCashPrice(fee).toLocaleString("tr-TR")} ₺ · Ön ödemeli {calcPrepayPrice(fee).toLocaleString("tr-TR")} ₺
+          Peşin {calcCashPrice(fee).toLocaleString("tr-TR")} ₺ · Ön ödemeli (%{prepayMarkupRate}) {calcPrepayPrice(fee, prepayMarkupRate).toLocaleString("tr-TR")} ₺
           {paymentPlan && ` · Müşteri "${paymentPlan === "cash" ? "Peşin" : "Ön Ödemeli"}" planı onayladı`}
         </p>
       </div>

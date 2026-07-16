@@ -60,7 +60,7 @@ export async function generateOfferPdfBySlug(offerSlug: string): Promise<Buffer 
     },
     items: pdfItems,
     cashPrice: calcCashPrice(fee),
-    prepayPrice: calcPrepayPrice(fee),
+    prepayPrice: calcPrepayPrice(fee, booking.prepay_markup_rate),
     prepayAvailable: isPrepayAvailable(booking.event_date),
     depositRate: Number(booking.deposit_rate ?? 30),
     offerUrl: `${BASE}/teklif/${offerSlug}`,

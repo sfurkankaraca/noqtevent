@@ -37,11 +37,21 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient();
-    const { data: booking } = await supabase
+    const bookingResult = await supabase
       .from("bookings")
-      .select("id, offer_slug, status, fee, payment_plan, deposit_rate, contract_url, client_name, client_email, dj_profiles(name, email, slug)")
+      .select("id, offer_slug, status, fee, payment_plan, deposit_rate, prepay_markup_rate, contract_url, client_name, client_email, dj_profiles(name, email, slug)")
       .eq("id", result.basketId)
       .single();
+    let booking = bookingResult.data;
+    if (bookingResult.error?.message.includes("column")) {
+      // prepay_markup_rate migration'ı henüz çalıştırılmadıysa onsuz dene
+      const fallback = await supabase
+        .from("bookings")
+        .select("id, offer_slug, status, fee, payment_plan, deposit_rate, contract_url, client_name, client_email, dj_profiles(name, email, slug)")
+        .eq("id", result.basketId)
+        .single();
+      booking = fallback.data as typeof booking;
+    }
 
     if (!booking) return redirectToOffer(slug, "hata", "Rezervasyon bulunamadı.");
     const offerSlug = booking.offer_slug ?? slug;
