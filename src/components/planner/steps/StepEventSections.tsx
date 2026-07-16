@@ -94,18 +94,31 @@ function PhotoGallery({ photos, name, bgColor, focalPoints }: {
 
 // ─── SANATÇI KARTI (sanatçılar sayfasındaki gibi — foto galeri + hover video) ──
 
+function proxyVideo(url: string): string {
+  if (!url || !url.includes("media.noqt.events")) return url;
+  return `/api/video?url=${encodeURIComponent(url)}`;
+}
+
 function ArtistCard({ dj, selected, onToggle, bgColor }: {
   dj: Dj; selected: boolean; onToggle: () => void; bgColor: string;
 }) {
   const allPhotos = dj.photos && dj.photos.length > 0 ? dj.photos : dj.photo_url ? [dj.photo_url] : [];
   const initials = dj.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+  const [playingVideo, setPlayingVideo] = useState(false);
 
   return (
     <div className={`rounded-2xl overflow-hidden border-2 bg-card transition-all ${
       selected ? "border-foreground" : "border-border hover:border-foreground/30"
     }`}>
-      <div className="relative group cursor-pointer" onClick={onToggle}>
-        {allPhotos.length > 0 ? (
+      <div className="relative group cursor-pointer" onClick={playingVideo ? undefined : onToggle}>
+        {playingVideo && dj.preview_video_url ? (
+          <video
+            src={proxyVideo(dj.preview_video_url)}
+            controls autoPlay playsInline
+            className="w-full h-40 object-cover bg-black"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : allPhotos.length > 0 ? (
           <PhotoGallery photos={allPhotos} name={dj.name} bgColor={bgColor} focalPoints={dj.focal_points} />
         ) : (
           <div className={`${bgColor} h-40 flex items-center justify-center`}>
@@ -115,21 +128,25 @@ function ArtistCard({ dj, selected, onToggle, bgColor }: {
           </div>
         )}
 
-        {dj.preview_video_url && (
-          <video
-            src={dj.preview_video_url}
-            muted loop playsInline
-            className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play()}
-            onMouseLeave={(e) => { const v = e.currentTarget as HTMLVideoElement; v.pause(); v.currentTime = 0; }}
-          />
+        {!playingVideo && dj.preview_video_url && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setPlayingVideo(true); }}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <span className="w-11 h-11 bg-black/50 group-hover:bg-black/65 transition-colors rounded-full flex items-center justify-center border border-white/40">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+            </span>
+          </button>
         )}
 
-        <span className={`absolute top-3 right-3 z-10 w-6 h-6 rounded-full border flex items-center justify-center text-xs ${
-          selected ? "bg-foreground text-background border-foreground" : "bg-background/80 backdrop-blur-sm border-border text-transparent"
-        }`}>
-          ✓
-        </span>
+        {!playingVideo && (
+          <span className={`absolute top-3 right-3 z-10 w-6 h-6 rounded-full border flex items-center justify-center text-xs ${
+            selected ? "bg-foreground text-background border-foreground" : "bg-background/80 backdrop-blur-sm border-border text-transparent"
+          }`}>
+            ✓
+          </span>
+        )}
       </div>
 
       <div className="p-3.5">
