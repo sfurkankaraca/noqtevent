@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { EVENT_TYPE_LABELS as EVENT_LABELS } from "@/lib/eventTypeLabels";
+import DeleteInquiryButton from "./DeleteInquiryButton";
 
 const STATUS_STYLES: Record<string, string> = {
   new: "bg-blue-50 text-blue-700 border-blue-200",
@@ -89,9 +90,12 @@ export default async function InquiriesPage() {
                     })()}
                   </td>
                   <td className="px-4 py-3.5">
-                    <Link href={`/admin/inquiries/${inq.id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      Detay →
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link href={`/admin/inquiries/${inq.id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        Detay →
+                      </Link>
+                      <DeleteInquiryButton id={inq.id} name={`${inq.contact?.name ?? ""} ${inq.contact?.surname ?? ""}`.trim() || "Bu talep"} />
+                    </div>
                   </td>
                 </tr>
               ))}

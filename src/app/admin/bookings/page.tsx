@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
+import DeleteBookingButton from "./DeleteBookingButton";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   draft:        { label: "Taslak",            cls: "bg-gray-100 text-gray-600" },
@@ -82,10 +83,13 @@ export default async function BookingsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <Link href={`/admin/bookings/${b.id}`}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                          Detay →
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          <Link href={`/admin/bookings/${b.id}`}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                            Detay →
+                          </Link>
+                          <DeleteBookingButton id={b.id} name={b.client_name} />
+                        </div>
                       </td>
                     </tr>
                   );
@@ -122,10 +126,13 @@ export default async function BookingsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <Link href={`/admin/bookings/${b.id}`}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                          Detay →
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          <Link href={`/admin/bookings/${b.id}`}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                            Detay →
+                          </Link>
+                          <DeleteBookingButton id={b.id} name={b.client_name} />
+                        </div>
                       </td>
                     </tr>
                   );

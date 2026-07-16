@@ -25,3 +25,10 @@ export async function assignDj(id: string, dj_id: string | null) {
   await supabase.from("inquiries").update({ assigned_dj_id: dj_id || null }).eq("id", id);
   revalidatePath(`/admin/inquiries/${id}`);
 }
+
+export async function deleteInquiry(id: string) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+  await supabase.from("inquiries").delete().eq("id", id);
+  revalidatePath("/admin/inquiries");
+}
