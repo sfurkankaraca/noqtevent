@@ -1,8 +1,8 @@
 export const TERMS_VERSION = "2026-07-02-v1";
 
 export const PREPAY_MULTIPLIER = 1.25; // Ön ödemeli fiyat = peşin fiyat × 1.25
-export const PREPAY_DEADLINE_DAYS = 15; // Ön ödeme ile rezervasyon en geç etkinliğe X gün kala yapılabilir
-export const FINAL_PAYMENT_DEADLINE_DAYS = 2; // Kalan ödeme en geç etkinliğe X gün kala tamamlanmalı
+export const PREPAY_DEADLINE_DAYS = 3; // Ön ödeme ile rezervasyon en geç etkinliğe X gün kala yapılabilir
+export const FINAL_PAYMENT_DEADLINE_DAYS = 1; // Kalan ödeme en geç etkinliğe X gün kala tamamlanmalı
 export const NON_REFUNDABLE_WINDOW_DAYS = 7; // Etkinliğe X gün veya daha az kala iptal → ön ödeme iade edilmez
 
 export function calcCashPrice(fee: number): number {
