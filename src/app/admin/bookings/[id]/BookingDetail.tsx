@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { updateBookingStatus, addPayment, type BookingStatus } from "../actions";
+import type { BookingItem } from "@/lib/bookingItems";
 import DeliveryManager from "./DeliveryManager";
 import OfferManager from "./OfferManager";
 import CancelBookingPanel from "./CancelBookingPanel";
@@ -43,11 +44,12 @@ type Payment = {
   description: string | null; paid_at: string | null; status: string;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default function BookingDetail({ booking, payments, artists }: {
+export default function BookingDetail({ booking, payments, artists, items = [] }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   booking: Record<string, any>;
   payments: Payment[];
   artists: { id: string; name: string; performer_type: string | null }[];
+  items?: BookingItem[];
 }) {
   const [isPending, startTransition] = useTransition();
   const [contractGenerating, setContractGenerating] = useState(false);
@@ -226,6 +228,43 @@ export default function BookingDetail({ booking, payments, artists }: {
             )}
           </div>
         </div>
+
+        {/* Teklif kalemleri */}
+        {items.length > 0 && (
+          <div className="bg-white rounded-2xl border border-border p-5 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Teklif Kalemleri</p>
+            <div className="divide-y divide-border">
+              {items.map((it) => (
+                <div key={it.id} className="py-2.5 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {it.title}
+                      {it.kind === "artist" && it.dj_profiles?.performer_type && (
+                        <span className="text-muted-foreground font-normal"> · {it.dj_profiles.performer_type}</span>
+                      )}
+                    </p>
+                    {it.description && <p className="text-xs text-muted-foreground mt-0.5">{it.description}</p>}
+                    {it.kind === "artist" && it.artist_id && (
+                      <a href={`/sanatcilar/${it.artist_id}`} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        Profil ↗
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                    {Number(it.amount).toLocaleString("tr-TR")} ₺
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between pt-1 border-t border-border text-sm">
+              <span className="text-muted-foreground">Toplam</span>
+              <span className="font-semibold text-foreground tabular-nums">
+                {items.reduce((s, it) => s + Number(it.amount), 0).toLocaleString("tr-TR")} ₺
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Etkinlik */}
         <div className="bg-white rounded-2xl border border-border p-5 space-y-3">

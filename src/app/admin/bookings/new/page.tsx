@@ -86,7 +86,7 @@ export default async function NewBookingPage({ searchParams }: Props) {
           ← Bookings
         </Link>
         <span className="text-muted-foreground/40">/</span>
-        <h1 className="text-2xl font-semibold text-foreground">Yeni Booking</h1>
+        <h1 className="text-2xl font-semibold text-foreground">Teklif Oluştur</h1>
         {prefill && (
           <span className="text-xs px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
             Talepten aktarıldı

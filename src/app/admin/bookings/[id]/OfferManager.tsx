@@ -92,10 +92,22 @@ export default function OfferManager({ bookingId, clientName, clientEmail, fee, 
       </div>
 
       {slug && (
-        <button onClick={handleSend} disabled={sending || !clientEmail}
-          className="w-full py-2.5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
-          {sending ? "Gönderiliyor…" : sent ? "✓ Tekrar Gönder" : "Müşteriye E-posta Gönder"}
-        </button>
+        <>
+          <div className="flex gap-2">
+            <a href={`/api/teklif/${slug}/pdf`} target="_blank" rel="noopener noreferrer"
+              className="flex-1 text-center py-2 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Teklif PDF ↗
+            </a>
+            <a href={`/api/teklif/${slug}/sozlesme`} target="_blank" rel="noopener noreferrer"
+              className="flex-1 text-center py-2 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Sözleşme PDF ↗
+            </a>
+          </div>
+          <button onClick={handleSend} disabled={sending || !clientEmail}
+            className="w-full py-2.5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+            {sending ? "Gönderiliyor…" : sent ? "✓ Tekrar Gönder" : "Müşteriye E-posta Gönder"}
+          </button>
+        </>
       )}
       {!clientEmail && <p className="text-xs text-muted-foreground">Müşteri e-postası yok, otomatik gönderim yapılamaz.</p>}
     </div>

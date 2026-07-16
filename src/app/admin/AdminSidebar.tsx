@@ -18,6 +18,7 @@ const NAV = [
   { href: "/admin/testimonials", label: "Yorumlar", icon: "💬" },
   { href: "/admin/inquiries", label: "Talepler", icon: "📋" },
   { href: "/admin/bookings", label: "Bookings", icon: "🎤" },
+  { href: "/admin/bookings/new", label: "Teklif Oluştur", icon: "📝" },
   { href: "/admin/etkinlikler", label: "Etkinlikler", icon: "🗂" },
   { href: "/admin/hedefler", label: "Hedefler", icon: "🎯" },
   { href: "/admin/takvim", label: "Takvim", icon: "📅" },

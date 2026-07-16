@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { upsertBooking, type BookingPayload } from "./actions";
+import { upsertBooking, type BookingPayload, type BookingItemPayload } from "./actions";
+import type { BookingItem } from "@/lib/bookingItems";
 
 const EVENT_TYPE_LABELS = [
   "Düğün", "Düğün / Nikah", "Nişan", "Kına Gecesi", "Doğum Günü",
@@ -19,12 +20,23 @@ type Props = {
   artists: Artist[];
   inquiries?: Inquiry[];
   booking?: Partial<BookingPayload> & { id?: string };
+  items?: BookingItem[];
+};
+
+// Teklif kalemi taslağı (form state) — kaydederken BookingItemPayload'a çevrilir
+type ItemDraft = {
+  key: number;
+  kind: "artist" | "service";
+  artist_id: string;
+  title: string;
+  description: string;
+  amount: string;
 };
 
 const inputCls = "w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/40";
 const labelCls = "block text-xs font-medium text-muted-foreground tracking-wide uppercase mb-2";
 
-export default function BookingForm({ artists, inquiries = [], booking }: Props) {
+export default function BookingForm({ artists, inquiries = [], booking, items: initialItems = [] }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +62,30 @@ export default function BookingForm({ artists, inquiries = [], booking }: Props)
   const [notes, setNotes] = useState(booking?.notes ?? "");
   const [internalNotes, setInternalNotes] = useState(booking?.internal_notes ?? "");
 
-  const feeNum = parseFloat(fee) || 0;
+  const [items, setItems] = useState<ItemDraft[]>(
+    initialItems.map((it, i) => ({
+      key: i,
+      kind: it.kind,
+      artist_id: it.artist_id ?? "",
+      title: it.title ?? "",
+      description: it.description ?? "",
+      amount: String(it.amount ?? ""),
+    }))
+  );
+  const [itemKey, setItemKey] = useState(initialItems.length);
+
+  const addItem = (kind: "artist" | "service") => {
+    setItems((prev) => [...prev, { key: itemKey, kind, artist_id: "", title: "", description: "", amount: "" }]);
+    setItemKey((k) => k + 1);
+  };
+  const updateItem = (key: number, patch: Partial<ItemDraft>) =>
+    setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
+  const removeItem = (key: number) => setItems((prev) => prev.filter((it) => it.key !== key));
+
+  const artistName = (id: string) => artists.find((a) => a.id === id)?.name ?? "";
+  const itemsTotal = items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
+
+  const feeNum = items.length > 0 ? itemsTotal : parseFloat(fee) || 0;
   const commission = feeNum * (parseFloat(commissionRate) / 100);
   const artistNet = feeNum - commission;
   const deposit = feeNum * (parseFloat(depositRate) / 100);
@@ -64,14 +99,27 @@ export default function BookingForm({ artists, inquiries = [], booking }: Props)
 
   const handleSave = () => {
     if (!clientName.trim()) { setError("Müşteri adı zorunlu"); return; }
-    if (!feeNum) { setError("Ücret girilmeli"); return; }
+    if (!feeNum) { setError("Ücret girilmeli — kalem ekleyin veya ücret girin"); return; }
+    for (const it of items) {
+      if (it.kind === "artist" && !it.artist_id) { setError("Sanatçı kaleminde sanatçı seçilmeli"); return; }
+      if (it.kind === "service" && !it.title.trim()) { setError("Hizmet kaleminde başlık girilmeli"); return; }
+      if (!(parseFloat(it.amount) > 0)) { setError("Her kalem için tutar girilmeli"); return; }
+    }
     setError(null);
+    const itemsPayload: BookingItemPayload[] = items.map((it) => ({
+      kind: it.kind,
+      artist_id: it.kind === "artist" ? it.artist_id : null,
+      title: it.kind === "artist" ? (it.title.trim() || artistName(it.artist_id)) : it.title.trim(),
+      description: it.description.trim() || null,
+      amount: parseFloat(it.amount) || 0,
+    }));
     startTransition(async () => {
       try {
         await upsertBooking({
           id: booking?.id,
           inquiry_id: inquiryId || null,
           artist_id: artistId || null,
+          items: itemsPayload,
           client_name: clientName.trim(),
           client_email: clientEmail || null,
           client_phone: clientPhone || null,
@@ -141,9 +189,84 @@ export default function BookingForm({ artists, inquiries = [], booking }: Props)
         </div>
       </div>
 
-      {/* Sanatçı */}
+      {/* Teklif kalemleri — çoklu sanatçı + hizmet */}
       <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
-        <h2 className="font-semibold text-foreground">Sanatçı</h2>
+        <div>
+          <h2 className="font-semibold text-foreground">Teklif Kalemleri</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Birden fazla sanatçı ve hizmet ekleyin — teklif sayfasında ve sözleşmede kalem kalem görünür,
+            sanatçı kalemleri profil linkiyle birlikte gösterilir. Toplam ücret otomatik hesaplanır.
+          </p>
+        </div>
+
+        {items.length > 0 && (
+          <div className="space-y-3">
+            {items.map((it) => (
+              <div key={it.key} className="rounded-xl border border-border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] px-2 py-1 rounded-full font-medium uppercase tracking-wide ${
+                    it.kind === "artist" ? "bg-violet-50 text-violet-700" : "bg-sky-50 text-sky-700"
+                  }`}>
+                    {it.kind === "artist" ? "Sanatçı" : "Hizmet"}
+                  </span>
+                  <button type="button" onClick={() => removeItem(it.key)}
+                    className="text-xs text-muted-foreground hover:text-red-600 transition-colors">
+                    Kaldır ✕
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    {it.kind === "artist" ? (
+                      <select value={it.artist_id}
+                        onChange={(e) => updateItem(it.key, { artist_id: e.target.value })} className={inputCls}>
+                        <option value="">— Sanatçı seç</option>
+                        {artists.map((a) => (
+                          <option key={a.id} value={a.id}>{a.name} ({a.performer_type ?? "—"})</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input value={it.title} onChange={(e) => updateItem(it.key, { title: e.target.value })}
+                        placeholder="Hizmet adı — örn. Ses & Işık Sistemi" className={inputCls} />
+                    )}
+                  </div>
+                  <input type="number" min="0" value={it.amount}
+                    onChange={(e) => updateItem(it.key, { amount: e.target.value })}
+                    placeholder="Tutar ₺" className={inputCls} />
+                </div>
+                <input value={it.description} onChange={(e) => updateItem(it.key, { description: e.target.value })}
+                  placeholder={it.kind === "artist" ? "Açıklama — örn. 4 saat DJ performansı" : "Açıklama (opsiyonel)"}
+                  className={inputCls} />
+              </div>
+            ))}
+            <div className="flex justify-between items-center px-1 text-sm">
+              <span className="text-muted-foreground">Kalemler toplamı</span>
+              <span className="font-semibold text-foreground">{itemsTotal.toLocaleString("tr-TR")} ₺</span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button type="button" onClick={() => addItem("artist")}
+            className="text-sm px-4 py-2 rounded-full border border-border text-foreground hover:bg-secondary transition-colors">
+            + Sanatçı Ekle
+          </button>
+          <button type="button" onClick={() => addItem("service")}
+            className="text-sm px-4 py-2 rounded-full border border-border text-foreground hover:bg-secondary transition-colors">
+            + Hizmet Ekle
+          </button>
+        </div>
+      </div>
+
+      {/* Ana sanatçı (takvim/finans için) */}
+      <div className="bg-white rounded-2xl border border-border p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold text-foreground">Ana Sanatçı</h2>
+          {items.some((it) => it.kind === "artist") && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Boş bırakırsanız ilk sanatçı kalemi otomatik atanır — takvim ve finans görünümlerinde kullanılır.
+            </p>
+          )}
+        </div>
         <select value={artistId} onChange={(e) => setArtistId(e.target.value)} className={inputCls}>
           <option value="">— Sanatçı seç</option>
           {artists.map((a) => (
@@ -199,8 +322,16 @@ export default function BookingForm({ artists, inquiries = [], booking }: Props)
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className={labelCls}>Toplam Ücret (₺)</label>
-            <input type="number" min="0" value={fee} onChange={(e) => setFee(e.target.value)}
-              placeholder="25000" className={inputCls} />
+            {items.length > 0 ? (
+              <>
+                <input value={itemsTotal.toLocaleString("tr-TR")} readOnly disabled
+                  className={`${inputCls} bg-secondary/40 cursor-not-allowed`} />
+                <p className="text-[10px] text-muted-foreground mt-1">Kalemlerden otomatik</p>
+              </>
+            ) : (
+              <input type="number" min="0" value={fee} onChange={(e) => setFee(e.target.value)}
+                placeholder="25000" className={inputCls} />
+            )}
           </div>
           <div>
             <label className={labelCls}>Komisyon %</label>

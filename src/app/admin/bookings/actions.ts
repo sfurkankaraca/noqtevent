@@ -6,12 +6,21 @@ import { revalidatePath } from "next/cache";
 import { sendBookingDeliveryEmail, sendOfferEmail as sendOfferEmailLib, sendPaymentReceivedEmails } from "@/lib/email";
 import { calcDuePayment } from "@/lib/paymentPlan";
 import { createAndStoreContract } from "@/lib/contract";
+import { fetchBookingItems, itemsArtistNames } from "@/lib/bookingItems";
 
 const BASE = () => process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
 export type BookingStatus =
   | "draft" | "offer_sent" | "confirmed" | "contracted"
   | "deposit_paid" | "full_paid" | "completed" | "cancelled";
+
+export type BookingItemPayload = {
+  kind: "artist" | "service";
+  artist_id?: string | null;
+  title: string;
+  description?: string | null;
+  amount: number;
+};
 
 export type BookingPayload = {
   id?: string;
@@ -35,21 +44,68 @@ export type BookingPayload = {
   advance_amount: number;
   notes?: string | null;
   internal_notes?: string | null;
+  // Teklif kalemleri (çoklu sanatçı/hizmet) — undefined ise dokunulmaz
+  items?: BookingItemPayload[];
 };
 
 export async function upsertBooking(payload: BookingPayload) {
   await requireAdmin();
   const supabase = createServiceClient();
-  const { id, ...data } = payload;
+  const { id, items, ...data } = payload;
 
+  // Kalemler varsa toplam ücret kalemlerden hesaplanır; ana sanatçı boşsa
+  // ilk sanatçı kaleminden atanır (takvim/finans görünümleri için)
+  if (items && items.length > 0) {
+    data.fee = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+    if (!data.artist_id) {
+      data.artist_id = items.find((i) => i.kind === "artist" && i.artist_id)?.artist_id ?? null;
+    }
+  }
+
+  let bookingId = id;
   if (id) {
     const { error } = await supabase.from("bookings").update(data).eq("id", id);
     if (error) throw new Error(error.message);
   } else {
-    const { error } = await supabase.from("bookings").insert(data);
+    const { data: inserted, error } = await supabase
+      .from("bookings").insert(data).select("id").single();
     if (error) throw new Error(error.message);
+    bookingId = inserted.id;
   }
+
+  if (items !== undefined && bookingId) {
+    const { error: delError } = await supabase
+      .from("booking_items").delete().eq("booking_id", bookingId);
+    if (delError) {
+      // Migration henüz çalıştırılmadıysa: kalemsiz kayıtları engelleme, kalemli kayıtta net hata ver
+      if (items.length === 0) {
+        revalidatePath("/admin/bookings");
+        return;
+      }
+      throw new Error(
+        /booking_items|relation|schema/i.test(delError.message)
+          ? "booking_items tablosu bulunamadı — supabase-migration-booking-items.sql'i Supabase SQL Editor'da çalıştırın."
+          : delError.message
+      );
+    }
+    if (items.length > 0) {
+      const { error: insError } = await supabase.from("booking_items").insert(
+        items.map((it, i) => ({
+          booking_id: bookingId,
+          kind: it.kind,
+          artist_id: it.kind === "artist" ? (it.artist_id ?? null) : null,
+          title: it.title,
+          description: it.description ?? null,
+          amount: Number(it.amount) || 0,
+          sort_order: i,
+        }))
+      );
+      if (insError) throw new Error(insError.message);
+    }
+  }
+
   revalidatePath("/admin/bookings");
+  if (bookingId) revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
@@ -189,11 +245,15 @@ export async function sendOfferEmail(bookingId: string) {
   if (!booking.offer_slug) throw new Error("Önce teklif linkini oluşturun");
   if (!booking.client_email) throw new Error("Müşteri e-postası yok");
 
+  // Çoklu kalemli teklifte e-posta başlığında tüm sanatçılar geçsin
+  const items = await fetchBookingItems(supabase, bookingId);
+  const artistNames = itemsArtistNames(items);
+
   const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
   await sendOfferEmailLib({
     clientName: booking.client_name,
     clientEmail: booking.client_email,
-    artistName: booking.dj_profiles?.name ?? "—",
+    artistName: artistNames ?? booking.dj_profiles?.name ?? "—",
     offerUrl: `${BASE}/teklif/${booking.offer_slug}`,
     eventType: booking.event_type,
     eventDate: booking.event_date,

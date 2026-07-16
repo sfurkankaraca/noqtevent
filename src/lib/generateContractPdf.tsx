@@ -1,5 +1,5 @@
 import {
-  Document, Page, Text, View, StyleSheet, Font,
+  Document, Page, Text, View, StyleSheet, Font, Link,
   renderToBuffer,
 } from "@react-pdf/renderer";
 import React from "react";
@@ -106,6 +106,14 @@ export type ContractData = {
     travelRequired?: boolean;
     accommodationRequired?: boolean;
   };
+  // Teklif kalemleri (çoklu sanatçı/hizmet) — boşsa tek sanatçılı klasik görünüm
+  items?: {
+    title: string;
+    artistName?: string | null;
+    profileUrl?: string | null;
+    description?: string | null;
+    amount: number;
+  }[];
   notes?: string | null;
   // Müşteri teklifi dijital onayladıysa (click-wrap) — ıslak imza yerine geçer
   agreement?: {
@@ -240,6 +248,38 @@ function ContractDocument({ data }: { data: ContractData }) {
             </View>
           )}
         </View>
+
+        {/* Hizmet kalemleri — çoklu sanatçı/hizmet teklifi */}
+        {data.items && data.items.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Hizmet Kalemleri</Text>
+            <View style={styles.finBox}>
+              {data.items.map((it, i) => (
+                <View key={i} style={{ marginBottom: i < data.items!.length - 1 ? 8 : 0 }}>
+                  <View style={styles.finRow}>
+                    <Text style={styles.finValue}>{it.title}</Text>
+                    <Text style={styles.finValue}>{fmt(it.amount)}</Text>
+                  </View>
+                  {it.description ? (
+                    <Text style={{ fontSize: 8, color: palette.gray }}>{it.description}</Text>
+                  ) : null}
+                  {it.profileUrl ? (
+                    <Link src={it.profileUrl} style={{ fontSize: 8, color: palette.gray, textDecoration: "underline" }}>
+                      Sanatçı profili: {it.profileUrl}
+                    </Link>
+                  ) : null}
+                </View>
+              ))}
+              <View style={styles.finDivider} />
+              <View style={styles.finTotal}>
+                <Text style={styles.finTotalLabel}>Kalemler Toplamı</Text>
+                <Text style={styles.finTotalValue}>
+                  {fmt(data.items.reduce((s, it) => s + it.amount, 0))}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Finansal */}
         <View style={styles.section}>

@@ -6,6 +6,7 @@ import {
   TERMS_TEXT, PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_DEADLINE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
 } from "@/lib/bookingTerms";
 import { acceptOffer, notifyPaymentClaim, sendOfferOtp, startOnlinePayment } from "./actions";
+import type { BookingItem } from "@/lib/bookingItems";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Booking = Record<string, any>;
@@ -17,10 +18,11 @@ const fmt = (n: number) => n.toLocaleString("tr-TR") + " ₺";
 type BankInfo = { iban: string; accountName: string; bankName: string | null } | null;
 
 export default function OfferView({
-  booking, slug, agreement, bankInfo = null, expired = false, paymentResult = null, paymentMessage = null,
+  booking, slug, items = [], agreement, bankInfo = null, expired = false, paymentResult = null, paymentMessage = null,
 }: {
   booking: Booking;
   slug: string;
+  items?: BookingItem[];
   agreement: Agreement;
   bankInfo?: BankInfo;
   expired?: boolean;
@@ -143,9 +145,63 @@ export default function OfferView({
           Teklifiniz Hazır
         </h1>
         <p className="text-sm text-muted-foreground mb-10">
-          {booking.dj_profiles?.name ? `${booking.dj_profiles.name} ile ` : ""}
+          {(() => {
+            const names = items.filter((i) => i.kind === "artist" && i.dj_profiles?.name).map((i) => i.dj_profiles!.name);
+            const label = names.length > 0 ? names.join(" + ") : booking.dj_profiles?.name;
+            return label ? `${label} ile ` : "";
+          })()}
           {booking.event_type ?? "etkinliğiniz"}{eventDateStr ? ` · ${eventDateStr}` : ""}
         </p>
+
+        {/* Teklif kapsamı — sanatçı ve hizmet kalemleri */}
+        {items.length > 0 && (
+          <div className="bg-white rounded-2xl border border-border p-6 mb-8">
+            <p className="text-sm font-semibold text-foreground mb-4">Teklif Kapsamı</p>
+            <div className="divide-y divide-border">
+              {items.map((it) => (
+                <div key={it.id} className="py-3 first:pt-0 last:pb-0 flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {it.title}
+                      {it.kind === "artist" && it.dj_profiles?.performer_type && (
+                        <span className="text-muted-foreground font-normal"> · {it.dj_profiles.performer_type}</span>
+                      )}
+                    </p>
+                    {it.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{it.description}</p>
+                    )}
+                    {it.kind === "artist" && it.artist_id && (
+                      <a
+                        href={`/sanatcilar/${it.artist_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block mt-1 text-xs text-foreground underline underline-offset-2 hover:text-foreground/80"
+                      >
+                        Sanatçı profilini incele ↗
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                    {fmt(Number(it.amount))}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between pt-3 mt-1 border-t border-border">
+              <span className="text-sm text-muted-foreground">Toplam (peşin fiyat)</span>
+              <span className="text-sm font-semibold text-foreground tabular-nums">{fmt(cashPrice)}</span>
+            </div>
+            <a
+              href={`/api/teklif/${slug}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              download={`noqt-teklif-${slug}.pdf`}
+              className="inline-block mt-4 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              Teklifi PDF olarak indir
+            </a>
+          </div>
+        )}
 
         {/* Fiyat kartları */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">

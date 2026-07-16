@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase";
 import { generateContractPdf, type ContractData } from "@/lib/generateContractPdf";
+import { artistProfileUrl, fetchBookingItems, itemsArtistNames, type BookingItem } from "@/lib/bookingItems";
 
 export type ContractResult = {
   pdfBuffer: Buffer;
@@ -9,7 +10,7 @@ export type ContractResult = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildContractData(booking: Record<string, any>, agreement: Record<string, any> | null): ContractData {
+function buildContractData(booking: Record<string, any>, agreement: Record<string, any> | null, items: BookingItem[] = []): ContractData {
   return {
     bookingId: booking.id,
     contractDate: new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
@@ -19,10 +20,17 @@ function buildContractData(booking: Record<string, any>, agreement: Record<strin
       phone: booking.client_phone,
     },
     artist: {
-      name: booking.dj_profiles?.name ?? "—",
-      performer_type: booking.dj_profiles?.performer_type,
+      name: itemsArtistNames(items) ?? booking.dj_profiles?.name ?? "—",
+      performer_type: items.length > 0 ? null : booking.dj_profiles?.performer_type,
       city: booking.dj_profiles?.city,
     },
+    items: items.map((it) => ({
+      title: it.title,
+      artistName: it.dj_profiles?.name ?? null,
+      profileUrl: it.kind === "artist" && it.artist_id ? artistProfileUrl(it.artist_id) : null,
+      description: it.description,
+      amount: Number(it.amount),
+    })),
     event: {
       type: booking.event_type,
       date: booking.event_date,
@@ -69,15 +77,18 @@ export async function generateContractPreview(offerSlug: string): Promise<Buffer
     .single();
   if (error || !booking) return null;
 
-  const { data: agreement } = await supabase
-    .from("booking_agreements")
-    .select("*")
-    .eq("booking_id", booking.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [{ data: agreement }, items] = await Promise.all([
+    supabase
+      .from("booking_agreements")
+      .select("*")
+      .eq("booking_id", booking.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    fetchBookingItems(supabase, booking.id),
+  ]);
 
-  return generateContractPdf(buildContractData(booking, agreement));
+  return generateContractPdf(buildContractData(booking, agreement, items));
 }
 
 // Booking'ten (varsa son dijital onayla birlikte) sözleşme PDF'i üretir,
@@ -93,15 +104,18 @@ export async function createAndStoreContract(bookingId: string): Promise<Contrac
 
   if (error || !booking) return null;
 
-  const { data: agreement } = await supabase
-    .from("booking_agreements")
-    .select("*")
-    .eq("booking_id", bookingId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [{ data: agreement }, items] = await Promise.all([
+    supabase
+      .from("booking_agreements")
+      .select("*")
+      .eq("booking_id", bookingId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    fetchBookingItems(supabase, bookingId),
+  ]);
 
-  const pdfBuffer = await generateContractPdf(buildContractData(booking, agreement));
+  const pdfBuffer = await generateContractPdf(buildContractData(booking, agreement, items));
 
   // Sözleşmeler PII içerdiği için private bucket'ta tutulur; erişim imzalı URL ile
   const bucket = "contracts";

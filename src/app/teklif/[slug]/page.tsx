@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase";
 import { sendOfferViewedNotification } from "@/lib/email";
+import { fetchBookingItems, itemsArtistNames } from "@/lib/bookingItems";
 import OfferView from "./OfferView";
 
 type Props = {
@@ -36,6 +37,8 @@ export default async function OfferPage({ params, searchParams }: Props) {
 
   if (!booking) notFound();
 
+  const items = await fetchBookingItems(supabase, booking.id);
+
   // İlk görüntülemede admin'e "sıcakken ara" bildirimi.
   // Serverless'ta response sonrası arka plan işi kesilebileceğinden burada await ediyoruz.
   // Update başarısız olursa (ör. migration henüz çalıştırılmadıysa) bildirim gönderilmez —
@@ -48,7 +51,7 @@ export default async function OfferPage({ params, searchParams }: Props) {
     if (!viewedError) {
       await sendOfferViewedNotification({
         clientName: booking.client_name,
-        artistName: booking.dj_profiles?.name ?? "—",
+        artistName: itemsArtistNames(items) ?? booking.dj_profiles?.name ?? "—",
         bookingId: booking.id,
       }).catch((err) => console.error("[offer-viewed]", err));
     }
@@ -81,6 +84,7 @@ export default async function OfferPage({ params, searchParams }: Props) {
     <OfferView
       booking={booking}
       slug={slug}
+      items={items}
       agreement={agreement}
       bankInfo={bankInfo}
       expired={expired}
