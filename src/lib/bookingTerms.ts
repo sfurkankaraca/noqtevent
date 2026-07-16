@@ -5,7 +5,7 @@ export const TERMS_VERSION = "2026-07-02-v1";
 // yalnızca kolon henüz yoksa (migration çalıştırılmadan önce) düşülen değerdir.
 export const DEFAULT_PREPAY_MARKUP_RATE = 25;
 export const PREPAY_DEADLINE_DAYS = 3; // Ön ödeme ile rezervasyon en geç etkinliğe X gün kala yapılabilir
-export const FINAL_PAYMENT_DEADLINE_DAYS = 1; // Kalan ödeme en geç etkinliğe X gün kala tamamlanmalı
+export const FINAL_PAYMENT_GRACE_DAYS = 7; // Kalan ödeme, etkinlik tarihinden sonra en geç X gün içinde tamamlanmalı
 export const NON_REFUNDABLE_WINDOW_DAYS = 7; // Etkinliğe X gün veya daha az kala iptal → ön ödeme iade edilmez
 
 export function calcCashPrice(fee: number): number {
@@ -34,7 +34,7 @@ export const TERMS_TEXT = `
 
 2. Ön Ödeme ile Rezervasyon: Ön ödeme seçeneği, etkinlik tarihine en az ${PREPAY_DEADLINE_DAYS} gün kalana kadar kullanılabilir. Bu süreden sonra yalnızca peşin (tam) ödeme ile rezervasyon yapılabilir.
 
-3. Kesin Rezervasyon: Rezervasyonun kesinleşmesi için kalan ödemenin etkinlik tarihinden en geç ${FINAL_PAYMENT_DEADLINE_DAYS} gün öncesine kadar tamamlanmış olması gerekir. Bu süre içinde ödeme tamamlanmazsa rezervasyon iptal sayılabilir.
+3. Kalan Ödeme: Ön ödemeli (kaporalı) planda kalan bakiye, etkinlik tarihinden sonra en geç ${FINAL_PAYMENT_GRACE_DAYS} gün içinde tamamlanmalıdır.
 
 4. İptal ve İade: Etkinlik tarihine ${NON_REFUNDABLE_WINDOW_DAYS} gün veya daha az kala yapılan iptallerde ödenmiş ön ödeme/kapora tutarı iade edilmez. Bu süreden daha erken yapılan iptallerde ön ödeme iade edilir.
 

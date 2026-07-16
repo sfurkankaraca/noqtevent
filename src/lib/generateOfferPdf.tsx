@@ -5,7 +5,7 @@ import {
 import React from "react";
 import { ROBOTO_REGULAR, ROBOTO_BOLD } from "./pdfFonts";
 import {
-  PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_DEADLINE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
+  PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_GRACE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
 } from "./bookingTerms";
 
 // Built-in Helvetica Türkçe glifleri (ğ, ş, İ, ı, ₺) içermez — Unicode font şart
@@ -217,7 +217,7 @@ function OfferDocument({ data }: { data: OfferPdfData }) {
               <Text style={styles.priceValue}>{fmt(data.prepayPrice)}</Text>
               <Text style={styles.priceNote}>
                 {data.prepayAvailable
-                  ? `Kapora (%${data.depositRate}): ${fmt(deposit)} — kalan ödeme etkinliğe ${FINAL_PAYMENT_DEADLINE_DAYS} gün kala.`
+                  ? `Kapora (%${data.depositRate}): ${fmt(deposit)} — kalan ödeme etkinlikten sonra en geç ${FINAL_PAYMENT_GRACE_DAYS} gün içinde.`
                   : "Etkinlik tarihi yaklaştığı için bu seçenek kapanmıştır."}
               </Text>
             </View>
@@ -239,7 +239,7 @@ function OfferDocument({ data }: { data: OfferPdfData }) {
             • Ön ödeme ile rezervasyon, etkinliğe en az {PREPAY_DEADLINE_DAYS} gün kalana kadar yapılabilir.
           </Text>
           <Text style={styles.termsText}>
-            • Kesin rezervasyon için kalan ödeme, etkinlikten en geç {FINAL_PAYMENT_DEADLINE_DAYS} gün önce tamamlanmalıdır.
+            • Kalan ödeme, etkinlik tarihinden sonra en geç {FINAL_PAYMENT_GRACE_DAYS} gün içinde tamamlanmalıdır.
           </Text>
           <Text style={styles.termsText}>
             • Etkinliğe {NON_REFUNDABLE_WINDOW_DAYS} gün veya daha az kala yapılan iptallerde ön ödeme iade edilmez.

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import {
   calcCashPrice, calcPrepayPrice, isPrepayAvailable, daysUntil,
-  TERMS_TEXT, PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_DEADLINE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
+  TERMS_TEXT, PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_GRACE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
 } from "@/lib/bookingTerms";
 import { acceptOffer, notifyPaymentClaim, sendOfferOtp, startOnlinePayment } from "./actions";
 import type { BookingItem } from "@/lib/bookingItems";
@@ -233,7 +233,7 @@ export default function OfferView({
             <p className="text-2xl font-semibold text-foreground tabular-nums">{fmt(prepayPrice)}</p>
             <p className="text-xs text-muted-foreground mt-2">
               {prepayAvailable
-                ? `Kapora (%${depositRate}): ${fmt(prepayDeposit)} — kalan ödeme etkinliğe ${FINAL_PAYMENT_DEADLINE_DAYS} gün kala`
+                ? `Kapora (%${depositRate}): ${fmt(prepayDeposit)} — kalan ödeme etkinlikten sonra en geç ${FINAL_PAYMENT_GRACE_DAYS} gün içinde`
                 : `Etkinliğe ${daysLeft ?? 0} gün kaldığı için bu seçenek kapandı`}
             </p>
           </button>
@@ -244,7 +244,7 @@ export default function OfferView({
           <p className="text-sm font-semibold text-foreground mb-3">Rezervasyon Koşulları</p>
           <ul className="text-xs text-muted-foreground space-y-2 leading-relaxed">
             <li>• Ön ödeme ile rezervasyon, etkinliğe en az {PREPAY_DEADLINE_DAYS} gün kalana kadar yapılabilir.</li>
-            <li>• Kesin rezervasyon için kalan ödeme, etkinlikten en geç {FINAL_PAYMENT_DEADLINE_DAYS} gün önce tamamlanmalıdır.</li>
+            <li>• Kalan ödeme, etkinlik tarihinden sonra en geç {FINAL_PAYMENT_GRACE_DAYS} gün içinde tamamlanmalıdır.</li>
             <li>• Etkinliğe {NON_REFUNDABLE_WINDOW_DAYS} gün veya daha az kala yapılan iptallerde ön ödeme iade edilmez.</li>
           </ul>
           <details className="mt-4">
