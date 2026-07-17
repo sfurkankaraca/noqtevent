@@ -54,13 +54,10 @@ export async function upsertBooking(payload: BookingPayload) {
   const supabase = createServiceClient();
   const { id, items, ...data } = payload;
 
-  // Kalemler varsa toplam ücret kalemlerden hesaplanır; ana sanatçı boşsa
-  // ilk sanatçı kaleminden atanır (takvim/finans görünümleri için)
-  if (items && items.length > 0) {
-    data.fee = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
-    if (!data.artist_id) {
-      data.artist_id = items.find((i) => i.kind === "artist" && i.artist_id)?.artist_id ?? null;
-    }
+  // Toplam ücret formdan manuel gelir (kalem bazlı tutar opsiyonel).
+  // Ana sanatçı boşsa ilk sanatçı kaleminden atanır (takvim/finans görünümleri için)
+  if (items && items.length > 0 && !data.artist_id) {
+    data.artist_id = items.find((i) => i.kind === "artist" && i.artist_id)?.artist_id ?? null;
   }
 
   let bookingId = id;

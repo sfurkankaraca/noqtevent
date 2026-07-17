@@ -87,7 +87,7 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
   const artistName = (id: string) => artists.find((a) => a.id === id)?.name ?? "";
   const itemsTotal = items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
 
-  const feeNum = items.length > 0 ? itemsTotal : parseFloat(fee) || 0;
+  const feeNum = parseFloat(fee) || 0;
   const commission = feeNum * (parseFloat(commissionRate) / 100);
   const artistNet = feeNum - commission;
   const prepayPrice = calcPrepayPrice(feeNum, parseFloat(prepayMarkupRate) || 25);
@@ -108,7 +108,6 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
     for (const it of items) {
       if (it.kind === "artist" && !it.artist_id) { setError("Sanatçı kaleminde sanatçı seçilmeli"); return; }
       if (it.kind === "service" && !it.title.trim()) { setError("Hizmet kaleminde başlık girilmeli"); return; }
-      if (!(parseFloat(it.amount) > 0)) { setError("Her kalem için tutar girilmeli"); return; }
     }
     setError(null);
     const itemsPayload: BookingItemPayload[] = items.map((it) => ({
@@ -201,7 +200,8 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
           <h2 className="font-semibold text-foreground">Teklif Kalemleri</h2>
           <p className="text-xs text-muted-foreground mt-1">
             Birden fazla sanatçı ve hizmet ekleyin — teklif sayfasında ve sözleşmede kalem kalem görünür,
-            sanatçı kalemleri profil linkiyle birlikte gösterilir. Toplam ücret otomatik hesaplanır.
+            sanatçı kalemleri profil linkiyle birlikte gösterilir. Kalem başına tutar girmek zorunlu değil;
+            aşağıdaki Finansal bölümde tek bir toplam ücret girebilirsiniz.
           </p>
         </div>
 
@@ -237,17 +237,19 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
                   </div>
                   <input type="number" min="0" value={it.amount}
                     onChange={(e) => updateItem(it.key, { amount: e.target.value })}
-                    placeholder="Tutar ₺" className={inputCls} />
+                    placeholder="Tutar ₺ (opsiyonel)" className={inputCls} />
                 </div>
                 <input value={it.description} onChange={(e) => updateItem(it.key, { description: e.target.value })}
                   placeholder={it.kind === "artist" ? "Açıklama — örn. 4 saat DJ performansı" : "Açıklama (opsiyonel)"}
                   className={inputCls} />
               </div>
             ))}
-            <div className="flex justify-between items-center px-1 text-sm">
-              <span className="text-muted-foreground">Kalemler toplamı</span>
-              <span className="font-semibold text-foreground">{itemsTotal.toLocaleString("tr-TR")} ₺</span>
-            </div>
+            {itemsTotal > 0 && (
+              <div className="flex justify-between items-center px-1 text-sm">
+                <span className="text-muted-foreground">Kalem tutarları toplamı</span>
+                <span className="font-semibold text-foreground">{itemsTotal.toLocaleString("tr-TR")} ₺</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -328,15 +330,13 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className={labelCls}>Toplam Ücret (₺)</label>
-            {items.length > 0 ? (
-              <>
-                <input value={itemsTotal.toLocaleString("tr-TR")} readOnly disabled
-                  className={`${inputCls} bg-secondary/40 cursor-not-allowed`} />
-                <p className="text-[10px] text-muted-foreground mt-1">Kalemlerden otomatik</p>
-              </>
-            ) : (
-              <input type="number" min="0" value={fee} onChange={(e) => setFee(e.target.value)}
-                placeholder="25000" className={inputCls} />
+            <input type="number" min="0" value={fee} onChange={(e) => setFee(e.target.value)}
+              placeholder="25000" className={inputCls} />
+            {itemsTotal > 0 && parseFloat(fee) !== itemsTotal && (
+              <button type="button" onClick={() => setFee(String(itemsTotal))}
+                className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 mt-1">
+                Kalem tutarları toplamını kullan ({itemsTotal.toLocaleString("tr-TR")} ₺)
+              </button>
             )}
           </div>
           <div>

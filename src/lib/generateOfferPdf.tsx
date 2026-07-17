@@ -185,7 +185,7 @@ function OfferDocument({ data }: { data: OfferPdfData }) {
                     {it.title}
                     {it.performerType ? ` · ${it.performerType}` : ""}
                   </Text>
-                  <Text style={styles.itemAmount}>{fmt(it.amount)}</Text>
+                  {it.amount > 0 && <Text style={styles.itemAmount}>{fmt(it.amount)}</Text>}
                 </View>
                 {it.description ? <Text style={styles.itemDesc}>{it.description}</Text> : null}
                 {it.profileUrl ? (

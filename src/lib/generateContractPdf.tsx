@@ -258,7 +258,7 @@ function ContractDocument({ data }: { data: ContractData }) {
                 <View key={i} style={{ marginBottom: i < data.items!.length - 1 ? 8 : 0 }}>
                   <View style={styles.finRow}>
                     <Text style={styles.finValue}>{it.title}</Text>
-                    <Text style={styles.finValue}>{fmt(it.amount)}</Text>
+                    {it.amount > 0 && <Text style={styles.finValue}>{fmt(it.amount)}</Text>}
                   </View>
                   {it.description ? (
                     <Text style={{ fontSize: 8, color: palette.gray }}>{it.description}</Text>
@@ -273,9 +273,7 @@ function ContractDocument({ data }: { data: ContractData }) {
               <View style={styles.finDivider} />
               <View style={styles.finTotal}>
                 <Text style={styles.finTotalLabel}>Kalemler Toplamı</Text>
-                <Text style={styles.finTotalValue}>
-                  {fmt(data.items.reduce((s, it) => s + it.amount, 0))}
-                </Text>
+                <Text style={styles.finTotalValue}>{fmt(fee)}</Text>
               </View>
             </View>
           </View>

@@ -251,16 +251,18 @@ export default function BookingDetail({ booking, payments, artists, items = [] }
                       </a>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
-                    {Number(it.amount).toLocaleString("tr-TR")} ₺
-                  </p>
+                  {Number(it.amount) > 0 && (
+                    <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                      {Number(it.amount).toLocaleString("tr-TR")} ₺
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
             <div className="flex justify-between pt-1 border-t border-border text-sm">
               <span className="text-muted-foreground">Toplam</span>
               <span className="font-semibold text-foreground tabular-nums">
-                {items.reduce((s, it) => s + Number(it.amount), 0).toLocaleString("tr-TR")} ₺
+                {fee.toLocaleString("tr-TR")} ₺
               </span>
             </div>
           </div>

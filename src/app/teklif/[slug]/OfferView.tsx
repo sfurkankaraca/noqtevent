@@ -184,9 +184,11 @@ export default function OfferView({
                       </a>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
-                    {fmt(Number(it.amount))}
-                  </p>
+                  {Number(it.amount) > 0 && (
+                    <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                      {fmt(Number(it.amount))}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
