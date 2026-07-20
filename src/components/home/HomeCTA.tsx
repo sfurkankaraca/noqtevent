@@ -52,6 +52,12 @@ export default function HomeCTA() {
                 />
               </svg>
             </Link>
+            <Link
+              href="/planla/ai"
+              className="inline-flex items-center gap-2 border border-border text-foreground px-6 py-4 rounded-full text-sm font-medium hover:border-foreground/40 transition-colors"
+            >
+              ✨ AI ile Planla
+            </Link>
             <a
               href="https://wa.me/905417997973"
               target="_blank"

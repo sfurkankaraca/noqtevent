@@ -187,10 +187,18 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               </svg>
             </Link>
 
+            <Link
+              href="/planla/ai"
+              onClick={() => trackEvent("cta_click", { location: "hero", target: "planla-ai" })}
+              className="inline-flex items-center gap-2 border border-white/30 lg:border-border text-white lg:text-foreground px-6 py-4 rounded-full text-sm font-medium tracking-wide hover:border-white/60 lg:hover:border-foreground/40 transition-colors"
+            >
+              ✨ AI ile Planla
+            </Link>
+
             <a
               href="#nasil-calisir"
               onClick={() => trackEvent("cta_click", { location: "hero", target: "nasil-calisir" })}
-              className="inline-flex items-center gap-2 border border-white/30 lg:border-border text-white lg:text-foreground px-6 py-4 rounded-full text-sm font-medium tracking-wide hover:border-white/60 lg:hover:border-foreground/40 transition-colors"
+              className="hidden sm:inline-flex items-center gap-2 border border-white/30 lg:border-border text-white lg:text-foreground px-6 py-4 rounded-full text-sm font-medium tracking-wide hover:border-white/60 lg:hover:border-foreground/40 transition-colors"
             >
               Nasıl Çalışıyoruz
             </a>
