@@ -31,7 +31,9 @@ docs/                     foundation documents (this audit lives here)
 
 Key structural issue: `src/lib` mixes platform concerns (supabase, r2, rateLimit), product domain logic (bookingTerms, paymentPlan, checklistTemplate), and rendering (PDF, email) in one flat namespace — the opposite of the module layout mandated by `SOFTWARE_ARCHITECTURE.md` §2.1.
 
-## 3. Database Tables (reconstructed from the 37 SQL files)
+## 3. Database Tables
+
+> **Update (M3, 2026-07-19):** the schema is no longer reconstructed from loose files — `supabase/migrations/00000000000000_baseline.sql` is the verified, tooling-generated baseline (29 tables, 2 functions, 7 triggers, 18 policies, 0 data rows; extensions correctly absent — all UUID defaults use Postgres 17's core `gen_random_uuid()`, no `pgcrypto`/`uuid-ossp` dependency). The 43 original hand-applied SQL files are retired to `docs/legacy-sql/` for historical reference only and are no longer the source of truth. All future schema changes go through `supabase migration new` + `db push`. Table list below unchanged from the original reconstruction and still accurate.
 
 | Cluster | Tables |
 |---|---|
@@ -44,7 +46,7 @@ Key structural issue: `src/lib` mixes platform concerns (supabase, r2, rateLimit
 | Memory Drive module | `memory_events`, `memory_uploads` |
 | Internal ops | `company_goals`, `company_tasks`, `company_task_completions` |
 
-Known schema problems: two half-linked event models (`bookings` ↔ `event_projects` via nullable FK); `checklist_items`/`checklist_comments` serve both parents via nullable FKs; **RLS policies missing `TO service_role` grant public anon read/write** on `songs`, `inquiries`, `dj_profiles`, `partner_profiles`, `site_assets`, `invitations`, `rsvp_responses`, `memory_events`, `memory_uploads` (`supabase-schema.sql:87-112`, `supabase-davetiye.sql:60-67`, `supabase-memory.sql:44-48`). Later tables (`bookings`, `booking_*`, `testimonials`, `contact_messages`) are RLS-enabled with no policy = correctly deny-all.
+Known schema problems: two half-linked event models (`bookings` ↔ `event_projects` via nullable FK) — unresolved, targeted by roadmap M11. **RLS exposure fixed in M2** (`docs/legacy-sql/supabase-migration-security-anon-lockdown.sql`, now folded into the M3 baseline) — the 7 previously-unrestricted policies on `songs`, `inquiries`, `site_assets`, `invitations`, `rsvp_responses`, `memory_events`, `memory_uploads` are now scoped `TO service_role`; `dj_profiles`/`partner_profiles` were re-verified as already correctly scoped and were never part of the fix.
 
 ## 4. API Routes (34 handlers)
 
