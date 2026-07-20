@@ -2,7 +2,7 @@
 
 > Status: Foundation document, v1 (2026-07-19). This is the canonical language for the interaction fact log — the company's compounding asset (see `PRODUCT_VISION.md` §2).
 >
-> **Vocabulary status (founder decision 2026-07-19): the 23 verbs, 8 contexts and all emission thresholds in this document are a DRAFT vocabulary, not an approved implementation contract.** The envelope structure (§2), design principles (§1), visibility model (§7) and privacy rules (§10) are ratified; the concrete verb/context/threshold lists require a founder review pass before any code emits facts against them.
+> **Vocabulary status (M1 review executed 2026-07-19): the vocabulary has been classified into a Day 1 set and a Deferred set** (see Status columns in §5/§6). The Day 1 set contains only interactions the current noqt.events product can actually emit from existing transaction points: **6 verbs** (`booked`, `purchased`, `cancelled`, `performed_at`, `hosted`, `reviewed`) and **4 contexts** (`wedding`, `corporate`, `social-celebration`, `nightlife`). Deferred entries remain defined but MUST NOT be emitted until the feature that triggers them ships and the entry is activated via §13 governance. The envelope structure (§2), design principles (§1), visibility model (§7) and privacy rules (§10) were already ratified. **Founder approved the M1 classification on 2026-07-19 (including the `rated`→`reviewed` merge, the `supplied` deferral until partner references exist, and `hosted` actor = booking client/event owner). The Day 1 vocabulary is now the ratified implementation contract; roadmap gate G2 is CLOSED.**
 >
 > Governance: changes to entity kinds, verbs, contexts, or visibility classes require an entry in this file's changelog (§13) and founder sign-off. Products may NOT invent canonical vocabulary in feature branches.
 
@@ -80,16 +80,18 @@ Section intentionally reserved for an object-extension spec (how products extend
 
 The same interaction means different things in different contexts; recommenders must treat `matched(dating)` and `matched(professional)` completely differently. Context is first-class in the envelope. Starting set:
 
-| Context | Used by |
-|---|---|
-| `wedding` | events |
-| `corporate` | events |
-| `social-celebration` | events (birthday, engagement, private party) |
-| `nightlife` | events, social (club, festival, public party) |
-| `learning` | club |
-| `dating` | social |
-| `friendship` | social |
-| `professional` | events, club, social (collaboration, mentoring, business) |
+| Context | Used by | Status (M1 review) |
+|---|---|---|
+| `wedding` | events | **Day 1** — derivable from `bookings.event_type` |
+| `corporate` | events | **Day 1** — derivable from `bookings.event_type` |
+| `social-celebration` | events (birthday, engagement, private party) | **Day 1** — derivable from `bookings.event_type` |
+| `nightlife` | events, social (club, festival, public party) | **Day 1** — derivable from `bookings.event_type` |
+| `learning` | club | Deferred — no noqta.club product yet |
+| `dating` | social | Deferred — no NOQT Social product yet |
+| `friendship` | social | Deferred — no NOQT Social product yet |
+| `professional` | events, club, social (collaboration, mentoring, business) | Deferred — no current emitter |
+
+Day 1 note: noqt.events must map its Turkish `event_type` values (düğün, nişan, kına, kurumsal, doğum günü, kulüp/festival…) onto these four contexts in the emission function; unmappable types emit `context = null` rather than inventing values.
 
 Rules:
 - Emit context even when derivable from the object (denormalized on purpose — the log must be queryable without joins into product DBs).
@@ -101,51 +103,51 @@ Each entry: definition + emission trigger. **Every verb needs an emission thresh
 
 ### Presence & experience (weak–medium signal, high volume)
 
-| Verb | Definition | Emission trigger |
-|---|---|---|
-| `viewed` | Meaningful look at a profile/listing/content | Detail page open ≥3s (not list impressions) |
-| `saved` | Bookmarked/favorited for later | Explicit save action |
-| `attended` | Was present at an event/workshop (physical or virtual) | Check-in, ticket scan, or organizer confirmation |
-| `visited` | Was at a venue outside a formal event | Explicit check-in only (no passive location) |
+| Verb | Definition | Emission trigger | Status (M1 review) |
+|---|---|---|---|
+| `viewed` | Meaningful look at a profile/listing/content | Detail page open ≥3s (not list impressions) | Deferred — requires client instrumentation that doesn't exist; not a transaction point |
+| `saved` | Bookmarked/favorited for later | Explicit save action | Deferred — no save/bookmark feature in any product |
+| `attended` | Was present at an event/workshop (physical or virtual) | Check-in, ticket scan, or organizer confirmation | Deferred — no check-in/ticketing mechanism; first emitter is NOQT Social (roadmap M14) |
+| `visited` | Was at a venue outside a formal event | Explicit check-in only (no passive location) | Deferred — no check-in feature |
 
 ### Commitment (strong signal, low volume — transaction echoes)
 
-| Verb | Definition | Emission trigger |
-|---|---|---|
-| `booked` | Commercially engaged a supplier (artist/venue/partner) | Booking reaches confirmed status |
-| `purchased` | Bought a product (ticket, invitation, memory drive, course) | Payment completed |
-| `enrolled` | Started a course/cohort | Enrollment activated |
-| `completed` | Finished a course/cohort | Completion criteria met (separate from `enrolled` — starting and finishing are wildly different signals) |
-| `performed_at` | Supplied artistic performance to an event | Event completed with this artist on the bill |
-| `supplied` | Provided non-performance service to an event | Event completed with this partner's service delivered |
-| `hosted` | Owned/threw the event | Event completed; actor is the event owner |
-| `cancelled` | Withdrew from a prior commitment | Booking/enrollment/ticket cancelled (new fact; prior fact untouched) |
+| Verb | Definition | Emission trigger | Status (M1 review) |
+|---|---|---|---|
+| `booked` | Commercially engaged a supplier (artist/venue/partner) | Booking reaches confirmed status | **Day 1** — `bookings.status → confirmed` |
+| `purchased` | Bought a product (ticket, invitation, memory drive, course) | Payment completed | **Day 1** — iyzico callback success |
+| `enrolled` | Started a course/cohort | Enrollment activated | Deferred — noqta.club |
+| `completed` | Finished a course/cohort | Completion criteria met (separate from `enrolled` — starting and finishing are wildly different signals) | Deferred — noqta.club |
+| `performed_at` | Supplied artistic performance to an event | Event completed with this artist on the bill | **Day 1** — `bookings.status → completed`, object from `bookings.artist_id` / artist `booking_items` |
+| `supplied` | Provided non-performance service to an event | Event completed with this partner's service delivered | Deferred — service `booking_items` have no `partner_id` linkage today; no resolvable object entity |
+| `hosted` | Owned/threw the event | Event completed; actor is the event owner | **Day 1** — `bookings.status → completed`, actor = client entity |
+| `cancelled` | Withdrew from a prior commitment | Booking/enrollment/ticket cancelled (new fact; prior fact untouched) | **Day 1** — `bookings.status → cancelled` |
 
-### Social
+### Social — entire family Deferred (no current emitter in any product)
 
-| Verb | Definition | Emission trigger |
-|---|---|---|
-| `follows` | Persistent asymmetric interest in person/artist/community/brand | Follow action (unfollow emits `unfollowed`) |
-| `unfollowed` | Ended a follow | Unfollow action |
-| `joined` | Became member of community/group/cohort | Membership activated |
-| `matched` | Mutual, consented person↔person connection | Both sides consented; **context required** |
-| `messaged` | Initiated first contact / started a thread | First message in a new thread only. **Never log message content or volume** |
-| `invited` | Brought someone into an event/community | Invitation sent that was accepted |
-| `referred` | Brought a new person into the ecosystem | Referred signup completed (the growth loop, made queryable) |
+| Verb | Definition | Emission trigger | Status (M1 review) |
+|---|---|---|---|
+| `follows` | Persistent asymmetric interest in person/artist/community/brand | Follow action (unfollow emits `unfollowed`) | Deferred — no follow feature |
+| `unfollowed` | Ended a follow | Unfollow action | Deferred |
+| `joined` | Became member of community/group/cohort | Membership activated | Deferred — no communities |
+| `matched` | Mutual, consented person↔person connection | Both sides consented; **context required** | Deferred — NOQT Social |
+| `messaged` | Initiated first contact / started a thread | First message in a new thread only. **Never log message content or volume** | Deferred — no chat exists |
+| `invited` | Brought someone into an event/community | Invitation sent that was accepted | Deferred — Davetiye guests are not entities (no accounts); endpoints unresolvable |
+| `referred` | Brought a new person into the ecosystem | Referred signup completed (the growth loop, made queryable) | Deferred — no referral system |
 
 ### Evaluation (sparse, precious)
 
-| Verb | Definition | Emission trigger |
-|---|---|---|
-| `rated` | Structured score given | Rating submitted; value in `metadata.rating` |
-| `reviewed` | Written evaluation given | Review submitted (content stays in product tables; fact records that it happened) |
-| `endorsed` | Vouched for a skill/quality of a person | Explicit endorsement action |
+| Verb | Definition | Emission trigger | Status (M1 review) |
+|---|---|---|---|
+| `reviewed` | Evaluation given — written and/or scored; score in `metadata.rating` | Review form submitted (content stays in product tables; fact records that it happened) | **Day 1** — `/degerlendirme/[slug]` submission |
+| ~~`rated`~~ | — | — | **Merged into `reviewed`** — the product collects rating and text in one submission; a recommender never treats them separately (§1.5 altitude test) |
+| `endorsed` | Vouched for a skill/quality of a person | Explicit endorsement action | Deferred — no endorsement feature |
 
-### Relationship lifecycle
+### Relationship lifecycle — Deferred
 
-| Verb | Definition | Emission trigger |
-|---|---|---|
-| `partnership_started` / `partnership_ended` | Long-running relationship object began/ended (§3.2) | Relationship record created/closed |
+| Verb | Definition | Emission trigger | Status (M1 review) |
+|---|---|---|---|
+| `partnership_started` / `partnership_ended` | Long-running relationship object began/ended (§3.2) | Relationship record created/closed | Deferred — no partnership relationship object exists yet |
 
 ## 7. Visibility Taxonomy
 
@@ -221,7 +223,7 @@ Plus: emission is wired into product transaction-completion functions, not left 
 - Fact table with the §2 envelope, in Postgres
 - Entity registry + role table, seeded from Clerk users, `dj_profiles`, `partner_profiles`
 - This document as the registry; validation function enforcing §11
-- Emission from existing noqt.events transaction points: booking confirmed → `booked`; payment completed → `purchased`; review submitted → `reviewed`/`rated`; event delivered → `performed_at`/`supplied`/`hosted`
+- Emission from existing noqt.events transaction points, **Day 1 verbs only (M1 review)**: booking confirmed → `booked`; payment completed → `purchased`; review submitted → `reviewed` (rating in metadata); booking completed → `performed_at` + `hosted`; booking cancelled → `cancelled`
 - Redaction path (§10) implemented, even if never yet used
 
 **Explicitly deferred — do NOT implement yet:**
@@ -241,4 +243,5 @@ Process for canonical changes (new verb/context/kind, promotion of a namespaced 
 
 | Date | Change | Approved by |
 |---|---|---|
-| 2026-07-19 | v1: initial envelope, 7 entity kinds, 23 canonical verbs, 8 contexts, 3 visibility classes | Founder — **envelope, principles, visibility & privacy rules ratified; verb/context/threshold lists remain DRAFT** (see header note) |
+| 2026-07-19 | v1: initial envelope, 7 entity kinds, 23 canonical verbs, 8 contexts, 3 visibility classes | Founder — envelope, principles, visibility & privacy rules ratified; verb/context lists DRAFT |
+| 2026-07-19 | v1.1 (M1 review): vocabulary classified. **Day 1: 6 verbs** (`booked`, `purchased`, `cancelled`, `performed_at`, `hosted`, `reviewed`) **+ 4 contexts** (`wedding`, `corporate`, `social-celebration`, `nightlife`). `rated` merged into `reviewed`. All other verbs/contexts Deferred with reasons in Status columns. | **Founder — APPROVED 2026-07-19.** Ratified items: `rated`→`reviewed` merge; `supplied` deferred until partner references exist; `hosted` actor = booking client/event owner; Day 1 set is the implementation contract. **Gate G2 closed.** |
