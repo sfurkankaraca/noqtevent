@@ -9,7 +9,7 @@ export const maxDuration = 60;
 export const metadata: Metadata = {
   title: "AI ile Planla — Saniyeler İçinde Kişisel Etkinlik Önerisi",
   description:
-    "Birkaç soruya cevap ver, hayalindeki atmosferi anlat — sana özel konsept, sanatçı ve tahmini bütçe önerisini saniyeler içinde al.",
+    "Birkaç soruya cevap ver, hayalindeki atmosferi anlat — etkinliğine özel konsept önerilerini ve deneyim taslağını saniyeler içinde al.",
   alternates: { canonical: "https://www.noqt.events/planla/ai" },
 };
 

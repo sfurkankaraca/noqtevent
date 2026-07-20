@@ -9,11 +9,7 @@ import {
   PARTNER_SERVICES,
   type MusicConcept,
 } from "@/components/planner/PlannerStore";
-import {
-  estimateFeeRangeAcrossArtists,
-  formatFeeRange,
-  type ArtistFeeData,
-} from "@/lib/artistPricing";
+import { type ArtistFeeData } from "@/lib/artistPricing";
 
 // ── Chip allowlist'leri ───────────────────────────────────────────────────────
 
@@ -25,10 +21,36 @@ export const GUEST_RANGES = [
   { id: "400+", label: "400+" },
 ] as const;
 
+// Tüm iller — founder kararı (2026-07-20): hizmet alanı Kayseri/Nevşehir ile sınırlı sunulmaz.
 export const CITIES = [
-  { id: "kayseri", label: "Kayseri" },
-  { id: "nevsehir", label: "Nevşehir / Kapadokya" },
-  { id: "other", label: "Diğer" },
+  { id: "adana", label: "Adana" }, { id: "adiyaman", label: "Adıyaman" }, { id: "afyonkarahisar", label: "Afyonkarahisar" },
+  { id: "agri", label: "Ağrı" }, { id: "aksaray", label: "Aksaray" }, { id: "amasya", label: "Amasya" },
+  { id: "ankara", label: "Ankara" }, { id: "antalya", label: "Antalya" }, { id: "ardahan", label: "Ardahan" },
+  { id: "artvin", label: "Artvin" }, { id: "aydin", label: "Aydın" }, { id: "balikesir", label: "Balıkesir" },
+  { id: "bartin", label: "Bartın" }, { id: "batman", label: "Batman" }, { id: "bayburt", label: "Bayburt" },
+  { id: "bilecik", label: "Bilecik" }, { id: "bingol", label: "Bingöl" }, { id: "bitlis", label: "Bitlis" },
+  { id: "bolu", label: "Bolu" }, { id: "burdur", label: "Burdur" }, { id: "bursa", label: "Bursa" },
+  { id: "canakkale", label: "Çanakkale" }, { id: "cankiri", label: "Çankırı" }, { id: "corum", label: "Çorum" },
+  { id: "denizli", label: "Denizli" }, { id: "diyarbakir", label: "Diyarbakır" }, { id: "duzce", label: "Düzce" },
+  { id: "edirne", label: "Edirne" }, { id: "elazig", label: "Elazığ" }, { id: "erzincan", label: "Erzincan" },
+  { id: "erzurum", label: "Erzurum" }, { id: "eskisehir", label: "Eskişehir" }, { id: "gaziantep", label: "Gaziantep" },
+  { id: "giresun", label: "Giresun" }, { id: "gumushane", label: "Gümüşhane" }, { id: "hakkari", label: "Hakkari" },
+  { id: "hatay", label: "Hatay" }, { id: "igdir", label: "Iğdır" }, { id: "isparta", label: "Isparta" },
+  { id: "istanbul", label: "İstanbul" }, { id: "izmir", label: "İzmir" }, { id: "kahramanmaras", label: "Kahramanmaraş" },
+  { id: "karabuk", label: "Karabük" }, { id: "karaman", label: "Karaman" }, { id: "kars", label: "Kars" },
+  { id: "kastamonu", label: "Kastamonu" }, { id: "kayseri", label: "Kayseri" }, { id: "kirikkale", label: "Kırıkkale" },
+  { id: "kirklareli", label: "Kırklareli" }, { id: "kirsehir", label: "Kırşehir" }, { id: "kilis", label: "Kilis" },
+  { id: "kocaeli", label: "Kocaeli" }, { id: "konya", label: "Konya" }, { id: "kutahya", label: "Kütahya" },
+  { id: "malatya", label: "Malatya" }, { id: "manisa", label: "Manisa" }, { id: "mardin", label: "Mardin" },
+  { id: "mersin", label: "Mersin" }, { id: "mugla", label: "Muğla" }, { id: "mus", label: "Muş" },
+  { id: "nevsehir", label: "Nevşehir" }, { id: "nigde", label: "Niğde" }, { id: "ordu", label: "Ordu" },
+  { id: "osmaniye", label: "Osmaniye" }, { id: "rize", label: "Rize" }, { id: "sakarya", label: "Sakarya" },
+  { id: "samsun", label: "Samsun" }, { id: "siirt", label: "Siirt" }, { id: "sinop", label: "Sinop" },
+  { id: "sivas", label: "Sivas" }, { id: "sanliurfa", label: "Şanlıurfa" }, { id: "sirnak", label: "Şırnak" },
+  { id: "tekirdag", label: "Tekirdağ" }, { id: "tokat", label: "Tokat" }, { id: "trabzon", label: "Trabzon" },
+  { id: "tunceli", label: "Tunceli" }, { id: "usak", label: "Uşak" }, { id: "van", label: "Van" },
+  { id: "yalova", label: "Yalova" }, { id: "yozgat", label: "Yozgat" }, { id: "zonguldak", label: "Zonguldak" },
+  { id: "yurtdisi", label: "Yurt Dışı" },
 ] as const;
 
 export const VENUE_STATUS = [
@@ -251,14 +273,6 @@ export function serviceLabels(ids: string[]): string[] {
     .filter((l): l is string => Boolean(l));
 }
 
-// Fiyat aralığı ASLA AI'dan gelmez — yalnızca sanatçı kaşe verisinden hesaplanır.
-export function estimatePriceText(
-  matched: ConciergeArtist[],
-  allArtists: ConciergeArtist[],
-  eventTypeId: string
-): string | null {
-  const range =
-    estimateFeeRangeAcrossArtists(matched, eventTypeId) ??
-    estimateFeeRangeAcrossArtists(allArtists, eventTypeId);
-  return range ? formatFeeRange(range) : null;
-}
+// Fiyat/tahmini maliyet founder kararıyla (2026-07-20) concierge'den tamamen çıkarıldı:
+// maliyetler netleşmeden müşteriye hiçbir rakam gösterilmez. Sanatçı eşleşmesi de
+// müşteriye gösterilmez — yalnızca CRM kaydına (admin bağlamı) yazılır.

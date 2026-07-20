@@ -25,12 +25,6 @@ const STEP_TITLES = [
   "Taslağını bize gönder",
 ];
 
-const PERFORMER_TYPE_LABELS: Record<string, string> = {
-  dj: "DJ", artist: "Solo Sanatçı", trio: "Trio", grup: "Grup",
-  dance: "Dans Ekibi", bando: "Bando", orkestra: "Orkestra",
-  host: "Sunucu / MC", moderator: "Moderatör",
-};
-
 type MonthOption = { id: string; label: string };
 
 function ChipGroup<T extends { id: string; label: string }>({
@@ -132,7 +126,7 @@ export default function ConciergeWizard({ monthOptions }: { monthOptions: MonthO
         eventType: input.eventType,
         aiUsed: res.aiUsed,
         conceptCount: res.concepts.length,
-        artistCount: res.artists.length,
+        artistCount: res.matchedArtistIds.length,
       });
       goTo(4);
     } catch (err) {
@@ -295,7 +289,19 @@ export default function ConciergeWizard({ monthOptions }: { monthOptions: MonthO
               <div className="space-y-8 max-w-2xl">
                 <ChipGroup label="Hangi ay?" options={monthOptions} value={input.month} onSelect={(id) => update({ month: id })} />
                 <ChipGroup label="Kaç misafir?" options={GUEST_RANGES} value={input.guestRange} onSelect={(id) => update({ guestRange: id })} />
-                <ChipGroup label="Nerede?" options={CITIES} value={input.city} onSelect={(id) => update({ city: id })} />
+                <div className="space-y-2.5">
+                  <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground font-medium">Nerede?</p>
+                  <select
+                    value={input.city}
+                    onChange={(e) => update({ city: e.target.value })}
+                    className="w-full max-w-xs px-4 py-3 rounded-xl border-2 border-border bg-card text-foreground text-sm focus:outline-none focus:border-foreground/40 transition-colors"
+                  >
+                    <option value="" disabled>Şehir seç</option>
+                    {CITIES.map((c) => (
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
                 <ChipGroup label="Mekan durumu" options={VENUE_STATUS} value={input.venueStatus} onSelect={(id) => update({ venueStatus: id })} />
                 <ChipGroup label="Bütçe yaklaşımı" options={BUDGET_LEVELS} value={input.budgetLevel} onSelect={(id) => update({ budgetLevel: id })} />
 
@@ -389,7 +395,7 @@ export default function ConciergeWizard({ monthOptions }: { monthOptions: MonthO
                   </p>
                 </motion.div>
 
-                {/* Konseptler */}
+                {/* Örnek konseptler — founder kararı: öneri değil örnek olarak sunulur */}
                 {result.concepts.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 16 }}
@@ -398,7 +404,7 @@ export default function ConciergeWizard({ monthOptions }: { monthOptions: MonthO
                     className="bg-card border border-border rounded-2xl p-5"
                   >
                     <p className="text-xs text-muted-foreground tracking-[0.2em] uppercase font-medium mb-4">
-                      Önerilen Konseptler
+                      Sana Uygun Örnek Konseptler
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       {result.concepts.map((c) => (
@@ -417,88 +423,14 @@ export default function ConciergeWizard({ monthOptions }: { monthOptions: MonthO
                         </div>
                       ))}
                     </div>
-                  </motion.div>
-                )}
-
-                {/* Sanatçılar */}
-                {result.artists.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-card border border-border rounded-2xl p-5"
-                  >
-                    <p className="text-xs text-muted-foreground tracking-[0.2em] uppercase font-medium mb-4">
-                      Önerilen Sanatçılar
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      {result.artists.map((a) => {
-                        const initials = a.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-                        return (
-                          <Link
-                            key={a.id}
-                            href={`/sanatcilar/${a.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="relative aspect-[3/4] rounded-xl overflow-hidden group block"
-                          >
-                            {a.photo ? (
-                              <Image
-                                src={a.photo}
-                                alt={a.name}
-                                fill
-                                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-secondary flex items-center justify-center">
-                                <span
-                                  className="text-3xl font-light text-muted-foreground"
-                                  style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)" }}
-                                >
-                                  {initials}
-                                </span>
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                            <div className="absolute bottom-2.5 left-2.5 right-2.5">
-                              <p className="text-xs font-semibold text-white leading-tight">{a.name}</p>
-                              {a.performerType && (
-                                <p className="text-[10px] text-white/70 mt-0.5">
-                                  {PERFORMER_TYPE_LABELS[a.performerType] ?? a.performerType}
-                                </p>
-                              )}
-                            </div>
-                            <span className="absolute top-2 right-2 text-[9px] px-2 py-0.5 rounded-full bg-white/90 text-black opacity-0 group-hover:opacity-100 transition-opacity">
-                              Profil →
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Tahmini bütçe */}
-                {result.priceRangeText && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between gap-4 flex-wrap"
-                  >
-                    <div>
-                      <p className="text-xs text-muted-foreground tracking-[0.2em] uppercase font-medium">
-                        Tahmini Sanatçı Bütçesi
-                      </p>
-                      <p className="text-xl font-semibold text-foreground mt-1 tabular-nums">
-                        {result.priceRangeText}
-                      </p>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground max-w-[220px] leading-relaxed">
-                      Tahmini aralıktır, bağlayıcı değildir. Net teklif, detayları
-                      birlikte netleştirdikten sonra hazırlanır.
-                    </p>
+                    <Link
+                      href="/konseptler"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block mt-4 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 decoration-border"
+                    >
+                      Tüm konseptlerimizi incele →
+                    </Link>
                   </motion.div>
                 )}
 

@@ -24,7 +24,6 @@ import {
   matchArtists,
   deriveServices,
   serviceLabels,
-  estimatePriceText,
   EMPTY_EXTRACTION,
   GUEST_RANGES,
   CITIES,
@@ -34,9 +33,10 @@ import {
 export type ConciergeResult = {
   narrative: string;
   aiUsed: boolean;
+  // Konseptler müşteriye "örnek" olarak sunulur (founder kararı 2026-07-20).
   concepts: { id: string; name: string; emoji: string; description: string; cover: string | null; color: string }[];
-  artists: { id: string; name: string; performerType: string | null; city: string | null; photo: string | null }[];
-  priceRangeText: string | null;
+  // Müşteriye GÖSTERİLMEZ — yalnızca CRM kaydına yazılır (admin eşleşme bağlamı).
+  matchedArtistIds: string[];
   serviceIds: string[];
   serviceLabels: string[];
   extraction: VibeExtraction;
@@ -99,7 +99,6 @@ export async function runConcierge(input: ConciergeInput): Promise<ConciergeResu
   const matched = matchArtists(artists, conceptIds, input.city);
 
   const serviceIds = deriveServices(extraction, input.venueStatus);
-  const priceRangeText = estimatePriceText(matched, artists, input.eventType);
 
   const narrative = extraction.narrative || fallbackNarrative(input.eventType);
 
@@ -114,14 +113,7 @@ export async function runConcierge(input: ConciergeInput): Promise<ConciergeResu
       cover: covers[c.id] ?? null,
       color: c.color,
     })),
-    artists: matched.map((a) => ({
-      id: a.id,
-      name: a.name,
-      performerType: a.performer_type,
-      city: a.city,
-      photo: (a.photos && a.photos.length > 0 ? a.photos[0] : a.photo_url) ?? null,
-    })),
-    priceRangeText,
+    matchedArtistIds: matched.map((a) => a.id),
     serviceIds,
     serviceLabels: serviceLabels(serviceIds),
     extraction,
@@ -157,8 +149,7 @@ export async function submitConciergeInquiry(
     extraction: validateExtraction(sub.result.extraction),
     ai_used: Boolean(sub.result.aiUsed),
     matched_concepts: (sub.result.concepts ?? []).slice(0, 3).map((c) => String(c.id).slice(0, 60)),
-    matched_artists: (sub.result.artists ?? []).slice(0, 3).map((a) => String(a.id).slice(0, 60)),
-    price_range_shown: sub.result.priceRangeText ? String(sub.result.priceRangeText).slice(0, 60) : null,
+    matched_artists: (sub.result.matchedArtistIds ?? []).slice(0, 3).map((id) => String(id).slice(0, 60)),
     narrative_shown: String(sub.result.narrative ?? "").slice(0, 420),
   };
 
