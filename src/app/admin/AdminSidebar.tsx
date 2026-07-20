@@ -16,6 +16,7 @@ const NAV = [
   { href: "/admin/konseptler", label: "Konseptler", icon: "✦" },
   { href: "/admin/journal", label: "Journal", icon: "✍" },
   { href: "/admin/testimonials", label: "Yorumlar", icon: "💬" },
+  { href: "/admin/leads", label: "Lead Inbox", icon: "📥" },
   { href: "/admin/inquiries", label: "Talepler", icon: "📋" },
   { href: "/admin/bookings", label: "Bookings", icon: "🎤" },
   { href: "/admin/bookings/new", label: "Teklif Oluştur", icon: "📝" },
