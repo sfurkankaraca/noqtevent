@@ -263,7 +263,15 @@ export function matchArtists(
 export function deriveServices(extraction: VibeExtraction, venueStatus: string): string[] {
   const ids = new Set<string>(["dj"]);
   if (venueStatus === "yok") ids.add("venue-search");
-  for (const s of extraction.services) ids.add(s);
+  // Mekanı belli olan müşteriye mekan kategorisi hizmetleri önerilmez — AI serbest
+  // metindeki mekan tarifinden (ör. "otel balo salonunda") yanlışlıkla çıkarabiliyor.
+  const venueCategoryIds = new Set(
+    PARTNER_SERVICES.filter((s) => s.category === "Mekan").map((s) => s.id)
+  );
+  for (const s of extraction.services) {
+    if (venueStatus === "var" && venueCategoryIds.has(s)) continue;
+    ids.add(s);
+  }
   return [...ids];
 }
 
