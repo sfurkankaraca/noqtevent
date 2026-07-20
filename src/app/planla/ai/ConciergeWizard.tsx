@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { trackEvent } from "@/lib/analytics";
 import { EVENT_TYPES } from "@/components/planner/PlannerStore";
 import {
@@ -97,7 +97,9 @@ export default function ConciergeWizard({ monthOptions }: { monthOptions: MonthO
 
   // Terk etme sinyali: sayfa kapanırken gönderilmemişse — best effort
   const stateRef = useRef({ step, submitted });
-  stateRef.current = { step, submitted };
+  useEffect(() => {
+    stateRef.current = { step, submitted };
+  }, [step, submitted]);
   useEffect(() => {
     const onPageHide = () => {
       if (!stateRef.current.submitted) {
@@ -159,10 +161,12 @@ export default function ConciergeWizard({ monthOptions }: { monthOptions: MonthO
     }
   };
 
+  // Yalnızca giriş animasyonu — çıkış animasyonu yok. Adım geçişi asla bir
+  // animasyonun bitmesine kilitlenmez (arka plan sekmesi / rAF kısıtlaması
+  // exit'i durdurursa AnimatePresence mode="wait" akışı tamamen bloke ederdi).
   const variants = {
     enter: (d: number) => ({ opacity: 0, x: d > 0 ? 48 : -48 }),
     center: { opacity: 1, x: 0 },
-    exit: (d: number) => ({ opacity: 0, x: d > 0 ? -48 : 48 }),
   };
 
   if (submitted) {
@@ -251,17 +255,15 @@ export default function ConciergeWizard({ monthOptions }: { monthOptions: MonthO
           {STEP_TITLES[step - 1]}
         </motion.h1>
 
-        <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
-            key={step}
-            custom={direction}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="flex-1"
-          >
+        <motion.div
+          key={step}
+          custom={direction}
+          variants={variants}
+          initial="enter"
+          animate="center"
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="flex-1"
+        >
             {/* ── 1: Etkinlik türü ── */}
             {step === 1 && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -623,8 +625,7 @@ export default function ConciergeWizard({ monthOptions }: { monthOptions: MonthO
                 </p>
               </div>
             )}
-          </motion.div>
-        </AnimatePresence>
+        </motion.div>
       </div>
     </div>
   );
