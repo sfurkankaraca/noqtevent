@@ -74,11 +74,15 @@ export type LeadAnalysis = {
   urgency: "this_week" | "this_month" | "flexible" | null;
   budget_signal: "stated" | "implied_low" | "implied_high" | "none";
   missing_info: string[];
-  probability: number; // 1-5
+  probability: number; // 1-5 — AI'nın SADECE talep kalitesi (netlik/aciliyet/bütçe) yargısı
   recommended_package: string | null;
   sales_notes: string;
   analyzed_at: string;
   model: string;
+  // Coğrafi skor deterministik hesaplanır (AI'dan gelmez) — bkz. geoTierFromLocation.
+  // final_score = quality (probability) + geo birleşimi; listede/sıralamada gösterilen budur.
+  geo_tier?: number; // 1-5
+  final_score?: number; // 1-5, tabloda gösterilen ve sıralanan skor
 };
 
 const INTENTS = ["hot", "warm", "cold"] as const;
@@ -151,6 +155,57 @@ export function validateLeadAnalysis(
     analyzed_at: new Date().toISOString(),
     model: opts.model,
   };
+}
+
+// ── Coğrafi skor (founder kararı 2026-07-21) ─────────────────────────────────
+// Kayseri merkezli bir işiz — aynı taleple bile olsa Kayseri/Kapadokya bölgesi
+// bir müşteri, uzak bir ilden gelen müşteriden daha değerlidir (lojistik maliyet,
+// hız, mevcut ilişki ağı). Bu YAPAY ZEKÂ'DAN GELMEZ: konum metninden deterministik
+// eşlenir, böylece aynı şehir her zaman aynı skoru alır ve model bunu "unutamaz"
+// ya da tutarsız yorumlayamaz.
+//
+// Kademeler saha gerçeğine göre kurulur, hassas mesafe hesabı değildir:
+//  5 — Kayseri (merkez)
+//  4 — Nevşehir/Kapadokya ve doğrudan komşu iller (aynı gün ulaşım, mevcut ağ)
+//  3 — Orta Anadolu / bir günlük mesafe (bilinen ama uzak)
+//  2 — Büyük metropoller (İstanbul/İzmir/Ankara vb.) — hacim var ama lojistik maliyetli
+//  1 — Çok uzak / yurt dışı — pratikte hizmet zor
+const GEO_TIER_5 = ["kayseri"];
+const GEO_TIER_4 = ["nevsehir", "nevşehir", "sivas", "nigde", "niğde", "kirsehir", "kırşehir", "yozgat", "malatya", "kahramanmaras", "kahramanmaraş", "aksaray"];
+const GEO_TIER_3 = ["konya", "adana", "elazig", "elazığ", "tokat", "amasya", "corum", "çorum", "gaziantep", "erzincan", "mersin", "osmaniye", "kirikkale", "kırıkkale"];
+const GEO_TIER_2 = ["istanbul", "ankara", "izmir", "bursa", "antalya", "kocaeli", "eskisehir", "eskişehir", "samsun", "trabzon", "gebze", "kadikoy", "kadıköy", "besiktas", "beşiktaş"];
+// Geri kalan her şey (81 il listesindeki uzak iller + tanınmayan metin) tier 1.
+
+function normalizeCityText(text: string): string {
+  return text
+    .toLocaleLowerCase("tr-TR")
+    .replace(/i̇/g, "i")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim();
+}
+
+// Konum metninden ("Kayseri, Melikgazi" veya "Ankara, Çankaya (12 KM)" gibi
+// serbest metinlerden) il adını çıkarıp kademeye eşler. Tanınmayan/boş konum
+// cezalandırılmaz da ödüllendirilmez de — nötr orta değer (3) döner.
+export function geoTierFromLocation(location: string | null): number {
+  if (!location) return 3;
+  const norm = normalizeCityText(location);
+  const hit = (list: string[]) => list.some((c) => norm.includes(normalizeCityText(c)));
+  if (hit(GEO_TIER_5)) return 5;
+  if (hit(GEO_TIER_4)) return 4;
+  if (hit(GEO_TIER_3)) return 3;
+  if (hit(GEO_TIER_2)) return 2;
+  return 1;
+}
+
+// Kalite (AI'nın talep netliği/aciliyet/bütçe yargısı) ile coğrafi kademeyi
+// eşit ağırlıkla birleştirir — founder kararı: konum "en önemli şeylerden biri",
+// tek belirleyici değil. 1-5 aralığına yuvarlanır.
+export function combineLeadScore(qualityProbability: number, geoTier: number): number {
+  const q = Math.min(5, Math.max(1, qualityProbability));
+  const g = Math.min(5, Math.max(1, geoTier));
+  return Math.min(5, Math.max(1, Math.round((q + g) / 2)));
 }
 
 // ── Portfolyo linki (founder kararı 2026-07-21) ─────────────────────────────

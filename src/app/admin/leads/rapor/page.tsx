@@ -95,7 +95,7 @@ export default async function LeadReportPage() {
   const byCity = countBy(rows, (r) => (r.location ? String(r.location).split(",")[0].trim() : null));
   const byType = countBy(rows, (r) => (r.event_type ? (EVENT_TYPE_LABELS[r.event_type] ?? r.event_type) : null));
   const byScore = countBy(rows, (r) => {
-    const p = r.ai_analysis?.probability;
+    const p = r.ai_analysis?.final_score ?? r.ai_analysis?.probability;
     return p ? `${p}/5` : null;
   }).sort((a, b) => b[0].localeCompare(a[0]));
   const priceShoppers = rows.filter((r) => /sadece fiyat/i.test(r.description ?? "")).length;

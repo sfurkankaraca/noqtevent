@@ -191,7 +191,9 @@ export async function analyzeLeadRaw(input: {
       "SADECE şu JSON'u döndür, başka hiçbir metin ekleme: " +
       '{"event_type_guess": "<katalogdan id veya null>", "intent": "hot|warm|cold|null", ' +
       '"urgency": "this_week|this_month|flexible|null", "budget_signal": "stated|implied_low|implied_high|none", ' +
-      '"missing_info": ["teklif verebilmek için eksik bilgiler, en fazla 5"], "probability": 1-5, ' +
+      '"missing_info": ["teklif verebilmek için eksik bilgiler, en fazla 5"], ' +
+      '"probability": "1-5, SADECE talebin netliği/aciliyeti/bütçe sinyaline göre — ' +
+      'müşterinin şehri/konumu bu puana KESİNLİKLE dahil etme, konum ayrı ve deterministik hesaplanıyor", ' +
       '"recommended_package": "<verilen listeden birebir ad veya null>", ' +
       '"sales_notes": "satışçıya en fazla 2 cümle Türkçe not"}',
     `Kaynak: ${input.source}\nBilinen alanlar: ${input.knownFields || "yok"}\n\n` +

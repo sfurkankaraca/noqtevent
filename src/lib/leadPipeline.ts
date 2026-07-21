@@ -14,6 +14,8 @@ import {
   sanitizeLeadText,
   needsPortfolioLink,
   injectPortfolioLink,
+  geoTierFromLocation,
+  combineLeadScore,
   type LeadAnalysis,
 } from "@/lib/leads";
 
@@ -60,6 +62,12 @@ export async function runAnalysisAndReply(lead: LeadRow): Promise<{
     validPackages: packageNames,
     model: TEXT_MODEL,
   });
+
+  // Coğrafi kademe deterministik hesaplanır (AI'dan gelmez) ve kalite skoruyla
+  // birleştirilir — Kayseri merkezli iş için konum, tabloda gösterilen nihai
+  // skorun (final_score) yarısını oluşturur.
+  analysis.geo_tier = geoTierFromLocation(lead.location);
+  analysis.final_score = combineLeadScore(analysis.probability, analysis.geo_tier);
 
   const analysisSummary = [
     analysis.event_type_guess && `Tür: ${EVENT_TYPE_LABELS[analysis.event_type_guess] ?? analysis.event_type_guess}`,

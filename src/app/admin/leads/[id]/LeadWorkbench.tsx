@@ -215,8 +215,32 @@ export default function LeadWorkbench({ lead, events }: { lead: LeadRow; events:
                 <p><span className="text-muted-foreground text-xs">Niyet:</span><br />{a.intent ? INTENT_LABELS[a.intent] : "belirsiz"}</p>
                 <p><span className="text-muted-foreground text-xs">Aciliyet:</span><br />{a.urgency ? URGENCY_LABELS[a.urgency] : "belirsiz"}</p>
                 <p><span className="text-muted-foreground text-xs">Bütçe sinyali:</span><br />{BUDGET_SIGNAL_LABELS[a.budget_signal] ?? "—"}</p>
-                <p><span className="text-muted-foreground text-xs">Olasılık:</span><br /><span className="tabular-nums">{"●".repeat(a.probability)}{"○".repeat(5 - a.probability)}</span> {a.probability}/5</p>
                 <p><span className="text-muted-foreground text-xs">Önerilen paket:</span><br />{a.recommended_package ?? "—"}</p>
+              </div>
+
+              {/* Skor kırılımı: konum Kayseri'ye yakınlığa göre deterministik, AI'dan gelmez */}
+              <div className="grid grid-cols-3 gap-3 pt-1">
+                <div className="bg-secondary/40 rounded-xl px-3 py-2.5 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Talep Kalitesi</p>
+                  <p className="text-sm font-semibold text-foreground mt-1 tabular-nums">{a.probability}/5</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">AI — netlik/aciliyet</p>
+                </div>
+                <div className="bg-secondary/40 rounded-xl px-3 py-2.5 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Konum</p>
+                  <p className="text-sm font-semibold text-foreground mt-1 tabular-nums">
+                    {a.geo_tier != null ? `${a.geo_tier}/5` : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Kayseri&apos;ye yakınlık</p>
+                </div>
+                <div className="bg-foreground rounded-xl px-3 py-2.5 text-center">
+                  <p className="text-[10px] text-background/60 uppercase tracking-wide">Nihai Skor</p>
+                  <p className="text-sm font-semibold text-background mt-1 tabular-nums">
+                    {(a.final_score ?? a.probability)}/5
+                  </p>
+                  <p className="text-[10px] text-background/60 mt-0.5">
+                    {a.final_score != null ? "kalite + konum" : "yalnızca kalite"}
+                  </p>
+                </div>
               </div>
               {a.missing_info?.length > 0 && (
                 <div>

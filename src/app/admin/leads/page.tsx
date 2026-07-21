@@ -64,7 +64,10 @@ export default async function LeadsPage({
   if (cityFilter) rows = rows.filter((l) => l.city === cityFilter);
   if (typeFilter) rows = rows.filter((l) => l.event_type === typeFilter);
 
-  const scoreOf = (l: (typeof rows)[number]) => (l.ai_analysis?.probability as number | undefined) ?? 0;
+  // final_score = kalite (AI) + coğrafi kademe birleşimi; eski lead'lerde henüz
+  // yoksa (backfill/geo öncesi) AI'nın ham probability'sine düşer.
+  const scoreOf = (l: (typeof rows)[number]) =>
+    (l.ai_analysis?.final_score as number | undefined) ?? (l.ai_analysis?.probability as number | undefined) ?? 0;
 
   rows = [...rows].sort((a, b) => {
     switch (sort) {
@@ -182,7 +185,8 @@ export default async function LeadsPage({
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((lead) => {
-                const prob = lead.ai_analysis?.probability as number | undefined;
+                const finalScore = scoreOf(lead) || undefined;
+                const isCombined = lead.ai_analysis?.final_score != null;
                 return (
                   <tr key={lead.id} className="hover:bg-secondary/20 transition-colors">
                     <td className="px-5 py-3.5">
@@ -217,9 +221,12 @@ export default async function LeadsPage({
                         : "—"}
                     </td>
                     <td className="px-4 py-3.5 text-xs">
-                      {prob ? (
-                        <span className="tabular-nums" title={`Olasılık ${prob}/5`}>
-                          {"●".repeat(prob)}{"○".repeat(5 - prob)}
+                      {finalScore ? (
+                        <span
+                          className="tabular-nums"
+                          title={isCombined ? `Skor ${finalScore}/5 (kalite + konum)` : `Skor ${finalScore}/5 (yalnızca kalite — konum henüz hesaplanmadı)`}
+                        >
+                          {"●".repeat(finalScore)}{"○".repeat(5 - finalScore)}
                         </span>
                       ) : "—"}
                     </td>
