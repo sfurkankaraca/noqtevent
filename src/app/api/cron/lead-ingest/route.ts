@@ -88,7 +88,10 @@ export async function GET(req: NextRequest) {
     const q = `${GMAIL_QUERY} after:${afterSec}`;
 
     const list = await gmail.users.messages.list({ userId: "me", q, maxResults: 25 });
-    const ids = (list.data.messages ?? []).map((m) => m.id!).filter(Boolean);
+    // Gmail en-yeni-önce döner; ESKİDEN YENİYE işliyoruz ki AI tavanına takılıp
+    // erken çıkarsak imleç yalnızca gerçekten işlenenlerin ötesine ilerlesin —
+    // aradaki mesajlar bir sonraki koşuda kaldığı yerden alınır, hiçbiri atlanmaz.
+    const ids = (list.data.messages ?? []).map((m) => m.id!).filter(Boolean).reverse();
 
     for (const id of ids) {
       if (counts.created >= MAX_MESSAGES_PER_RUN) break;

@@ -96,7 +96,7 @@ export function parseArmutEmail(input: {
   const oppIdx = lines.findIndex((l) => /iş fırsatın var/i.test(l));
   if (oppIdx >= 0) {
     service = lines.slice(oppIdx + 1).find(
-      (l) => l.length > 2 && !/^merhaba/i.test(l) && !TAIL_MARKERS.test(l)
+      (l) => l.length > 2 && !/^merhaba/i.test(l) && !/iş fırsat/i.test(l) && !TAIL_MARKERS.test(l)
     ) ?? null;
   }
 
