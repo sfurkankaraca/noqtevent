@@ -10,6 +10,7 @@ import {
   type LeadStatus,
 } from "@/lib/leads";
 import LeadFilters from "./LeadFilters";
+import DashboardStrip from "./DashboardStrip";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,8 @@ export default async function LeadsPage({
           </Link>
         </div>
       </div>
+
+      <DashboardStrip />
 
       {/* Durum filtreleri */}
       <div className="flex flex-wrap gap-2">
