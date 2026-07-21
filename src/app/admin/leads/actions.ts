@@ -236,3 +236,13 @@ export async function reanalyzeStuckLeadsStep(limit?: number) {
   revalidatePath("/admin/leads");
   return result;
 }
+
+// ── Eski parser hatasıyla giren junk Armut lead'lerini düzelt ────────────────
+
+export async function reprocessJunkArmutStep() {
+  await requireAdmin();
+  const { reprocessJunkArmutStep: run } = await import("@/lib/armutJunkReprocess");
+  const result = await run();
+  revalidatePath("/admin/leads");
+  return result;
+}

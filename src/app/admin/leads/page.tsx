@@ -14,6 +14,7 @@ import LeadFilters from "./LeadFilters";
 import DashboardStrip from "./DashboardStrip";
 import StaleBanner from "./StaleBanner";
 import ReanalyzeBanner from "./ReanalyzeBanner";
+import JunkFixBanner from "./JunkFixBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,7 @@ export default async function LeadsPage({
   // filtresiyle (?stale=1) ayrıca görülebilir ve toplu arşivlenebilir.
   const staleCount = withMeta.filter((l) => l.stale).length;
   const stuckNewCount = withMeta.filter((l) => l.status === "new").length;
+  const junkCount = withMeta.filter((l) => l.description?.includes("Talepleri inceleyip")).length;
 
   // Filtre seçenekleri: mevcut durum görünümündeki verilerden türetilir, seçili
   // filtre uygulanmadan — böylece dropdown daralıp seçenek kaybolmaz.
@@ -166,6 +168,8 @@ export default async function LeadsPage({
       </div>
 
       <DashboardStrip />
+
+      {junkCount > 0 && <JunkFixBanner count={junkCount} />}
 
       {stuckNewCount > 0 && <ReanalyzeBanner count={stuckNewCount} />}
 
