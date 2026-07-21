@@ -212,6 +212,7 @@ export async function draftLeadReply(input: {
   description: string;
   analysisSummary: string; // "Tür: düğün | Aciliyet: bu ay" — doğrulanmış analizden
   missingInfo: string[];
+  includePortfolio?: boolean; // pazar yeri kaynakları: müşteri bizi tanımıyor
 }): Promise<string> {
   const asks = input.missingInfo.slice(0, 2);
   return textGateway(
@@ -220,6 +221,10 @@ export async function draftLeadReply(input: {
       "KURALLAR: Fiyat, indirim veya kesin müsaitlik sözü VERME. " +
       "Yapay zekâ gibi konuşma: kalıp selamlama, madde işareti, 'size nasıl yardımcı olabilirim' yok. " +
       "Abartma yok: NOQT'u en fazla yarım cümleyle an. " +
+      (input.includePortfolio
+        ? "Müşteri bizi tanımıyor — mesajın doğal bir yerinde önceki çalışmalarımıza bakabileceğini belirt " +
+          "ve linkin geleceği yere TAM OLARAK [PORTFOLYO] yaz. Kendin URL YAZMA, sadece bu yer tutucuyu kullan. "
+        : "") +
       (asks.length
         ? `Yalnızca şu eksikleri sor, başka soru ekleme: ${asks.join(", ")}. `
         : "Soru sorma, talebi anladığını göster. ") +

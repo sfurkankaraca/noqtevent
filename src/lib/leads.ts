@@ -151,10 +151,36 @@ export function validateLeadAnalysis(
   };
 }
 
-// Önerilen yanıt temizliği: link/AI-artığı temizle, uzunluğu sınırla.
+// ── Portfolyo linki (founder kararı 2026-07-21) ─────────────────────────────
+// Pazar yeri müşterileri NOQT'u tanımaz — yanıta güven varlığı olarak portfolyo
+// linki eklenir. Link ASLA AI'dan gelmez: AI [PORTFOLYO] yer tutucusu koyar,
+// gerçek URL burada deterministik yerleştirilir (kaynak bazlı UTM ile).
+
+export const SOURCES_WITH_PORTFOLIO = ["armut", "gigbi", "bark"] as const;
+export const PORTFOLIO_PLACEHOLDER = "[PORTFOLYO]";
+
+export function portfolioLinkFor(source: string): string {
+  return `https://www.noqt.events/?utm_source=${encodeURIComponent(source)}&utm_medium=lead_reply`;
+}
+
+export function needsPortfolioLink(source: string): boolean {
+  return (SOURCES_WITH_PORTFOLIO as readonly string[]).includes(source);
+}
+
+// Yer tutucuyu gerçek linkle değiştirir; AI unutmuşsa sona doğal bir cümle ekler.
+export function injectPortfolioLink(reply: string, source: string): string {
+  const link = portfolioLinkFor(source);
+  if (reply.includes(PORTFOLIO_PLACEHOLDER)) {
+    return reply.split(PORTFOLIO_PLACEHOLDER).join(link);
+  }
+  return `${reply}\n\nÇalışmalarımıza buradan göz atabilirsiniz: ${link}`;
+}
+
+// Önerilen yanıt temizliği: AI-artığı ve yabancı linkleri temizle, uzunluğu sınırla.
+// Kendi domain'imiz korunur — portfolyo linki (enjekte edilmiş veya elle eklenmiş) silinmez.
 export function sanitizeReply(raw: string): string {
   return (raw ?? "")
-    .replace(/https?:\/\/\S+/g, "")
+    .replace(/https?:\/\/\S+/g, (url) => (url.includes("noqt.events") ? url : ""))
     .replace(/^["'\s]+|["'\s]+$/g, "")
     .trim()
     .slice(0, 900);
