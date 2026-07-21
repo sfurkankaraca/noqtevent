@@ -115,7 +115,14 @@ export async function GET(req: NextRequest) {
           event_date: parsed.event_date,
           location: parsed.location,
           description: parsed.description,
-          raw_source_payload: { gmail_id: id, subject, from, internal_date: internalDate },
+          raw_source_payload: {
+            gmail_id: id,
+            subject,
+            from,
+            internal_date: internalDate,
+            // parser evrimi için ham gövde — ileride yeniden işlenebilir
+            body: bodyText.slice(0, 8000),
+          },
           created_via: "gmail",
         });
 
