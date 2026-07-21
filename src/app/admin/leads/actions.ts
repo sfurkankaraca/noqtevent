@@ -168,3 +168,15 @@ export async function generateLeadReportComment(statsJson: string, samples: stri
   });
   return text.trim().slice(0, 4000);
 }
+
+// ── Armut tam geçmiş taraması (backfill) ─────────────────────────────────────
+// Tek sayfa işler; istemci "bitene kadar" bunu döngüyle çağırır (BackfillButton.tsx).
+
+export async function backfillArmutStep(reset?: boolean) {
+  await requireAdmin();
+  const { runArmutBackfillStep } = await import("@/lib/armutBackfill");
+  const result = await runArmutBackfillStep({ reset });
+  revalidatePath("/admin/leads/rapor");
+  revalidatePath("/admin/leads");
+  return result;
+}

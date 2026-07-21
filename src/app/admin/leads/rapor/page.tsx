@@ -2,9 +2,10 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { EVENT_TYPE_LABELS } from "@/lib/eventTypeLabels";
 import ReportAiComment from "./ReportAiComment";
+import BackfillButton from "./BackfillButton";
 
-// "AI Yorumu Üret" server action'ı AI çağrısı yapar
-export const maxDuration = 60;
+// Backfill döngüsündeki her adım Gmail + AI çağrısı yapar
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -130,6 +131,8 @@ export default async function LeadReportPage() {
           ← Lead Inbox
         </Link>
       </div>
+
+      <BackfillButton />
 
       {/* Özet şerit */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

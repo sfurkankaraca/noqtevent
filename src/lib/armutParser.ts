@@ -12,7 +12,48 @@ export type ParsedArmutLead = {
   event_date: string | null; // YYYY-MM-DD
   description: string;
   looksLikeLead: boolean; // talep bildirimi mi, gürültü mü (fatura/pazarlama)
+  armut_job_url: string | null; // "Teklif ver" butonunun linki — Armut panelinde talebi bulmak için
 };
+
+// Gmail mesaj gövdesinden (base64url decode edilmiş HTML) multipart parçaları çıkarır.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function extractGmailParts(payload: any): { text: string; html: string | null } {
+  const decode = (b64: string) => Buffer.from(b64, "base64url").toString("utf8");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const walk = (part: any, mime: string): string | null => {
+    if (!part) return null;
+    if (part.mimeType === mime && part.body?.data) return decode(part.body.data);
+    for (const child of part.parts ?? []) {
+      const found = walk(child, mime);
+      if (found) return found;
+    }
+    return null;
+  };
+  const html = walk(payload, "text/html");
+  const plain = walk(payload, "text/plain");
+  if (plain) return { text: plain, html };
+  if (html) return { text: htmlToText(html), html };
+  if (payload?.body?.data) {
+    const raw = decode(payload.body.data);
+    return { text: htmlToText(raw), html: raw };
+  }
+  return { text: "", html: null };
+}
+
+// "Teklif ver" CTA'sının href'i — Armut panelinde ilgili talebi doğrudan açar.
+// Müşteri adı e-postada olmadığından bu, talebi bulmanın tek güvenilir yolu.
+export function extractArmutJobUrl(html: string | null): string | null {
+  if (!html) return null;
+  const anchorRe = /<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = anchorRe.exec(html))) {
+    const innerText = m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (/teklif\s*ver/i.test(innerText)) {
+      return m[1].replace(/&amp;/g, "&");
+    }
+  }
+  return null;
+}
 
 const TR_MONTHS: Record<string, string> = {
   ocak: "01", şubat: "02", subat: "02", mart: "03", nisan: "04", mayıs: "05", mayis: "05",
@@ -67,10 +108,12 @@ export function parseArmutEmail(input: {
   subject: string;
   from: string;
   bodyText: string;
+  html?: string | null;
 }): ParsedArmutLead {
   const subject = (input.subject ?? "").toLowerCase();
   const lines = (input.bodyText ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
   const fullText = lines.join("\n");
+  const armut_job_url = extractArmutJobUrl(input.html ?? null);
 
   const isNoise = NOISE_SUBJECT_HINTS.some((h) => subject.includes(h));
   const isArmutTemplate = lines.some((l) => /iş fırsat/i.test(l));
@@ -87,6 +130,7 @@ export function parseArmutEmail(input: {
       event_date: parseTurkishDate(fullText),
       description: fullText.slice(0, 4000),
       looksLikeLead,
+      armut_job_url,
     };
   }
 
@@ -143,5 +187,6 @@ export function parseArmutEmail(input: {
     event_date,
     description: description.slice(0, 4000),
     looksLikeLead,
+    armut_job_url,
   };
 }

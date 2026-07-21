@@ -106,6 +106,16 @@ export default function LeadWorkbench({ lead, events }: { lead: LeadRow; events:
           }
         >
           <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{lead.description}</p>
+          {lead.raw_source_payload?.armut_job_url && (
+            <a
+              href={lead.raw_source_payload.armut_job_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5 rounded-full bg-secondary text-foreground hover:bg-secondary/70 transition-colors"
+            >
+              🔗 Armut&apos;ta Görüntüle / Teklif Ver
+            </a>
+          )}
           <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
             {!editFields ? (
               <>

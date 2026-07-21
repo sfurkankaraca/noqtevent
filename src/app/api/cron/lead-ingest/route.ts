@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { createServiceClient } from "@/lib/supabase";
 import { ingestLead } from "@/lib/leadPipeline";
-import { parseArmutEmail, htmlToText } from "@/lib/armutParser";
+import { parseArmutEmail, extractGmailParts } from "@/lib/armutParser";
 
 export const maxDuration = 300;
 
@@ -26,28 +26,6 @@ function headerValue(payload: any, name: string): string {
     (h: { name?: string }) => h.name?.toLowerCase() === name.toLowerCase()
   );
   return h?.value ?? "";
-}
-
-// multipart gövdeden düz metin çıkar: önce text/plain, yoksa text/html → metin
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractBody(payload: any): string {
-  const decode = (b64: string) => Buffer.from(b64, "base64url").toString("utf8");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const walk = (part: any, mime: string): string | null => {
-    if (!part) return null;
-    if (part.mimeType === mime && part.body?.data) return decode(part.body.data);
-    for (const child of part.parts ?? []) {
-      const found = walk(child, mime);
-      if (found) return found;
-    }
-    return null;
-  };
-  const plain = walk(payload, "text/plain");
-  if (plain) return plain;
-  const html = walk(payload, "text/html");
-  if (html) return htmlToText(html);
-  if (payload?.body?.data) return htmlToText(decode(payload.body.data));
-  return "";
 }
 
 export async function GET(req: NextRequest) {
@@ -102,9 +80,9 @@ export async function GET(req: NextRequest) {
         const internalDate = Number(msg.data.internalDate ?? 0);
         const subject = headerValue(payload, "Subject");
         const from = headerValue(payload, "From");
-        const bodyText = extractBody(payload);
+        const { text: bodyText, html: bodyHtml } = extractGmailParts(payload);
 
-        const parsed = parseArmutEmail({ subject, from, bodyText });
+        const parsed = parseArmutEmail({ subject, from, bodyText, html: bodyHtml });
         if (!parsed.looksLikeLead) {
           counts.noise++;
           if (internalDate > newestInternalDate) newestInternalDate = internalDate;
@@ -123,6 +101,7 @@ export async function GET(req: NextRequest) {
             subject,
             from,
             internal_date: internalDate,
+            armut_job_url: parsed.armut_job_url,
             // parser evrimi için ham gövde — ileride yeniden işlenebilir
             body: bodyText.slice(0, 8000),
           },
