@@ -156,3 +156,15 @@ export async function updateLeadFields(id: string, fields: {
   revalidatePath(`/admin/leads/${id}`);
   revalidatePath("/admin/leads");
 }
+
+// ── Armut rapor yorumu ───────────────────────────────────────────────────────
+
+export async function generateLeadReportComment(statsJson: string, samples: string[]): Promise<string> {
+  await requireAdmin();
+  const { interpretLeadReport } = await import("@/lib/aiContent");
+  const text = await interpretLeadReport({
+    statsJson: String(statsJson).slice(0, 4000),
+    samples: (samples ?? []).slice(0, 12).map((s) => String(s).slice(0, 220)),
+  });
+  return text.trim().slice(0, 4000);
+}

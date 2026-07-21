@@ -73,6 +73,8 @@ export async function runAnalysisAndReply(lead: LeadRow): Promise<{
     analysisSummary: analysisSummary || "detay yok",
     missingInfo: analysis.missing_info,
     includePortfolio: needsPortfolioLink(lead.source),
+    // Pazar yerlerinde müşteri bize yazmadı — talebine teklif veriyoruz (üslup farkı kritik)
+    proactiveBid: needsPortfolioLink(lead.source),
   });
 
   // Sıra önemli: önce temizle (AI'ın uydurduğu URL'ler gider),

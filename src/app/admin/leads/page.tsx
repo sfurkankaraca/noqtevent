@@ -61,12 +61,20 @@ export default async function LeadsPage({
             Tüm kaynaklardan gelen fırsat talepleri — Sales OS
           </p>
         </div>
-        <Link
-          href="/admin/leads/new"
-          className="bg-foreground text-background px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
-        >
-          + Yeni Talep
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/leads/rapor"
+            className="border border-border text-foreground px-4 py-2.5 rounded-full text-sm hover:border-foreground/40 transition-colors"
+          >
+            📊 Rapor
+          </Link>
+          <Link
+            href="/admin/leads/new"
+            className="bg-foreground text-background px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            + Yeni Talep
+          </Link>
+        </div>
       </div>
 
       {/* Durum filtreleri */}
