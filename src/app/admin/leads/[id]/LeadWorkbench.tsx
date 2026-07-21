@@ -263,6 +263,24 @@ export default function LeadWorkbench({ lead, events }: { lead: LeadRow; events:
           <p className="text-[11px] text-muted-foreground mt-2">
             Akış: kopyala → Armut/WhatsApp&apos;ta kendin gönder → burada &ldquo;gönderildi&rdquo; işaretle.
           </p>
+          {lead.landing_token && (
+            <div className="mt-3 pt-3 border-t border-border flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-muted-foreground">Müşteriye özel sayfa:</span>
+              <button
+                onClick={async () => {
+                  await navigator.clipboard.writeText(`https://www.noqt.events/t/${lead.landing_token}`);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2500);
+                }}
+                className="text-[11px] px-3 py-1 rounded-full border border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
+              >
+                🔗 Landing linkini kopyala
+              </button>
+              <span className="text-[10px] text-muted-foreground">
+                (telefonla aradıysan WhatsApp&apos;tan bu linki at — müşteri bilgilerini oradan bırakır)
+              </span>
+            </div>
+          )}
         </Card>
 
         <Card title="Durum">

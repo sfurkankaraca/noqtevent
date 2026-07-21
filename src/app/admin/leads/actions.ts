@@ -81,10 +81,10 @@ async function runAnalysisAndReply(lead: LeadRow): Promise<{
   });
 
   // Sıra önemli: önce temizle (AI'ın kendi uydurduğu URL'ler gider),
-  // sonra gerçek portfolyo linkini deterministik yerleştir.
+  // sonra kişiye özel landing linkini deterministik yerleştir.
   let reply = sanitizeReply(replyRaw);
   if (needsPortfolioLink(lead.source)) {
-    reply = injectPortfolioLink(reply, lead.source).slice(0, 900);
+    reply = injectPortfolioLink(reply, lead.source, lead.landing_token).slice(0, 900);
   }
 
   return { analysis, reply };

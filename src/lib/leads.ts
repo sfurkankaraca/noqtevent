@@ -62,6 +62,8 @@ export const LEAD_EVENT_LABELS: Record<string, string> = {
   call_made: "Arama yapıldı",
   status_changed: "Durum değişti",
   note_added: "Not eklendi",
+  landing_viewed: "🔗 Müşteri landing sayfasını görüntüledi",
+  landing_submitted: "📝 Müşteri landing formunu doldurdu",
 };
 
 // ── AI analiz çıktısı doğrulama ──────────────────────────────────────────────
@@ -163,17 +165,25 @@ export function portfolioLinkFor(source: string): string {
   return `https://www.noqt.events/?utm_source=${encodeURIComponent(source)}&utm_medium=lead_reply`;
 }
 
+// Kişiye özel landing (founder kararı 2026-07-21): müşteri jenerik siteye değil,
+// kendi talebine özel /t/[token] sayfasına gider — orada güven unsurları + eksik
+// bilgileri bırakabileceği mini form var. Token varsa yanıt linki budur.
+export function landingLinkFor(source: string, landingToken: string): string {
+  return `https://www.noqt.events/t/${landingToken}?utm_source=${encodeURIComponent(source)}&utm_medium=lead_reply`;
+}
+
 export function needsPortfolioLink(source: string): boolean {
   return (SOURCES_WITH_PORTFOLIO as readonly string[]).includes(source);
 }
 
 // Yer tutucuyu gerçek linkle değiştirir; AI unutmuşsa sona doğal bir cümle ekler.
-export function injectPortfolioLink(reply: string, source: string): string {
-  const link = portfolioLinkFor(source);
+// landingToken verilirse kişiye özel landing linki, verilmezse jenerik portfolyo linki.
+export function injectPortfolioLink(reply: string, source: string, landingToken?: string | null): string {
+  const link = landingToken ? landingLinkFor(source, landingToken) : portfolioLinkFor(source);
   if (reply.includes(PORTFOLIO_PLACEHOLDER)) {
     return reply.split(PORTFOLIO_PLACEHOLDER).join(link);
   }
-  return `${reply}\n\nÇalışmalarımıza buradan göz atabilirsiniz: ${link}`;
+  return `${reply}\n\nÇalışmalarımıza ve talebinize özel sayfanıza buradan göz atabilirsiniz: ${link}`;
 }
 
 // Önerilen yanıt temizliği: AI-artığı ve yabancı linkleri temizle, uzunluğu sınırla.

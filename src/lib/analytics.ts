@@ -13,6 +13,8 @@ export type ConversionEvent =
   | "lead_submit"
   | "artist_booking_step"
   | "artist_booking_submit"
+  | "lead_landing_view"
+  | "lead_landing_submit"
   | "ai_concierge_start"
   | "ai_concierge_result"
   | "ai_concierge_submit"
