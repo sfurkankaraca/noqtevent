@@ -23,7 +23,14 @@ function countBy(rows: Row[], fn: (r: Row) => string | null): [string, number][]
 function firstLine(desc: string | null, label: string): string | null {
   if (!desc) return null;
   const m = desc.match(new RegExp(`^${label}:\\s*(.+)$`, "m"));
-  return m ? m[1].trim() : null;
+  if (!m) return null;
+  // Şablon varyantlarını normalize et: "Yeni bir X talebi geldi..." → X;
+  // eski parser döneminden kalan başlık satırı → belirsiz kategori
+  const v = m[1].trim();
+  const variant = v.match(/^Yeni bir (.+?) talebi geldi/i);
+  if (variant) return variant[1].trim();
+  if (/iş fırsatın var/i.test(v)) return "(kategori belirsiz)";
+  return v;
 }
 
 // Haftalık geliş trendi (son 8 hafta) — bileşen dışında (Date.now saflık kuralı)

@@ -99,6 +99,11 @@ export function parseArmutEmail(input: {
       (l) => l.length > 2 && !/^merhaba/i.test(l) && !/iş fırsat/i.test(l) && !TAIL_MARKERS.test(l)
     ) ?? null;
   }
+  // Şablon varyantı: hizmet adı "Yeni bir X talebi geldi..." cümlesinin içinde
+  if (service) {
+    const variant = service.match(/^Yeni bir (.+?) talebi geldi/i);
+    if (variant) service = variant[1].trim();
+  }
 
   // Yer: "Ankara, Mamak (253.7 KM)" → mesafe parantezi atılır
   const rawLocation = labelValue(lines, /^yer\s*:/i) ?? labelValue(lines, /^yer$/i);
