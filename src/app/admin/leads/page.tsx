@@ -9,6 +9,7 @@ import {
   followupDue,
   type LeadStatus,
 } from "@/lib/leads";
+import LeadFilters from "./LeadFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -20,12 +21,19 @@ const STATUS_ORDER: Record<string, number> = {
   won: 6, lost: 7, archived: 8,
 };
 
+// "İstanbul, Beykoz, Çamlıbahçe Mah" → "İstanbul"
+function cityOf(location: string | null): string | null {
+  if (!location) return null;
+  const first = location.split(",")[0]?.trim();
+  return first || null;
+}
+
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; city?: string; type?: string; sort?: string }>;
 }) {
-  const { status: filter } = await searchParams;
+  const { status: filter, city: cityFilter, type: typeFilter, sort = "smart" } = await searchParams;
   const supabase = createServiceClient();
 
   let query = supabase.from("leads").select("*").order("created_at", { ascending: false });
@@ -37,17 +45,55 @@ export default async function LeadsPage({
   const { data: leads, error } = await query;
 
   const now = new Date();
-  const rows = (leads ?? [])
-    .map((l) => ({ ...l, followup_due: followupDue(l, now) }))
-    .sort((a, b) => {
-      const fa = a.followup_due ? 0 : 1;
-      const fb = b.followup_due ? 0 : 1;
-      if (fa !== fb) return fa - fb;
-      const sa = STATUS_ORDER[a.status] ?? 9;
-      const sb = STATUS_ORDER[b.status] ?? 9;
-      if (sa !== sb) return sa - sb;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
+  const withMeta = (leads ?? []).map((l) => ({
+    ...l,
+    followup_due: followupDue(l, now),
+    city: cityOf(l.location),
+  }));
+
+  // Filtre seçenekleri: mevcut durum görünümündeki verilerden türetilir, seçili
+  // filtre uygulanmadan — böylece dropdown daralıp seçenek kaybolmaz.
+  const cityOptions = [...new Set(withMeta.map((l) => l.city).filter((c): c is string => Boolean(c)))]
+    .sort((a, b) => a.localeCompare(b, "tr"))
+    .map((c) => ({ value: c, label: c }));
+  const typeOptions = [...new Set(withMeta.map((l) => l.event_type).filter((t): t is string => Boolean(t)))]
+    .sort((a, b) => (EVENT_TYPE_LABELS[a] ?? a).localeCompare(EVENT_TYPE_LABELS[b] ?? b, "tr"))
+    .map((t) => ({ value: t, label: EVENT_TYPE_LABELS[t] ?? t }));
+
+  let rows = withMeta;
+  if (cityFilter) rows = rows.filter((l) => l.city === cityFilter);
+  if (typeFilter) rows = rows.filter((l) => l.event_type === typeFilter);
+
+  const scoreOf = (l: (typeof rows)[number]) => (l.ai_analysis?.probability as number | undefined) ?? 0;
+
+  rows = [...rows].sort((a, b) => {
+    switch (sort) {
+      case "date_desc":
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      case "date_asc":
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      case "score_desc":
+        return scoreOf(b) - scoreOf(a);
+      case "score_asc":
+        return scoreOf(a) - scoreOf(b);
+      case "event_date_asc": {
+        if (!a.event_date && !b.event_date) return 0;
+        if (!a.event_date) return 1;
+        if (!b.event_date) return -1;
+        return new Date(a.event_date).getTime() - new Date(b.event_date).getTime();
+      }
+      default: {
+        // Akıllı sıralama: takibi gelenler → durum önceliği → en yeni
+        const fa = a.followup_due ? 0 : 1;
+        const fb = b.followup_due ? 0 : 1;
+        if (fa !== fb) return fa - fb;
+        const sa = STATUS_ORDER[a.status] ?? 9;
+        const sb = STATUS_ORDER[b.status] ?? 9;
+        if (sa !== sb) return sa - sb;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    }
+  });
 
   const counts: Record<string, number> = {};
   for (const l of leads ?? []) counts[l.status] = (counts[l.status] ?? 0) + 1;
@@ -100,6 +146,9 @@ export default async function LeadsPage({
         ))}
       </div>
 
+      {/* Şehir / tür / sıralama */}
+      <LeadFilters cities={cityOptions} types={typeOptions} />
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
           {error.message}
@@ -111,7 +160,7 @@ export default async function LeadsPage({
           <p className="text-4xl mb-4">📥</p>
           <p className="text-foreground font-medium">Bu görünümde lead yok</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Yeni bir talep geldiğinde &ldquo;+ Yeni Talep&rdquo; ile ekle.
+            Filtreleri temizlemeyi dene ya da &ldquo;+ Yeni Talep&rdquo; ile ekle.
           </p>
         </div>
       )}
@@ -124,6 +173,7 @@ export default async function LeadsPage({
                 <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground tracking-wide">MÜŞTERİ</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">KAYNAK</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">ETKİNLİK</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">ŞEHİR</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">TARİH</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">SKOR</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground tracking-wide">DURUM</th>
@@ -157,6 +207,9 @@ export default async function LeadsPage({
                     </td>
                     <td className="px-4 py-3.5 text-xs text-muted-foreground">
                       {lead.event_type ? (EVENT_TYPE_LABELS[lead.event_type] ?? lead.event_type) : "—"}
+                    </td>
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground whitespace-nowrap">
+                      {lead.city ?? "—"}
                     </td>
                     <td className="px-4 py-3.5 text-xs text-muted-foreground whitespace-nowrap">
                       {lead.event_date
