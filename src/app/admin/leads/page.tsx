@@ -7,10 +7,12 @@ import {
   LEAD_STATUS_LABELS,
   LEAD_STATUS_STYLES,
   followupDue,
+  isStaleLead,
   type LeadStatus,
 } from "@/lib/leads";
 import LeadFilters from "./LeadFilters";
 import DashboardStrip from "./DashboardStrip";
+import StaleBanner from "./StaleBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +34,10 @@ function cityOf(location: string | null): string | null {
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; city?: string; type?: string; sort?: string }>;
+  searchParams: Promise<{ status?: string; city?: string; type?: string; sort?: string; stale?: string }>;
 }) {
-  const { status: filter, city: cityFilter, type: typeFilter, sort = "smart" } = await searchParams;
+  const { status: filter, city: cityFilter, type: typeFilter, sort = "smart", stale } = await searchParams;
+  const showStale = stale === "1";
   const supabase = createServiceClient();
 
   let query = supabase.from("leads").select("*").order("created_at", { ascending: false });
@@ -51,7 +54,13 @@ export default async function LeadsPage({
     followup_due: followupDue(l, now),
     call_due: Boolean(l.call_reminder_at && new Date(l.call_reminder_at) <= now),
     city: cityOf(l.location),
+    stale: isStaleLead(l, now),
   }));
+
+  // Backfill ile giren, hiç işlem görmemiş eski talepler varsayılan görünümde
+  // gizlenir — canlı inbox'ı yüzlerce ölü Armut ilanı basmasın. "Eski/Pasif"
+  // filtresiyle (?stale=1) ayrıca görülebilir ve toplu arşivlenebilir.
+  const staleCount = withMeta.filter((l) => l.stale).length;
 
   // Filtre seçenekleri: mevcut durum görünümündeki verilerden türetilir, seçili
   // filtre uygulanmadan — böylece dropdown daralıp seçenek kaybolmaz.
@@ -62,7 +71,7 @@ export default async function LeadsPage({
     .sort((a, b) => (EVENT_TYPE_LABELS[a] ?? a).localeCompare(EVENT_TYPE_LABELS[b] ?? b, "tr"))
     .map((t) => ({ value: t, label: EVENT_TYPE_LABELS[t] ?? t }));
 
-  let rows = withMeta;
+  let rows = showStale ? withMeta.filter((l) => l.stale) : withMeta.filter((l) => !l.stale);
   if (cityFilter) rows = rows.filter((l) => l.city === cityFilter);
   if (typeFilter) rows = rows.filter((l) => l.event_type === typeFilter);
 
@@ -160,7 +169,17 @@ export default async function LeadsPage({
             {LEAD_STATUS_LABELS[s]}{counts[s] ? ` (${counts[s]})` : ""}
           </Link>
         ))}
+        <Link
+          href="/admin/leads?stale=1"
+          className={`px-3.5 py-1.5 rounded-full text-xs border transition-colors ${
+            showStale ? "bg-foreground text-background border-foreground" : "bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-400"
+          }`}
+        >
+          🗄 Eski/Pasif{staleCount ? ` (${staleCount})` : ""}
+        </Link>
       </div>
+
+      {showStale && staleCount > 0 && <StaleBanner count={staleCount} />}
 
       {/* Şehir / tür / sıralama */}
       <LeadFilters cities={cityOptions} types={typeOptions} />

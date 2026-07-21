@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase";
-import { LEAD_SOURCES } from "@/lib/leads";
+import { LEAD_SOURCES, isStaleLead } from "@/lib/leads";
 
 // Sales OS — kaynak-bağımsız günlük operasyon şeridi (orijinal tasarımın
 // "Dashboard" adımı + Phase 2 kaynak/dönüşüm analitiğinin temeli).
@@ -19,7 +19,7 @@ export default async function DashboardStrip() {
   const supabase = createServiceClient();
 
   const [{ data: leads }, { data: sentEvents }] = await Promise.all([
-    supabase.from("leads").select("id, source, status, created_at").neq("status", "archived"),
+    supabase.from("leads").select("id, source, status, created_at, event_date").neq("status", "archived"),
     supabase.from("lead_events").select("lead_id, created_at").eq("type", "marked_sent"),
   ]);
 
@@ -30,7 +30,10 @@ export default async function DashboardStrip() {
   const lost = rows.filter((l) => l.status === "lost").length;
   const winRate = won + lost > 0 ? Math.round((won / (won + lost)) * 100) : null;
 
-  const pending = rows.filter((l) => PENDING_STATUSES.includes(l.status)).length;
+  // Eski/pasif (14+ gün işlem görmemiş veya etkinlik tarihi geçmiş) talepler
+  // "bekleyen yanıt" sayısına dahil edilmez — aksi halde yüzlerce ölü Armut
+  // ilanı gerçek bekleyen iş yükünü gizler.
+  const pending = rows.filter((l) => PENDING_STATUSES.includes(l.status) && !isStaleLead(l)).length;
 
   // Ortalama yanıt süresi: her lead'in İLK "gönderildi" olayı ile oluşturulma
   // zamanı arasındaki fark (saat). Not: created_at → admin sisteme girdiği an;

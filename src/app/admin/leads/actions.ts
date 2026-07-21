@@ -199,3 +199,30 @@ export async function markCallMade(id: string) {
   revalidatePath(`/admin/leads/${id}`);
   revalidatePath("/admin/leads");
 }
+
+// ── Eski/pasif lead toplu arşivleme ──────────────────────────────────────────
+// Backfill ile giren, hiç işlem görmemiş ve STALE_THRESHOLD_DAYS'ten eski
+// (veya etkinlik tarihi geçmiş) lead'leri arşive taşır. Arşivleme geri
+// alınabilir (archived → new geçişi tanımlı) — veri silinmez, sadece durum
+// değişir. Kullanıcı bu butona kendisi basmadan hiçbir şey arşivlenmez.
+export async function archiveStaleLeads(): Promise<{ archived: number }> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { data: candidates } = await supabase
+    .from("leads")
+    .select("id, status, created_at, event_date")
+    .in("status", ["new", "needs_review", "proposal_ready"]);
+
+  const { isStaleLead } = await import("@/lib/leads");
+  const staleIds = (candidates ?? []).filter((l) => isStaleLead(l)).map((l) => l.id);
+  if (staleIds.length === 0) return { archived: 0 };
+
+  await supabase.from("leads").update({ status: "archived" }).in("id", staleIds);
+  await supabase.from("lead_events").insert(
+    staleIds.map((id) => ({ lead_id: id, type: "status_changed", data: { to: "archived", via: "bulk_stale_archive" } }))
+  );
+
+  revalidatePath("/admin/leads");
+  return { archived: staleIds.length };
+}

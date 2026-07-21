@@ -274,3 +274,22 @@ export function followupDue(lead: {
   const threshold = FOLLOWUP_SCHEDULE_DAYS[lead.followup_count];
   return days >= threshold ? lead.followup_count + 1 : null;
 }
+
+// ── Eski/pasif lead tespiti (founder kararı 2026-07-21) ──────────────────────
+// Armut gibi pazar yerlerinde bir ilan "maksimum teklif sayısına ulaşınca"
+// kapanır — geçmiş taraması (backfill) ile içeri alınan, hiç işlem görmemiş
+// ve uzun süre önce gelmiş talepler artık gerçekte ölüdür. Bunları canlı
+// inbox'tan ayırmazsak yüzlerce eski talep, gerçek/güncel olanları gömer.
+export const STALE_THRESHOLD_DAYS = 14;
+const PRE_CONTACT_STATUSES = ["new", "needs_review", "proposal_ready"];
+
+export function isStaleLead(lead: {
+  status: string;
+  created_at: string;
+  event_date: string | null;
+}, now = new Date()): boolean {
+  if (!PRE_CONTACT_STATUSES.includes(lead.status)) return false;
+  if (lead.event_date && new Date(lead.event_date) < now) return true;
+  const ageDays = (now.getTime() - new Date(lead.created_at).getTime()) / 86_400_000;
+  return ageDays > STALE_THRESHOLD_DAYS;
+}
