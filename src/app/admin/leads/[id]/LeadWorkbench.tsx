@@ -49,6 +49,13 @@ export default function LeadWorkbench({ lead, events }: { lead: LeadRow; events:
   const [pending, startTransition] = useTransition();
   const [reply, setReply] = useState<string>(lead.suggested_reply ?? "");
   const [replyDirty, setReplyDirty] = useState(false);
+  // "Yeniden analiz" sonrası sunucudan gelen yeni yanıtı yakala (render sırasında
+  // state düzeltme deseni — kullanıcının kaydedilmemiş düzenlemesi varsa ezilmez).
+  const [prevSuggested, setPrevSuggested] = useState<string>(lead.suggested_reply ?? "");
+  if ((lead.suggested_reply ?? "") !== prevSuggested) {
+    setPrevSuggested(lead.suggested_reply ?? "");
+    if (!replyDirty) setReply(lead.suggested_reply ?? "");
+  }
   const [copied, setCopied] = useState(false);
   const [notes, setNotes] = useState<string>(lead.admin_notes ?? "");
   const [editFields, setEditFields] = useState(false);
