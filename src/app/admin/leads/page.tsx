@@ -48,6 +48,7 @@ export default async function LeadsPage({
   const withMeta = (leads ?? []).map((l) => ({
     ...l,
     followup_due: followupDue(l, now),
+    call_due: Boolean(l.call_reminder_at && new Date(l.call_reminder_at) <= now),
     city: cityOf(l.location),
   }));
 
@@ -86,7 +87,10 @@ export default async function LeadsPage({
         return new Date(a.event_date).getTime() - new Date(b.event_date).getTime();
       }
       default: {
-        // Akıllı sıralama: takibi gelenler → durum önceliği → en yeni
+        // Akıllı sıralama: arama zamanı gelenler → takibi gelenler → durum önceliği → en yeni
+        const ca = a.call_due ? 0 : 1;
+        const cb = b.call_due ? 0 : 1;
+        if (ca !== cb) return ca - cb;
         const fa = a.followup_due ? 0 : 1;
         const fb = b.followup_due ? 0 : 1;
         if (fa !== fb) return fa - fb;
@@ -192,6 +196,11 @@ export default async function LeadsPage({
                     <td className="px-5 py-3.5">
                       <Link href={`/admin/leads/${lead.id}`} className="block">
                         <div className="flex items-center gap-2">
+                          {lead.call_due && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 font-medium whitespace-nowrap">
+                              📞 Ara
+                            </span>
+                          )}
                           {lead.followup_due && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium whitespace-nowrap">
                               ⚡ Takip {lead.followup_due}

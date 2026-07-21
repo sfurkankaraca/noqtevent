@@ -180,3 +180,22 @@ export async function backfillArmutStep(reset?: boolean) {
   revalidatePath("/admin/leads");
   return result;
 }
+
+// ── Arama hatırlatıcısı (Phase 1) ────────────────────────────────────────────
+
+export async function setCallReminder(id: string, isoDatetime: string | null) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+  await supabase.from("leads").update({ call_reminder_at: isoDatetime }).eq("id", id);
+  revalidatePath(`/admin/leads/${id}`);
+  revalidatePath("/admin/leads");
+}
+
+export async function markCallMade(id: string) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+  await supabase.from("leads").update({ call_reminder_at: null }).eq("id", id);
+  await logEvent(id, "call_made", {});
+  revalidatePath(`/admin/leads/${id}`);
+  revalidatePath("/admin/leads");
+}

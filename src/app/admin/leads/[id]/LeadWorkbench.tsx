@@ -22,6 +22,8 @@ import {
   changeLeadStatus,
   updateLeadNotes,
   updateLeadFields,
+  setCallReminder,
+  markCallMade,
 } from "../actions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,6 +34,25 @@ type EventRow = Record<string, any>;
 const SOURCE_LABELS = Object.fromEntries(LEAD_SOURCES.map((s) => [s.id, s.label]));
 const inputCls =
   "w-full px-3 py-2 rounded-lg border border-border bg-white text-foreground text-sm focus:outline-none focus:border-foreground/40 transition-colors";
+
+// Arama hatırlatıcısı hızlı seçenekleri — yerel saat, ISO olarak döner.
+function addHours(h: number): string {
+  const d = new Date();
+  d.setHours(d.getHours() + h);
+  return d.toISOString();
+}
+function atTomorrow(hour: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(hour, 0, 0, 0);
+  return d.toISOString();
+}
+function atToday(hour: number): string {
+  const d = new Date();
+  d.setHours(hour, 0, 0, 0);
+  if (d <= new Date()) d.setDate(d.getDate() + 1);
+  return d.toISOString();
+}
 
 function Card({ title, children, extra }: { title: string; children: React.ReactNode; extra?: React.ReactNode }) {
   return (
@@ -79,6 +100,7 @@ export default function LeadWorkbench({ lead, events }: { lead: LeadRow; events:
     last_followup_at: lead.last_followup_at ?? null,
     followup_count: lead.followup_count ?? 0,
   });
+  const callReminderDue = Boolean(lead.call_reminder_at && new Date(lead.call_reminder_at) <= new Date());
 
   const act = (fn: () => Promise<void>) =>
     startTransition(async () => {
@@ -315,6 +337,60 @@ export default function LeadWorkbench({ lead, events }: { lead: LeadRow; events:
               </span>
             </div>
           )}
+        </Card>
+
+        <Card title="Arama Hatırlatıcısı">
+          {callReminderDue && (
+            <p className="text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 mb-3">
+              📞 Arama zamanı geldi — {new Date(lead.call_reminder_at).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+            </p>
+          )}
+          {lead.call_reminder_at && !callReminderDue && (
+            <p className="text-xs text-muted-foreground mb-3">
+              🕐 {new Date(lead.call_reminder_at).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} için ayarlandı
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => act(() => setCallReminder(lead.id, addHours(2)))}
+              disabled={pending}
+              className="px-3.5 py-1.5 rounded-full border border-border text-xs text-muted-foreground hover:border-foreground/40 transition-colors disabled:opacity-40"
+            >
+              2 saat sonra
+            </button>
+            <button
+              onClick={() => act(() => setCallReminder(lead.id, atTomorrow(10)))}
+              disabled={pending}
+              className="px-3.5 py-1.5 rounded-full border border-border text-xs text-muted-foreground hover:border-foreground/40 transition-colors disabled:opacity-40"
+            >
+              Yarın 10:00
+            </button>
+            <button
+              onClick={() => act(() => setCallReminder(lead.id, atToday(18)))}
+              disabled={pending}
+              className="px-3.5 py-1.5 rounded-full border border-border text-xs text-muted-foreground hover:border-foreground/40 transition-colors disabled:opacity-40"
+            >
+              Bu akşam 18:00
+            </button>
+            {(lead.call_reminder_at || callReminderDue) && (
+              <button
+                onClick={() => act(() => markCallMade(lead.id))}
+                disabled={pending}
+                className="px-3.5 py-1.5 rounded-full border border-green-300 bg-green-50 text-green-700 text-xs font-medium hover:bg-green-100 transition-colors disabled:opacity-40"
+              >
+                ✓ Arandı
+              </button>
+            )}
+            {lead.call_reminder_at && (
+              <button
+                onClick={() => act(() => setCallReminder(lead.id, null))}
+                disabled={pending}
+                className="px-3.5 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 underline underline-offset-2"
+              >
+                temizle
+              </button>
+            )}
+          </div>
         </Card>
 
         <Card title="Durum">
