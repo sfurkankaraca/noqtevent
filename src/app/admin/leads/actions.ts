@@ -4,93 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/adminAuth";
 import { createServiceClient } from "@/lib/supabase";
-import { analyzeLeadRaw, draftLeadReply } from "@/lib/aiContent";
 import { EVENT_TYPES } from "@/components/planner/PlannerStore";
-import { EVENT_TYPE_LABELS } from "@/lib/eventTypeLabels";
 import {
   LEAD_SOURCES,
   LEAD_TRANSITIONS,
-  URGENCY_LABELS,
   type LeadStatus,
-  validateLeadAnalysis,
   sanitizeReply,
-  sanitizeLeadText,
-  needsPortfolioLink,
-  injectPortfolioLink,
-  type LeadAnalysis,
 } from "@/lib/leads";
-import { TEXT_MODEL } from "@/lib/aiContent";
+import { ingestLead, runAnalysisAndReply, logLeadEvent as logEvent } from "@/lib/leadPipeline";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LeadRow = Record<string, any>;
-
-async function logEvent(leadId: string, type: string, data: Record<string, unknown> = {}) {
-  const supabase = createServiceClient();
-  await supabase.from("lead_events").insert({ lead_id: leadId, type, data });
-}
-
-// ── Analiz + yanıt üretimi (tek yerden; oluşturma ve "yeniden analiz" kullanır) ──
-
-async function runAnalysisAndReply(lead: LeadRow): Promise<{
-  analysis: LeadAnalysis;
-  reply: string;
-} | null> {
-  if (!process.env.AI_GATEWAY_API_KEY) return null;
-
-  const supabase = createServiceClient();
-  const { data: packages } = await supabase
-    .from("packages")
-    .select("name")
-    .eq("is_active", true);
-  const packageNames = (packages ?? []).map((p) => p.name as string);
-
-  const knownFields = [
-    lead.customer_name && `Ad: ${lead.customer_name}`,
-    lead.event_type && `Etkinlik: ${EVENT_TYPE_LABELS[lead.event_type] ?? lead.event_type}`,
-    lead.event_date && `Tarih: ${lead.event_date}`,
-    lead.location && `Konum: ${lead.location}`,
-    lead.budget_text && `Bütçe (ham): ${lead.budget_text}`,
-  ].filter(Boolean).join(" | ");
-
-  const { parsed } = await analyzeLeadRaw({
-    source: lead.source,
-    knownFields,
-    description: lead.description,
-    eventTypeCatalog: EVENT_TYPES.map((e) => ({ id: e.id, label: e.label })),
-    packageCatalog: packageNames,
-  });
-
-  const analysis = validateLeadAnalysis(parsed, {
-    validEventTypes: EVENT_TYPES.map((e) => e.id),
-    validPackages: packageNames,
-    model: TEXT_MODEL,
-  });
-
-  const analysisSummary = [
-    analysis.event_type_guess && `Tür: ${EVENT_TYPE_LABELS[analysis.event_type_guess] ?? analysis.event_type_guess}`,
-    analysis.urgency && `Aciliyet: ${URGENCY_LABELS[analysis.urgency]}`,
-    lead.event_date && `Tarih: ${lead.event_date}`,
-  ].filter(Boolean).join(" | ");
-
-  const replyRaw = await draftLeadReply({
-    customerName: lead.customer_name,
-    description: lead.description,
-    analysisSummary: analysisSummary || "detay yok",
-    missingInfo: analysis.missing_info,
-    includePortfolio: needsPortfolioLink(lead.source),
-  });
-
-  // Sıra önemli: önce temizle (AI'ın kendi uydurduğu URL'ler gider),
-  // sonra kişiye özel landing linkini deterministik yerleştir.
-  let reply = sanitizeReply(replyRaw);
-  if (needsPortfolioLink(lead.source)) {
-    reply = injectPortfolioLink(reply, lead.source, lead.landing_token).slice(0, 900);
-  }
-
-  return { analysis, reply };
-}
-
-// ── Lead oluşturma ───────────────────────────────────────────────────────────
+// ── Lead oluşturma — ortak pipeline üzerinden (cron ile aynı yol) ────────────
 
 export async function createLead(input: {
   source: string;
@@ -105,59 +28,13 @@ export async function createLead(input: {
   await requireAdmin();
 
   if (!LEAD_SOURCES.some((s) => s.id === input.source)) throw new Error("Geçersiz kaynak.");
-  const description = sanitizeLeadText(input.description);
-  if (description.length < 5) throw new Error("Talep metni zorunludur.");
-  if (input.event_type && !EVENT_TYPES.some((e) => e.id === input.event_type)) {
-    throw new Error("Geçersiz etkinlik türü.");
-  }
 
-  const supabase = createServiceClient();
-  const { data: created, error } = await supabase
-    .from("leads")
-    .insert({
-      source: input.source,
-      source_ref: input.source_ref?.trim().slice(0, 120) || null,
-      customer_name: input.customer_name?.trim().slice(0, 120) || null,
-      event_type: input.event_type || null,
-      event_date: input.event_date || null,
-      location: input.location?.trim().slice(0, 160) || null,
-      budget_text: input.budget_text?.trim().slice(0, 160) || null,
-      description,
-    })
-    .select("*")
-    .single();
-
-  if (error) {
-    if (error.code === "23505") throw new Error("Bu kaynak referansıyla zaten bir lead var.");
-    throw new Error(error.message);
-  }
-
-  await logEvent(created.id, "created", { source: input.source });
-
-  // AI analiz + yanıt — hata lead'i düşürmez, needs_review'da kalır.
-  try {
-    const result = await runAnalysisAndReply(created);
-    if (result) {
-      await supabase
-        .from("leads")
-        .update({
-          ai_analysis: result.analysis,
-          suggested_reply: result.reply,
-          reply_history: [{ text: result.reply, generated_at: new Date().toISOString(), edited: false }],
-          status: "needs_review",
-          // AI türü tahmin ettiyse ve insan girmemişse öneriyi alana yaz (insan değiştirebilir)
-          ...(created.event_type ? {} : result.analysis.event_type_guess ? { event_type: result.analysis.event_type_guess } : {}),
-        })
-        .eq("id", created.id);
-      await logEvent(created.id, "ai_analyzed", { probability: result.analysis.probability });
-      await logEvent(created.id, "reply_generated", { chars: result.reply.length });
-    }
-  } catch (err) {
-    console.error("Lead AI analiz hatası:", err);
-  }
+  const result = await ingestLead({ ...input, created_via: "manual" });
+  if (result.outcome === "duplicate") throw new Error("Bu kaynak referansıyla zaten bir lead var.");
+  if (result.outcome === "invalid") throw new Error(result.reason);
 
   revalidatePath("/admin/leads");
-  return { id: created.id };
+  return { id: result.id };
 }
 
 export async function createLeadAndRedirect(input: Parameters<typeof createLead>[0]) {
