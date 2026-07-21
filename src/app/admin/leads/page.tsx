@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createServiceClient } from "@/lib/supabase";
+import { createServiceClient, fetchAllRows } from "@/lib/supabase";
 import { EVENT_TYPE_LABELS } from "@/lib/eventTypeLabels";
 import {
   LEAD_SOURCES,
@@ -41,24 +41,39 @@ export default async function LeadsPage({
   const showStale = stale === "1";
   const supabase = createServiceClient();
 
-  // Supabase/PostgREST varsayılanı 1000 satırda kesiyor — backfill sonrası
-  // binlerce lead varken bu sayıları/eski-tespitini sessizce bozar.
-  let query = supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(5000);
-  if (filter && (LEAD_STATUSES as readonly string[]).includes(filter)) {
-    query = query.eq("status", filter);
-  } else {
-    query = query.neq("status", "archived");
+  // Supabase/PostgREST projesinin "Max Rows" ayarı (varsayılan 1000) her isteği
+  // sunucu tarafında kesiyor — .limit() bunu aşamaz, .range() ile sayfalıyoruz.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type LeadRow = Record<string, any>;
+  let leads: LeadRow[] = [];
+  let error: { message: string } | null = null;
+  try {
+    leads = await fetchAllRows<LeadRow>((from, to) => {
+      let q = supabase.from("leads").select("*").order("created_at", { ascending: false }).range(from, to);
+      if (filter && (LEAD_STATUSES as readonly string[]).includes(filter)) {
+        q = q.eq("status", filter);
+      } else {
+        q = q.neq("status", "archived");
+      }
+      return q;
+    });
+  } catch (err) {
+    error = { message: err instanceof Error ? err.message : "Bilinmeyen hata" };
   }
-  const { data: leads, error } = await query;
 
   const now = new Date();
   const withMeta = (leads ?? []).map((l) => ({
     ...l,
-    followup_due: followupDue(l, now),
+    followup_due: followupDue(l as { status: string; sent_at: string | null; last_followup_at: string | null; followup_count: number }, now),
     call_due: Boolean(l.call_reminder_at && new Date(l.call_reminder_at) <= now),
     city: cityOf(l.location),
-    stale: isStaleLead(l, now),
-  }));
+    stale: isStaleLead(l as { status: string; created_at: string; event_date: string | null }, now),
+  })) as (LeadRow & {
+    followup_due: number | null;
+    call_due: boolean;
+    city: string | null;
+    stale: boolean;
+  })[];
 
   // Backfill ile giren, hiç işlem görmemiş eski talepler varsayılan görünümde
   // gizlenir — canlı inbox'ı yüzlerce ölü Armut ilanı basmasın. "Eski/Pasif"

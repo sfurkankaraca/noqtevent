@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createServiceClient } from "@/lib/supabase";
+import { createServiceClient, fetchAllRows } from "@/lib/supabase";
 import { EVENT_TYPE_LABELS } from "@/lib/eventTypeLabels";
 import { LEAD_SOURCES } from "@/lib/leads";
 
@@ -67,14 +67,16 @@ function conversionRow(rows: Row[]) {
 
 export default async function LeadAnalyticsPage() {
   const supabase = createServiceClient();
-  const { data: leads } = await supabase
-    .from("leads")
-    .select("id, source, status, event_type, location, created_at, raw_source_payload")
-    .neq("status", "archived")
-    .order("created_at", { ascending: false })
-    .limit(5000);
+  const leads = await fetchAllRows<Row>((from, to) =>
+    supabase
+      .from("leads")
+      .select("id, source, status, event_type, location, created_at, raw_source_payload")
+      .neq("status", "archived")
+      .order("created_at", { ascending: false })
+      .range(from, to)
+  );
 
-  const rows = (leads ?? []) as Row[];
+  const rows = leads;
 
   // ── Aylık trend (tüm kaynaklar) ──
   const trend = monthlyTrend(rows);
