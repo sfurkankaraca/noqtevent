@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createServiceClient, fetchAllRows } from "@/lib/supabase";
 import { EVENT_TYPE_LABELS } from "@/lib/eventTypeLabels";
-import { LEAD_SOURCES } from "@/lib/leads";
+import { LEAD_SOURCES, demandDate } from "@/lib/leads";
 
 // Sales OS Phase 2 — kaynak-bağımsız analitik. /rapor Armut'a özel derin
 // analiz + AI yorumu içindir; bu sayfa TÜM kaynakları kapsayan aylık trend,
@@ -23,17 +23,6 @@ function Bar({ value, max, className = "bg-foreground" }: { value: number; max: 
   );
 }
 
-// Talebin GERÇEKTE ne zaman geldiğini yansıtır — backfill/manuel giriş sırasında
-// leads.created_at yalnızca "bize ne zaman düştüğü"nü gösterir (ör. bir yıllık
-// geçmiş Armut postası tek haftada içeri alınırsa hepsi aynı haftaya yığılır,
-// yanıltıcı olur). Armut için ham e-postanın internal_date'i (Gmail'in kendi
-// zaman damgası) gerçek talep anıdır; yoksa created_at'e düşer.
-function demandDate(r: Row): Date {
-  const internal = r.raw_source_payload?.internal_date;
-  if (typeof internal === "number" && internal > 0) return new Date(internal);
-  return new Date(r.created_at);
-}
-
 function monthlyTrend(rows: Row[]): { label: string; count: number }[] {
   const now = new Date();
   const buckets: { key: string; label: string }[] = [];
@@ -46,7 +35,7 @@ function monthlyTrend(rows: Row[]): { label: string; count: number }[] {
   }
   const counts = new Map<string, number>();
   for (const r of rows) {
-    const d = demandDate(r);
+    const d = demandDate(r as { created_at: string; raw_source_payload?: { internal_date?: number } | null });
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }

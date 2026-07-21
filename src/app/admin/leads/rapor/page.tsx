@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase";
 import { EVENT_TYPE_LABELS } from "@/lib/eventTypeLabels";
 import ReportAiComment from "./ReportAiComment";
 import BackfillButton from "./BackfillButton";
+import { demandDate } from "@/lib/leads";
 
 // Backfill döngüsündeki her adım Gmail + AI çağrısı yapar
 export const maxDuration = 300;
@@ -44,7 +45,7 @@ function weeklyTrend(rows: Row[]): [string, number][] {
     const end = now - w * weekMs;
     const label = w === 0 ? "Bu hafta" : `${w} hf önce`;
     trend.push([label, rows.filter((r) => {
-      const t = new Date(r.created_at).getTime();
+      const t = demandDate(r as { created_at: string; raw_source_payload?: { internal_date?: number } | null }).getTime();
       return t >= start && t < end;
     }).length]);
   }
@@ -82,7 +83,7 @@ export default async function LeadReportPage() {
   const supabase = createServiceClient();
   const { data: leads } = await supabase
     .from("leads")
-    .select("created_at, event_type, event_date, location, status, description, ai_analysis")
+    .select("created_at, event_type, event_date, location, status, description, ai_analysis, raw_source_payload")
     .eq("source", "armut")
     .order("created_at", { ascending: false })
     .limit(500);

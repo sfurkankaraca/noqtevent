@@ -8,6 +8,7 @@ import {
   LEAD_STATUS_STYLES,
   followupDue,
   isStaleLead,
+  demandDate,
   type LeadStatus,
 } from "@/lib/leads";
 import LeadFilters from "./LeadFilters";
@@ -69,11 +70,13 @@ export default async function LeadsPage({
     call_due: Boolean(l.call_reminder_at && new Date(l.call_reminder_at) <= now),
     city: cityOf(l.location),
     stale: isStaleLead(l as { status: string; created_at: string; event_date: string | null }, now),
+    demand_date: demandDate(l as { created_at: string; raw_source_payload?: { internal_date?: number } | null }),
   })) as (LeadRow & {
     followup_due: number | null;
     call_due: boolean;
     city: string | null;
     stale: boolean;
+    demand_date: Date;
   })[];
 
   // Backfill ile giren, hiç işlem görmemiş eski talepler varsayılan görünümde
@@ -104,9 +107,9 @@ export default async function LeadsPage({
   rows = [...rows].sort((a, b) => {
     switch (sort) {
       case "date_desc":
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return b.demand_date.getTime() - a.demand_date.getTime();
       case "date_asc":
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        return a.demand_date.getTime() - b.demand_date.getTime();
       case "score_desc":
         return scoreOf(b) - scoreOf(a);
       case "score_asc":
@@ -128,7 +131,7 @@ export default async function LeadsPage({
         const sa = STATUS_ORDER[a.status] ?? 9;
         const sb = STATUS_ORDER[b.status] ?? 9;
         if (sa !== sb) return sa - sb;
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return b.demand_date.getTime() - a.demand_date.getTime();
       }
     }
   });
@@ -298,7 +301,7 @@ export default async function LeadsPage({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(lead.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {lead.demand_date.toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </td>
                   </tr>
                 );

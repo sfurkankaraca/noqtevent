@@ -293,3 +293,20 @@ export function isStaleLead(lead: {
   const ageDays = (now.getTime() - new Date(lead.created_at).getTime()) / 86_400_000;
   return ageDays > STALE_THRESHOLD_DAYS;
 }
+
+// ── Gerçek "geliş" (talep) tarihi vs. sistem giriş zamanı ────────────────────
+// "created_at" yalnızca lead'in BİZE ne zaman düştüğünü gösterir — backfill
+// gibi geçmiş taraması sırasında bu, gerçek talep zamanından tamamen kopuk
+// olabilir (bir yıllık e-posta tek günde işlenebilir). Armut için Gmail'in
+// kendi zaman damgası (raw_source_payload.internal_date) gerçek "geliş"
+// anıdır; bu alanı taşımayan kaynaklarda (WhatsApp/Website/Manuel) created_at
+// zaten doğrudur (o an gerçekten geldiği an). "Tarih" (event_date) bambaşka
+// bir şey — müşterinin talep ettiği HİZMET tarihi, bu fonksiyonla karıştırılmaz.
+export function demandDate(lead: {
+  created_at: string;
+  raw_source_payload?: { internal_date?: number } | null;
+}): Date {
+  const internal = lead.raw_source_payload?.internal_date;
+  if (typeof internal === "number" && internal > 0) return new Date(internal);
+  return new Date(lead.created_at);
+}

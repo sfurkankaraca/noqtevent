@@ -1,5 +1,5 @@
 import { createServiceClient, fetchAllRows } from "@/lib/supabase";
-import { LEAD_SOURCES, isStaleLead } from "@/lib/leads";
+import { LEAD_SOURCES, isStaleLead, demandDate } from "@/lib/leads";
 
 // Sales OS — kaynak-bağımsız günlük operasyon şeridi (orijinal tasarımın
 // "Dashboard" adımı + Phase 2 kaynak/dönüşüm analitiğinin temeli).
@@ -20,11 +20,14 @@ export default async function DashboardStrip() {
 
   const [rows, { data: sentEvents }] = await Promise.all([
     fetchAllRows((from, to) =>
-      supabase.from("leads").select("id, source, status, created_at, event_date").neq("status", "archived").range(from, to)
+      supabase.from("leads").select("id, source, status, created_at, event_date, raw_source_payload").neq("status", "archived").range(from, to)
     ),
     supabase.from("lead_events").select("lead_id, created_at").eq("type", "marked_sent"),
   ]);
-  const todayCount = rows.filter((l) => l.created_at >= startOfTodayIso()).length;
+  // Gerçek talebin geldiği gün — sistemin ne zaman işlediği değil (backfill
+  // sırasında created_at yanıltıcı olabilir, bkz. leads.ts demandDate()).
+  const todayIso = startOfTodayIso();
+  const todayCount = rows.filter((l) => demandDate(l).toISOString() >= todayIso).length;
 
   const won = rows.filter((l) => l.status === "won").length;
   const lost = rows.filter((l) => l.status === "lost").length;
@@ -35,11 +38,9 @@ export default async function DashboardStrip() {
   // ilanı gerçek bekleyen iş yükünü gizler.
   const pending = rows.filter((l) => PENDING_STATUSES.includes(l.status) && !isStaleLead(l)).length;
 
-  // Ortalama yanıt süresi: her lead'in İLK "gönderildi" olayı ile oluşturulma
-  // zamanı arasındaki fark (saat). Not: created_at → admin sisteme girdiği an;
-  // Armut'ta gerçek e-posta gelişiyle sistem girişi arasında ~10dk cron
-  // gecikmesi olabilir — kabul edilebilir sapma (M4d'deki gibi not düşülür).
-  const createdAt = new Map(rows.map((l) => [l.id, l.created_at]));
+  // Ortalama yanıt süresi: her lead'in İLK "gönderildi" olayı ile GERÇEK talep
+  // (e-posta geliş) zamanı arasındaki fark (saat) — sistem işleme anı değil.
+  const createdAt = new Map(rows.map((l) => [l.id, demandDate(l).toISOString()]));
   const firstSentAt = new Map<string, string>();
   for (const ev of sentEvents ?? []) {
     const existing = firstSentAt.get(ev.lead_id);
