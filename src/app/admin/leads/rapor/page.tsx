@@ -127,9 +127,14 @@ export default async function LeadReportPage() {
             Gmail&apos;den içeri alınan tüm Armut talepleri — son 500 kayıt üzerinden
           </p>
         </div>
-        <Link href="/admin/leads" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          ← Lead Inbox
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/admin/leads/analitik" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            📈 Tüm Kaynaklar Analitiği
+          </Link>
+          <Link href="/admin/leads" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            ← Lead Inbox
+          </Link>
+        </div>
       </div>
 
       <BackfillButton />

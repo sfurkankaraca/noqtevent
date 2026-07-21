@@ -117,10 +117,16 @@ export default async function LeadsPage({
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href="/admin/leads/analitik"
+            className="border border-border text-foreground px-4 py-2.5 rounded-full text-sm hover:border-foreground/40 transition-colors"
+          >
+            📈 Analitik
+          </Link>
+          <Link
             href="/admin/leads/rapor"
             className="border border-border text-foreground px-4 py-2.5 rounded-full text-sm hover:border-foreground/40 transition-colors"
           >
-            📊 Rapor
+            📊 Armut Raporu
           </Link>
           <Link
             href="/admin/leads/new"
