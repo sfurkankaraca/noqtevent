@@ -19,15 +19,24 @@ export default async function DashboardStrip() {
   const supabase = createServiceClient();
 
   const [rows, { data: sentEvents }] = await Promise.all([
+    // raw_source_payload'ın TAMAMINI çekme (satır başına ~8000 karakter ham
+    // e-posta) — binlerce satırda RSC render'ını kaynak limitine çarptırıp
+    // çökertiyor (canlıda yaşandı). Sadece internal_date'i JSON path ile al.
     fetchAllRows((from, to) =>
-      supabase.from("leads").select("id, source, status, created_at, event_date, raw_source_payload").neq("status", "archived").range(from, to)
+      supabase
+        .from("leads")
+        .select("id, source, status, created_at, event_date, internal_date:raw_source_payload->internal_date")
+        .neq("status", "archived")
+        .range(from, to)
     ),
     supabase.from("lead_events").select("lead_id, created_at").eq("type", "marked_sent"),
   ]);
   // Gerçek talebin geldiği gün — sistemin ne zaman işlediği değil (backfill
   // sırasında created_at yanıltıcı olabilir, bkz. leads.ts demandDate()).
   const todayIso = startOfTodayIso();
-  const todayCount = rows.filter((l) => demandDate(l).toISOString() >= todayIso).length;
+  const todayCount = rows.filter(
+    (l) => demandDate(l as { created_at: string; internal_date?: number | null }).toISOString() >= todayIso
+  ).length;
 
   const won = rows.filter((l) => l.status === "won").length;
   const lost = rows.filter((l) => l.status === "lost").length;
@@ -40,7 +49,9 @@ export default async function DashboardStrip() {
 
   // Ortalama yanıt süresi: her lead'in İLK "gönderildi" olayı ile GERÇEK talep
   // (e-posta geliş) zamanı arasındaki fark (saat) — sistem işleme anı değil.
-  const createdAt = new Map(rows.map((l) => [l.id, demandDate(l).toISOString()]));
+  const createdAt = new Map(
+    rows.map((l) => [l.id, demandDate(l as { created_at: string; internal_date?: number | null }).toISOString()])
+  );
   const firstSentAt = new Map<string, string>();
   for (const ev of sentEvents ?? []) {
     const existing = firstSentAt.get(ev.lead_id);

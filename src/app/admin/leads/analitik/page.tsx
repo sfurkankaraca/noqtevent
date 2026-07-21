@@ -35,7 +35,7 @@ function monthlyTrend(rows: Row[]): { label: string; count: number }[] {
   }
   const counts = new Map<string, number>();
   for (const r of rows) {
-    const d = demandDate(r as { created_at: string; raw_source_payload?: { internal_date?: number } | null });
+    const d = demandDate(r as { created_at: string; internal_date?: number | null });
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
@@ -56,10 +56,13 @@ function conversionRow(rows: Row[]) {
 
 export default async function LeadAnalyticsPage() {
   const supabase = createServiceClient();
+  // raw_source_payload'ın TAMAMINI çekme (satır başına ~8000 karakter ham
+  // e-posta) — binlerce satırda RSC render'ını kaynak limitine çarptırıp
+  // çökertiyor (canlıda yaşandı). Sadece internal_date'i JSON path ile al.
   const leads = await fetchAllRows<Row>((from, to) =>
     supabase
       .from("leads")
-      .select("id, source, status, event_type, location, created_at, raw_source_payload")
+      .select("id, source, status, event_type, location, created_at, internal_date:raw_source_payload->internal_date")
       .neq("status", "archived")
       .order("created_at", { ascending: false })
       .range(from, to)

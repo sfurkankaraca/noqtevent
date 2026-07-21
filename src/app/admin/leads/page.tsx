@@ -51,7 +51,17 @@ export default async function LeadsPage({
   let error: { message: string } | null = null;
   try {
     leads = await fetchAllRows<LeadRow>((from, to) => {
-      let q = supabase.from("leads").select("*").order("created_at", { ascending: false }).range(from, to);
+      // "*" YAZMA: raw_source_payload her satırda ~8000 karakter ham e-posta
+      // metni taşıyor — binlerce satırda bunu tam çekmek RSC render'ını
+      // kaynak limitine çarptırıp çökertiyor (canlıda yaşandı). Sadece gerçek
+      // "geliş" tarihi için gereken internal_date'i JSON path ile çekiyoruz.
+      let q = supabase
+        .from("leads")
+        .select(
+          "id, source, status, created_at, event_type, event_date, location, description, customer_name, ai_analysis, call_reminder_at, sent_at, last_followup_at, followup_count, internal_date:raw_source_payload->internal_date"
+        )
+        .order("created_at", { ascending: false })
+        .range(from, to);
       if (filter && (LEAD_STATUSES as readonly string[]).includes(filter)) {
         q = q.eq("status", filter);
       } else {
@@ -70,7 +80,7 @@ export default async function LeadsPage({
     call_due: Boolean(l.call_reminder_at && new Date(l.call_reminder_at) <= now),
     city: cityOf(l.location),
     stale: isStaleLead(l as { status: string; created_at: string; event_date: string | null }, now),
-    demand_date: demandDate(l as { created_at: string; raw_source_payload?: { internal_date?: number } | null }),
+    demand_date: demandDate(l as { created_at: string; internal_date?: number | null }),
   })) as (LeadRow & {
     followup_due: number | null;
     call_due: boolean;

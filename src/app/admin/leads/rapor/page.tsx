@@ -45,7 +45,7 @@ function weeklyTrend(rows: Row[]): [string, number][] {
     const end = now - w * weekMs;
     const label = w === 0 ? "Bu hafta" : `${w} hf önce`;
     trend.push([label, rows.filter((r) => {
-      const t = demandDate(r as { created_at: string; raw_source_payload?: { internal_date?: number } | null }).getTime();
+      const t = demandDate(r as { created_at: string; internal_date?: number | null }).getTime();
       return t >= start && t < end;
     }).length]);
   }
@@ -83,7 +83,9 @@ export default async function LeadReportPage() {
   const supabase = createServiceClient();
   const { data: leads } = await supabase
     .from("leads")
-    .select("created_at, event_type, event_date, location, status, description, ai_analysis, raw_source_payload")
+    // raw_source_payload'ın TAMAMINI çekme (satır başına ~8000 karakter ham
+    // e-posta) — sadece gerçek "geliş" tarihi için gereken internal_date'i al.
+    .select("created_at, event_type, event_date, location, status, description, ai_analysis, internal_date:raw_source_payload->internal_date")
     .eq("source", "armut")
     .order("created_at", { ascending: false })
     .limit(500);

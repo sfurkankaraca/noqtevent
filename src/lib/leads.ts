@@ -302,11 +302,17 @@ export function isStaleLead(lead: {
 // anıdır; bu alanı taşımayan kaynaklarda (WhatsApp/Website/Manuel) created_at
 // zaten doğrudur (o an gerçekten geldiği an). "Tarih" (event_date) bambaşka
 // bir şey — müşterinin talep ettiği HİZMET tarihi, bu fonksiyonla karıştırılmaz.
+// İki şekilde de kabul eder: düz "internal_date" alanı (PostgREST JSON-path
+// seçimiyle — raw_source_payload'ın TAMAMINI (her satırda ~8000 karakter ham
+// e-posta metni) çekmeden sadece bu sayıyı almak için tercih edilir, bkz.
+// page.tsx/DashboardStrip.tsx) ya da iç içe raw_source_payload.internal_date
+// (tek satır çekimlerinde, ör. lead detay sayfası zaten "*" kullanıyor).
 export function demandDate(lead: {
   created_at: string;
+  internal_date?: number | null;
   raw_source_payload?: { internal_date?: number } | null;
 }): Date {
-  const internal = lead.raw_source_payload?.internal_date;
+  const internal = lead.internal_date ?? lead.raw_source_payload?.internal_date;
   if (typeof internal === "number" && internal > 0) return new Date(internal);
   return new Date(lead.created_at);
 }
