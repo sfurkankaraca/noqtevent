@@ -167,3 +167,62 @@ export async function ingestLead(input: IngestLeadInput): Promise<IngestResult> 
 
   return { outcome: "created", id: created.id };
 }
+
+export type ReanalyzeStepResult = {
+  done: boolean;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  remaining: number;
+};
+
+// Backfill'in ağır AI yükü altında bazı lead'lerin analizi başarısız olup
+// 'new' durumunda takılı kalabiliyor (bkz. ingestLead — hata lead'i düşürmez
+// ama status'u da ilerletmez). Bu, o lead'leri küçük gruplar halinde yeniden
+// dener. Backfill butonuyla aynı desen: tek adım işler, istemci bitene kadar
+// döngüyle çağırır.
+export async function reanalyzeStuckLeadsStep(limit = 15): Promise<ReanalyzeStepResult> {
+  const supabase = createServiceClient();
+
+  const { data: stuck, count } = await supabase
+    .from("leads")
+    .select("*", { count: "exact" })
+    .eq("status", "new")
+    .order("created_at", { ascending: true })
+    .limit(limit);
+
+  if (!stuck || stuck.length === 0) {
+    return { done: true, processed: 0, succeeded: 0, failed: 0, remaining: 0 };
+  }
+
+  let succeeded = 0;
+  let failed = 0;
+  for (const lead of stuck) {
+    try {
+      const result = await runAnalysisAndReply(lead);
+      if (result) {
+        await supabase
+          .from("leads")
+          .update({
+            ai_analysis: result.analysis,
+            suggested_reply: result.reply,
+            reply_history: [{ text: result.reply, generated_at: new Date().toISOString(), edited: false }],
+            status: "needs_review",
+            ...(lead.event_type ? {} : result.analysis.event_type_guess ? { event_type: result.analysis.event_type_guess } : {}),
+          })
+          .eq("id", lead.id);
+        await logLeadEvent(lead.id, "ai_analyzed", { probability: result.analysis.probability, retried: true });
+        await logLeadEvent(lead.id, "reply_generated", { chars: result.reply.length, retried: true });
+        succeeded++;
+      } else {
+        failed++;
+      }
+    } catch (err) {
+      failed++;
+      console.error(`Yeniden analiz hatası (${lead.id}):`, err);
+    }
+  }
+
+  const remaining = Math.max(0, (count ?? stuck.length) - stuck.length);
+  return { done: remaining === 0 && failed === 0, processed: stuck.length, succeeded, failed, remaining };
+}

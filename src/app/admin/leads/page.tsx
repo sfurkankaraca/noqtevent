@@ -13,6 +13,7 @@ import {
 import LeadFilters from "./LeadFilters";
 import DashboardStrip from "./DashboardStrip";
 import StaleBanner from "./StaleBanner";
+import ReanalyzeBanner from "./ReanalyzeBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,9 @@ export default async function LeadsPage({
   const showStale = stale === "1";
   const supabase = createServiceClient();
 
-  let query = supabase.from("leads").select("*").order("created_at", { ascending: false });
+  // Supabase/PostgREST varsayılanı 1000 satırda kesiyor — backfill sonrası
+  // binlerce lead varken bu sayıları/eski-tespitini sessizce bozar.
+  let query = supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(5000);
   if (filter && (LEAD_STATUSES as readonly string[]).includes(filter)) {
     query = query.eq("status", filter);
   } else {
@@ -61,6 +64,7 @@ export default async function LeadsPage({
   // gizlenir — canlı inbox'ı yüzlerce ölü Armut ilanı basmasın. "Eski/Pasif"
   // filtresiyle (?stale=1) ayrıca görülebilir ve toplu arşivlenebilir.
   const staleCount = withMeta.filter((l) => l.stale).length;
+  const stuckNewCount = withMeta.filter((l) => l.status === "new").length;
 
   // Filtre seçenekleri: mevcut durum görünümündeki verilerden türetilir, seçili
   // filtre uygulanmadan — böylece dropdown daralıp seçenek kaybolmaz.
@@ -147,6 +151,8 @@ export default async function LeadsPage({
       </div>
 
       <DashboardStrip />
+
+      {stuckNewCount > 0 && <ReanalyzeBanner count={stuckNewCount} />}
 
       {/* Durum filtreleri */}
       <div className="flex flex-wrap gap-2">

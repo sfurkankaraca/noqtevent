@@ -19,7 +19,7 @@ export default async function DashboardStrip() {
   const supabase = createServiceClient();
 
   const [{ data: leads }, { data: sentEvents }] = await Promise.all([
-    supabase.from("leads").select("id, source, status, created_at, event_date").neq("status", "archived"),
+    supabase.from("leads").select("id, source, status, created_at, event_date").neq("status", "archived").limit(5000),
     supabase.from("lead_events").select("lead_id, created_at").eq("type", "marked_sent"),
   ]);
 

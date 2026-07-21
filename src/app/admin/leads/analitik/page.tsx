@@ -72,7 +72,7 @@ export default async function LeadAnalyticsPage() {
     .select("id, source, status, event_type, location, created_at, raw_source_payload")
     .neq("status", "archived")
     .order("created_at", { ascending: false })
-    .limit(2000);
+    .limit(5000);
 
   const rows = (leads ?? []) as Row[];
 

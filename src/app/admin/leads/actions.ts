@@ -226,3 +226,13 @@ export async function archiveStaleLeads(): Promise<{ archived: number }> {
   revalidatePath("/admin/leads");
   return { archived: staleIds.length };
 }
+
+// ── Takılı kalan (analiz edilememiş) lead'leri yeniden dene ──────────────────
+
+export async function reanalyzeStuckLeadsStep(limit?: number) {
+  await requireAdmin();
+  const { reanalyzeStuckLeadsStep: run } = await import("@/lib/leadPipeline");
+  const result = await run(limit);
+  revalidatePath("/admin/leads");
+  return result;
+}
