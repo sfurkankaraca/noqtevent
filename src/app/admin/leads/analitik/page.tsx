@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createServiceClient, fetchAllRows } from "@/lib/supabase";
 import { EVENT_TYPE_LABELS } from "@/lib/eventTypeLabels";
-import { LEAD_SOURCES, demandDate } from "@/lib/leads";
+import { LEAD_SOURCES } from "@/lib/leads";
+import { getMonthlyTrend, monthKeyOf, monthLabelOf } from "@/lib/monthlyStats";
+import MonthlyTrendChart from "./MonthlyTrendChart";
 
 // Sales OS Phase 2 — kaynak-bağımsız analitik. /rapor Armut'a özel derin
 // analiz + AI yorumu içindir; bu sayfa TÜM kaynakları kapsayan aylık trend,
@@ -23,23 +25,13 @@ function Bar({ value, max, className = "bg-foreground" }: { value: number; max: 
   );
 }
 
-function monthlyTrend(rows: Row[]): { label: string; count: number }[] {
+function last12MonthKeys(): string[] {
   const now = new Date();
-  const buckets: { key: string; label: string }[] = [];
+  const keys: string[] = [];
   for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    buckets.push({
-      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-      label: d.toLocaleDateString("tr-TR", { month: "short", year: "2-digit" }),
-    });
+    keys.push(monthKeyOf(new Date(now.getFullYear(), now.getMonth() - i, 1)));
   }
-  const counts = new Map<string, number>();
-  for (const r of rows) {
-    const d = demandDate(r as { created_at: string; internal_date?: number | null });
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return buckets.map((b) => ({ label: b.label, count: counts.get(b.key) ?? 0 }));
+  return keys;
 }
 
 function conversionRow(rows: Row[]) {
@@ -70,9 +62,15 @@ export default async function LeadAnalyticsPage() {
 
   const rows = leads;
 
-  // ── Aylık trend (tüm kaynaklar) ──
-  const trend = monthlyTrend(rows);
-  const trendMax = Math.max(1, ...trend.map((t) => t.count));
+  // ── Aylık trend (tüm kaynaklar) — biten aylar monthly_lead_stats'tan
+  // önbellekli okunur, sadece içinde bulunulan ay canlı hesaplanır ──
+  const monthKeys = last12MonthKeys();
+  const trendMap = await getMonthlyTrend(monthKeys);
+  const trendBars = monthKeys.map((key) => ({
+    key,
+    label: monthLabelOf(key),
+    count: trendMap.get(key)?.total ?? 0,
+  }));
 
   // ── Kaynak bazlı dönüşüm ──
   const sourceIds = [...new Set(rows.map((r) => r.source))];
@@ -114,23 +112,7 @@ export default async function LeadAnalyticsPage() {
       </div>
 
       {/* Aylık trend */}
-      <div className="bg-white rounded-2xl border border-border p-5">
-        <p className="text-xs text-muted-foreground tracking-[0.15em] uppercase font-medium mb-5">
-          Aylık Talep Trendi — Son 12 Ay
-        </p>
-        <div className="flex items-end gap-2 h-32">
-          {trend.map((t) => (
-            <div key={t.label} className="flex-1 flex flex-col items-center justify-end gap-1.5">
-              <span className="text-[10px] text-muted-foreground tabular-nums">{t.count || ""}</span>
-              <div
-                className="w-full bg-foreground rounded-t-md min-h-[2px]"
-                style={{ height: `${Math.max(2, (t.count / trendMax) * 100)}px` }}
-              />
-              <span className="text-[10px] text-muted-foreground whitespace-nowrap">{t.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <MonthlyTrendChart bars={trendBars} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Kaynak bazlı dönüşüm */}

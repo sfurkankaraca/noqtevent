@@ -246,3 +246,12 @@ export async function reprocessJunkArmutStep() {
   revalidatePath("/admin/leads");
   return result;
 }
+
+// ── Aylık trend grafiği — bir aya tıklandığında o ayın lead'lerini getir ────
+
+export async function getLeadsForMonthAction(monthKey: string) {
+  await requireAdmin();
+  const { getLeadsForMonth } = await import("@/lib/monthlyStats");
+  const rows = await getLeadsForMonth(monthKey);
+  return rows.map((r) => ({ ...r, demand_date: r.demand_date.toISOString() }));
+}
