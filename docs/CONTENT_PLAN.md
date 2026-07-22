@@ -1,7 +1,7 @@
 # noqta.club — Magazine Content Plan
 
 > Status: v1 (2026-07-22). Editorial plan for the magazine pillar of noqta.club (see PRODUCT_VISION.md §4.2).
-> Launch surface: the existing `/journal` route on noqt.events, under electronic-music categories, until noqta.club ships as its own product.
+> Launch surface: `https://www.noqta.club/journal` (repo: `~/noqt/noqta-repo`, github `sfurkankaraca/Furkan`). Articles live in that repo's `lib/journal.ts`; this repo's `scripts/seed-club-journal.ts` is the content source of record. Do NOT publish these on noqt.events — brand boundary (PRODUCT_VISION.md §4).
 
 ## Editorial identity
 
@@ -31,7 +31,7 @@ A new-generation Turkish-language digital magazine for the electronic music worl
 2. **Own expertise:** DJ Academy curriculum knowledge → guides.
 3. **External (secondary):** RA/Songkick/venue announcements → event roundups; Bandcamp/Beatport/SoundCloud → Turkish release roundups; international press → commentary (never translation).
 
-## Launch batch (seeded 2026-07-22) — 10 articles
+## Launch batch (published on noqta.club 2026-07-22) — 10 articles
 
 | # | Slug | Category | Target query |
 |---|---|---|---|
