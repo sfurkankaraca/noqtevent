@@ -56,8 +56,10 @@ Products are separated because they differ on all three axes that justify a prod
 
 ### 4.2 noqta.club — education & media platform
 
-- **What it is:** DJ Academy, artist education, courses, workshops, blog/journal, podcast, videos, industry content, artist resources.
-- **Audience:** DJs, artists, producers, beginners, people interested in music and creative careers.
+- **What it is:** Two intertwined halves under one brand:
+  - **Education:** DJ Academy, artist education, courses, workshops, artist resources.
+  - **Magazine:** a new-generation digital magazine covering the electronic music world — editorial features, artist interviews, scene/industry coverage, blog/journal, podcast, videos. Not a static blog: a contemporary media brand in its own right, and the audience-building top of funnel for the education side.
+- **Audience:** DJs, artists, producers, beginners, people interested in music and creative careers; the magazine additionally targets the broader electronic music audience (listeners, scene followers).
 - **Revenue model:** B2C content/education — course sales, subscriptions, possibly sponsorship.
 - **Explicitly NOT:** a public event platform (this was an earlier idea, now abandoned).
 - **Role in flywheel:** generates learning, expertise, and creator signals. Feeds verified skill into the ecosystem (e.g., a completed course can warrant a supplier listing in noqt.events).
