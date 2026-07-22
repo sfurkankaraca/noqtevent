@@ -56,12 +56,14 @@ Products are separated because they differ on all three axes that justify a prod
 
 ### 4.2 noqta.club — education & media platform
 
-- **What it is:** Two intertwined halves under one brand:
+- **What it is:** Three intertwined pillars under one brand — everything a person invested in electronic music needs:
   - **Education:** DJ Academy, artist education, courses, workshops, artist resources.
   - **Magazine:** a new-generation digital magazine covering the electronic music world — editorial features, artist interviews, scene/industry coverage, blog/journal, podcast, videos. Not a static blog: a contemporary media brand in its own right, and the audience-building top of funnel for the education side.
+  - **Vertical network:** a professional/learning-oriented network for the electronic music vertical — profiles and portfolios (mixes, releases, credentials), mentor–student connections, DJ–organizer/venue connections, collaboration discovery. Think LinkedIn/SoundCloud for this scene, not a general social feed.
 - **Audience:** DJs, artists, producers, beginners, people interested in music and creative careers; the magazine additionally targets the broader electronic music audience (listeners, scene followers).
-- **Revenue model:** B2C content/education — course sales, subscriptions, possibly sponsorship.
-- **Explicitly NOT:** a public event platform (this was an earlier idea, now abandoned).
+- **Revenue model:** B2C content/education — course sales, subscriptions, possibly sponsorship. Network features support subscription value (pro profiles, visibility), not a separate revenue line initially.
+- **Boundary vs. NOQT Social (deliberate, defend it):** noqta.club owns the *vertical, professional/learning* network for electronic music (career-shaped connections: mentor, collaborator, booking-relevant visibility). NOQT Social owns *general* social discovery — friendship, communities, interest groups, event discovery, ticketing — including for electronic music fans. When a connection is about career/craft, it belongs here; when it is about socializing and experiences, it belongs in NOQT Social.
+- **Explicitly NOT:** a public event platform (this was an earlier idea, now abandoned), and not a general-purpose social network.
 - **Role in flywheel:** generates learning, expertise, and creator signals. Feeds verified skill into the ecosystem (e.g., a completed course can warrant a supplier listing in noqt.events).
 
 ### 4.3 NOQT Social — consumer social discovery
@@ -104,7 +106,7 @@ Products are separated because they differ on all three axes that justify a prod
 ## 7. Explicit Non-goals
 
 1. noqt.events will **not** become a public event platform. No public listings, no consumer ticketing.
-2. noqta.club will **not** become an events product. Education and media only.
+2. noqta.club will **not** become an events product, nor a general social network. Education, media, and the electronic-music vertical professional network only.
 3. NOQT Social is **not** a dating app. Dating is one feature inside social discovery.
 4. No fourth product until the three above are live and generating facts. "Communities" and "Ticketing" are capabilities inside NOQT Social, not products.
 5. Trust is never stored as a score in the canonical data. It is always recomputed from history.
@@ -116,6 +118,7 @@ Products are separated because they differ on all three axes that justify a prod
 - [x] **Dijital Davetiye and Memory Drive remain modules of noqt.events for now**, with the explicit option to separate them into standalone products later. Their current architectural independence (own tables, own routes) must be preserved so that later separation stays cheap.
 - [x] **Product sequencing: NOQT Social is the second product to be developed; noqta.club follows later.** noqt.events remains the revenue engine meanwhile.
 - [x] **Product names are provisional.** "noqta.club" and "NOQT Social" are working names, not final branding. Do not hardcode branding assumptions into schemas or identifiers (use neutral `product_source` values).
+- [x] **noqta.club includes a vertical network (ratified 2026-07-22):** profiles, portfolios, mentor–student and DJ–organizer connections for the electronic music vertical live in noqta.club. General social discovery, communities, and event discovery remain NOQT Social's domain (see §4.2 boundary).
 - [x] **Documentation remains in English.** (Codebase language unchanged; this decision covers `/docs` only.)
 
 ## 9. Remaining Open Decisions
