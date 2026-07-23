@@ -6,7 +6,7 @@ import { createServiceClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { TERMS_VERSION, calcCashPrice, calcPrepayPrice, isPrepayAvailable } from "@/lib/bookingTerms";
 import { rateLimit } from "@/lib/rateLimit";
-import { sendPaymentClaimNotification, sendOfferAcceptedEmails, sendOfferOtpEmail } from "@/lib/email";
+import { sendPaymentClaimNotification, sendOfferAcceptedEmails, sendOfferOtpEmail, sendOfferSelectionNotification } from "@/lib/email";
 import { createAndStoreContract } from "@/lib/contract";
 import { generateOfferOtp, verifyOfferOtp } from "@/lib/offerOtp";
 
@@ -17,6 +17,71 @@ async function getRequestMeta() {
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? hdrs.get("x-real-ip") ?? "unknown";
   const userAgent = hdrs.get("user-agent") ?? null;
   return { ip, userAgent };
+}
+
+// Müşteri, teklifte sunulan sanatçı adayları ve konsept görsellerinden seçimini gönderir.
+// Düşük hassasiyetli bir tercih bildirimi olduğundan OTP gerekmez; slug zaten tahmin edilemez.
+export async function submitOfferSelections(
+  slug: string,
+  data: { artistId?: string | null; conceptId?: string | null; note?: string | null }
+) {
+  const { ip } = await getRequestMeta();
+  const { ok } = rateLimit(ip, "offer-selection", { max: 10, windowMs: 10 * 60_000 });
+  if (!ok) throw new Error("Çok fazla istek. Lütfen birkaç dakika bekleyin.");
+
+  if (!data.artistId && !data.conceptId) throw new Error("En az bir seçim yapın.");
+
+  const supabase = createServiceClient();
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("id, client_name, offer_artist_ids, offer_concept_category")
+    .eq("offer_slug", slug)
+    .single();
+  if (error || !booking) throw new Error("Teklif bulunamadı.");
+
+  // Seçimler yalnızca bu teklifte sunulan seçenekler arasından olabilir
+  let artistName: string | null = null;
+  if (data.artistId) {
+    const offered: string[] = booking.offer_artist_ids ?? [];
+    if (!offered.includes(data.artistId)) throw new Error("Geçersiz sanatçı seçimi.");
+    const { data: artist } = await supabase.from("dj_profiles").select("name").eq("id", data.artistId).single();
+    artistName = artist?.name ?? null;
+  }
+
+  let conceptName: string | null = null;
+  if (data.conceptId) {
+    const { data: concept } = await supabase
+      .from("offer_concepts")
+      .select("name, category")
+      .eq("id", data.conceptId)
+      .single();
+    if (!concept || concept.category !== booking.offer_concept_category) {
+      throw new Error("Geçersiz konsept seçimi.");
+    }
+    conceptName = concept.name;
+  }
+
+  const note = data.note?.trim().slice(0, 500) || null;
+  const { error: updateError } = await supabase
+    .from("bookings")
+    .update({
+      offer_selected_artist_id: data.artistId || null,
+      offer_selected_concept_id: data.conceptId || null,
+      offer_selection_note: note,
+      offer_selection_at: new Date().toISOString(),
+    })
+    .eq("id", booking.id);
+  if (updateError) throw new Error("Seçim kaydedilemedi. Lütfen tekrar deneyin.");
+
+  await sendOfferSelectionNotification({
+    clientName: booking.client_name,
+    bookingId: booking.id,
+    artistName,
+    conceptName,
+    note,
+  }).catch((err) => console.error("[offer-selection]", err));
+
+  revalidatePath(`/teklif/${slug}`);
 }
 
 // Onay öncesi e-posta doğrulama kodu gönderir — onaylayanın e-posta

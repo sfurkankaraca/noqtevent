@@ -297,6 +297,31 @@ export async function sendOfferEmail(bookingId: string) {
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
+// Teklif sayfasında müşteriye sunulacak sanatçı adayları ve konsept kategorisi
+export async function updateOfferOptions(
+  bookingId: string,
+  options: { artistIds: string[]; conceptCategory: string | null }
+) {
+  await requireAdmin();
+  const supabase = createServiceClient();
+  const { data: booking } = await supabase.from("bookings").select("offer_slug").eq("id", bookingId).single();
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      offer_artist_ids: options.artistIds,
+      offer_concept_category: options.conceptCategory || null,
+    })
+    .eq("id", bookingId);
+  if (error) {
+    if (error.message.includes("column")) {
+      throw new Error("Teklif seçenekleri migration'ı henüz Supabase'de çalıştırılmadı (20260723040000_add_offer_options.sql).");
+    }
+    throw new Error(error.message);
+  }
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  if (booking?.offer_slug) revalidatePath(`/teklif/${booking.offer_slug}`);
+}
+
 export async function deleteBooking(id: string) {
   await requireAdmin();
   const supabase = createServiceClient();

@@ -1026,6 +1026,40 @@ export async function sendOfferViewedNotification(data: {
   });
 }
 
+// Müşteri teklif sayfasından sanatçı/konsept seçimini gönderdiğinde admin'e bildirim
+export async function sendOfferSelectionNotification(data: {
+  clientName: string;
+  bookingId: string;
+  artistName: string | null;
+  conceptName: string | null;
+  note: string | null;
+}) {
+  const resend = getResend();
+  if (!resend) return;
+
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
+  const rows = [
+    data.artistName ? `<tr><td style="padding:8px 0;color:#666;">Seçilen Sanatçı</td><td style="padding:8px 0;font-weight:600;">${data.artistName}</td></tr>` : "",
+    data.conceptName ? `<tr><td style="padding:8px 0;color:#666;">Seçilen Konsept</td><td style="padding:8px 0;font-weight:600;">${data.conceptName}</td></tr>` : "",
+    data.note ? `<tr><td style="padding:8px 0;color:#666;">Not</td><td style="padding:8px 0;">${data.note}</td></tr>` : "",
+  ].join("");
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject: `🎯 Teklif seçimi geldi — ${data.clientName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1a1a1a;">
+        <h1 style="font-size:20px;font-weight:700;margin-bottom:16px;">Müşteri tercihini gönderdi</h1>
+        <p style="font-size:14px;color:#444;"><strong>${data.clientName}</strong> teklif sayfasındaki seçeneklerden tercihini yaptı:</p>
+        <table style="width:100%;font-size:14px;margin-top:12px;">${rows}</table>
+        <p style="margin-top:20px;">
+          <a href="${BASE}/admin/bookings/${data.bookingId}" style="background:#1a1a1a;color:#fff;padding:12px 24px;border-radius:100px;text-decoration:none;font-size:14px;">Booking'i Aç →</a>
+        </p>
+      </div>`,
+  });
+}
+
 // Etkinlik sonrası değerlendirme isteği
 export async function sendReviewRequestEmail(data: {
   clientName: string;

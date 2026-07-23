@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { generateOfferLink, sendOfferEmail } from "../actions";
+import { generateOfferLink, sendOfferEmail, updateOfferOptions } from "../actions";
 import { calcCashPrice, calcPrepayPrice } from "@/lib/bookingTerms";
+
+const CONCEPT_CATEGORIES: { value: string; label: string }[] = [
+  { value: "", label: "— Konsept gösterme —" },
+  { value: "nisan", label: "Nişan" },
+  { value: "evde-nisan", label: "Evde Nişan" },
+  { value: "evlilik-teklifi", label: "Evlilik Teklifi" },
+  { value: "kurumsal", label: "Kurumsal Etkinlik" },
+];
 
 type Props = {
   bookingId: string;
@@ -12,9 +20,16 @@ type Props = {
   prepayMarkupRate: number;
   initialSlug: string | null;
   paymentPlan: string | null;
+  artists?: { id: string; name: string; performer_type: string | null }[];
+  initialArtistIds?: string[];
+  initialConceptCategory?: string | null;
+  selection?: { artistName: string | null; conceptName: string | null; note: string | null; at: string | null } | null;
 };
 
-export default function OfferManager({ bookingId, clientName, clientEmail, fee, prepayMarkupRate, initialSlug, paymentPlan }: Props) {
+export default function OfferManager({
+  bookingId, clientName, clientEmail, fee, prepayMarkupRate, initialSlug, paymentPlan,
+  artists = [], initialArtistIds = [], initialConceptCategory = null, selection = null,
+}: Props) {
   const toSlug = (s: string) =>
     s.toLowerCase()
       .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
@@ -27,6 +42,27 @@ export default function OfferManager({ bookingId, clientName, clientEmail, fee, 
   const [saved, setSaved] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
+  const [artistIds, setArtistIds] = useState<string[]>(initialArtistIds);
+  const [conceptCategory, setConceptCategory] = useState(initialConceptCategory ?? "");
+  const [optionsSaved, setOptionsSaved] = useState(false);
+
+  const toggleArtist = (id: string) => {
+    setArtistIds((prev) => (prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]));
+  };
+
+  const handleSaveOptions = () => {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await updateOfferOptions(bookingId, { artistIds, conceptCategory: conceptCategory || null });
+        setOptionsSaved(true);
+        setTimeout(() => setOptionsSaved(false), 2000);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Kayıt başarısız");
+      }
+    });
+  };
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://www.noqt.events";
   const offerUrl = slug ? `${origin}/teklif/${slug}` : null;
@@ -111,6 +147,62 @@ export default function OfferManager({ bookingId, clientName, clientEmail, fee, 
         </>
       )}
       {!clientEmail && <p className="text-xs text-muted-foreground">Müşteri e-postası yok, otomatik gönderim yapılamaz.</p>}
+
+      {/* Teklif seçenekleri: müşteriye sunulacak sanatçı adayları + konsept kategorisi */}
+      <div className="border-t border-border pt-3">
+        <button onClick={() => setShowOptions((p) => !p)}
+          className="flex items-center justify-between w-full text-xs font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors">
+          <span>Teklif Seçenekleri (sanatçı & konsept)</span>
+          <span>{showOptions ? "−" : "+"}</span>
+        </button>
+
+        {selection?.at && (
+          <div className="mt-2 rounded-xl bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-800 space-y-0.5">
+            <p className="font-medium">✓ Müşteri tercihini gönderdi ({new Date(selection.at).toLocaleDateString("tr-TR")})</p>
+            {selection.artistName && <p>Sanatçı: {selection.artistName}</p>}
+            {selection.conceptName && <p>Konsept: {selection.conceptName}</p>}
+            {selection.note && <p>Not: {selection.note}</p>}
+          </div>
+        )}
+
+        {showOptions && (
+          <div className="mt-3 space-y-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Sanatçı adayları (müşteri portfolyolarını görüp seçebilir)</p>
+              <div className="max-h-44 overflow-y-auto rounded-xl border border-border divide-y divide-border">
+                {artists.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-3">Aktif sanatçı bulunamadı.</p>
+                ) : (
+                  artists.map((a) => (
+                    <label key={a.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-secondary/30 transition-colors">
+                      <input type="checkbox" checked={artistIds.includes(a.id)} onChange={() => toggleArtist(a.id)}
+                        className="w-4 h-4 rounded border-border" />
+                      <span className="text-sm text-foreground flex-1">{a.name}</span>
+                      {a.performer_type && <span className="text-xs text-muted-foreground">{a.performer_type}</span>}
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Konsept görselleri kategorisi</p>
+              <select value={conceptCategory} onChange={(e) => setConceptCategory(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:border-foreground/40">
+                {CONCEPT_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <button onClick={handleSaveOptions} disabled={isPending}
+              className="w-full py-2 rounded-xl border border-border text-sm text-foreground hover:bg-secondary transition-colors disabled:opacity-50">
+              {isPending ? "Kaydediliyor…" : optionsSaved ? "✓ Kaydedildi" : "Seçenekleri Kaydet"}
+            </button>
+            <p className="text-xs text-muted-foreground">
+              Seçilen sanatçılar teklif sayfasında portfolyo kartlarıyla, konsept kategorisi de görsel seçenekler olarak müşteriye sunulur.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

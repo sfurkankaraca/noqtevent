@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import {
   calcCashPrice, calcPrepayPrice, isPrepayAvailable, daysUntil,
   TERMS_TEXT, PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_GRACE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
 } from "@/lib/bookingTerms";
-import { acceptOffer, notifyPaymentClaim, sendOfferOtp, startOnlinePayment } from "./actions";
+import { acceptOffer, notifyPaymentClaim, sendOfferOtp, startOnlinePayment, submitOfferSelections } from "./actions";
 import type { BookingItem } from "@/lib/bookingItems";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -13,12 +14,29 @@ type Booking = Record<string, any>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Agreement = Record<string, any> | null;
 
+export type OfferArtist = {
+  id: string;
+  name: string;
+  performer_type: string | null;
+  photo_url: string | null;
+  bio: string | null;
+  speciality: string | null;
+  slug: string | null;
+};
+
+export type OfferConcept = {
+  id: string;
+  name: string;
+  image_url: string;
+};
+
 const fmt = (n: number) => n.toLocaleString("tr-TR") + " ₺";
 
 type BankInfo = { iban: string; accountName: string; bankName: string | null } | null;
 
 export default function OfferView({
   booking, slug, items = [], agreement, bankInfo = null, expired = false, paymentResult = null, paymentMessage = null,
+  offerArtists = [], offerConcepts = [],
 }: {
   booking: Booking;
   slug: string;
@@ -28,6 +46,8 @@ export default function OfferView({
   expired?: boolean;
   paymentResult?: "success" | "error" | null;
   paymentMessage?: string | null;
+  offerArtists?: OfferArtist[];
+  offerConcepts?: OfferConcept[];
 }) {
   const [selectedPlan, setSelectedPlan] = useState<"cash" | "prepay">(
     agreement?.payment_plan ?? (isPrepayAvailable(booking.event_date) ? "prepay" : "cash")
@@ -46,6 +66,28 @@ export default function OfferView({
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(paymentResult === "error" ? (paymentMessage ?? "Ödeme tamamlanamadı.") : null);
   const [copied, setCopied] = useState<string | null>(null);
+
+  // Sanatçı/konsept seçimi — mevcut kayıtlı seçim varsa onunla başlar
+  const [selArtistId, setSelArtistId] = useState<string | null>(booking.offer_selected_artist_id ?? null);
+  const [selConceptId, setSelConceptId] = useState<string | null>(booking.offer_selected_concept_id ?? null);
+  const [selNote, setSelNote] = useState("");
+  const [selSubmitting, setSelSubmitting] = useState(false);
+  const [selSubmitted, setSelSubmitted] = useState(!!booking.offer_selection_at);
+  const [selError, setSelError] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<OfferConcept | null>(null);
+
+  const handleSubmitSelections = async () => {
+    setSelError(null);
+    setSelSubmitting(true);
+    try {
+      await submitOfferSelections(slug, { artistId: selArtistId, conceptId: selConceptId, note: selNote });
+      setSelSubmitted(true);
+    } catch (e) {
+      setSelError(e instanceof Error ? e.message : "Gönderilemedi");
+    } finally {
+      setSelSubmitting(false);
+    }
+  };
 
   const copyToClipboard = async (key: string, value: string) => {
     try {
@@ -205,6 +247,191 @@ export default function OfferView({
             >
               Teklifi PDF olarak indir
             </a>
+          </div>
+        )}
+
+        {/* Sanatçı seçenekleri — admin'in bu teklife eklediği adaylar, portfolyo linkiyle */}
+        {offerArtists.length > 0 && (
+          <div className="bg-white rounded-2xl border border-border p-6 mb-8">
+            <p className="text-sm font-semibold text-foreground mb-1">Sanatçı Seçenekleri</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Etkinliğiniz için önerdiğimiz sanatçılar — portfolyolarını inceleyip beğendiğinizi işaretleyin.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {offerArtists.map((artist) => {
+                const selected = selArtistId === artist.id;
+                return (
+                  <div key={artist.id}
+                    className={`rounded-xl border-2 overflow-hidden transition-all ${
+                      selected ? "border-foreground" : "border-border"
+                    }`}>
+                    {artist.photo_url && (
+                      <div className="relative aspect-[4/3] bg-secondary/30">
+                        <Image src={artist.photo_url} alt={artist.name} fill className="object-cover" unoptimized />
+                      </div>
+                    )}
+                    <div className="p-4 space-y-2">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{artist.name}</p>
+                        {(artist.speciality || artist.performer_type) && (
+                          <p className="text-xs text-muted-foreground">{artist.speciality ?? artist.performer_type}</p>
+                        )}
+                      </div>
+                      {artist.bio && (
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{artist.bio}</p>
+                      )}
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setSelArtistId(selected ? null : artist.id)}
+                          className={`flex-1 py-2 rounded-full text-xs font-medium transition-colors ${
+                            selected
+                              ? "bg-foreground text-background"
+                              : "border border-border text-foreground hover:border-foreground/40"
+                          }`}
+                        >
+                          {selected ? "✓ Seçildi" : "Bu Sanatçıyı Seç"}
+                        </button>
+                        <a
+                          href={`/sanatcilar/${artist.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-2 rounded-full border border-border text-xs text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                        >
+                          Portfolyo ↗
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Konsept görsel seçenekleri */}
+        {offerConcepts.length > 0 && (
+          <div className="bg-white rounded-2xl border border-border p-6 mb-8">
+            <p className="text-sm font-semibold text-foreground mb-1">Konsept Seçenekleri</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Etkinliğiniz için hazırladığımız konseptler — görsele tıklayarak büyütebilir, beğendiğinizi seçebilirsiniz.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {offerConcepts.map((concept) => {
+                const selected = selConceptId === concept.id;
+                return (
+                  <div key={concept.id}
+                    className={`rounded-xl border-2 overflow-hidden transition-all ${
+                      selected ? "border-foreground" : "border-border"
+                    }`}>
+                    <button type="button" onClick={() => setLightbox(concept)}
+                      className="relative aspect-[3/4] w-full bg-secondary/30 block">
+                      <Image src={concept.image_url} alt={concept.name} fill className="object-cover" unoptimized />
+                    </button>
+                    <div className="p-2.5 space-y-1.5">
+                      <p className="text-xs font-medium text-foreground leading-snug">{concept.name}</p>
+                      <button
+                        type="button"
+                        onClick={() => setSelConceptId(selected ? null : concept.id)}
+                        className={`w-full py-1.5 rounded-full text-[11px] font-medium transition-colors ${
+                          selected
+                            ? "bg-foreground text-background"
+                            : "border border-border text-foreground hover:border-foreground/40"
+                        }`}
+                      >
+                        {selected ? "✓ Seçildi" : "Seç"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Seçim gönderme */}
+        {(offerArtists.length > 0 || offerConcepts.length > 0) && (
+          <div className="bg-white rounded-2xl border border-border p-6 mb-8 space-y-3">
+            {selSubmitted ? (
+              <div className="flex items-start gap-2 text-green-700">
+                <span>✓</span>
+                <div>
+                  <p className="text-sm font-semibold">Tercihiniz bize ulaştı</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Seçiminizi aldık — teklifi buna göre netleştirip en kısa sürede size döneceğiz.
+                    Fikriniz değişirse yeniden seçip tekrar gönderebilirsiniz.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSelSubmitted(false)}
+                    className="mt-2 text-xs text-foreground underline underline-offset-2 hover:text-foreground/80"
+                  >
+                    Seçimi değiştir
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-foreground">Tercihinizi Gönderin</p>
+                <p className="text-xs text-muted-foreground">
+                  {[
+                    selArtistId ? `Sanatçı: ${offerArtists.find((a) => a.id === selArtistId)?.name}` : null,
+                    selConceptId ? `Konsept: ${offerConcepts.find((c) => c.id === selConceptId)?.name}` : null,
+                  ].filter(Boolean).join(" · ") || "Yukarıdan beğendiğiniz sanatçıyı ve/veya konsepti işaretleyin."}
+                </p>
+                <textarea
+                  value={selNote}
+                  onChange={(e) => setSelNote(e.target.value)}
+                  rows={2}
+                  placeholder="Eklemek istediğiniz not (opsiyonel)…"
+                  className={`${inputCls} resize-none text-xs`}
+                />
+                {selError && (
+                  <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{selError}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSubmitSelections}
+                  disabled={selSubmitting || (!selArtistId && !selConceptId)}
+                  className="w-full py-3 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {selSubmitting ? "Gönderiliyor…" : "Seçimlerimi Gönder"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Konsept lightbox */}
+        {lightbox && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6"
+            onClick={() => setLightbox(null)}
+          >
+            <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden">
+                <Image src={lightbox.image_url} alt={lightbox.name} fill className="object-contain bg-black" unoptimized />
+              </div>
+              <div className="flex items-center justify-between mt-3">
+                <p className="text-sm text-white font-medium">{lightbox.name}</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setSelConceptId(lightbox.id); setLightbox(null); }}
+                    className="px-4 py-2 rounded-full bg-white text-foreground text-xs font-medium hover:opacity-90"
+                  >
+                    Bu Konsepti Seç
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLightbox(null)}
+                    className="px-4 py-2 rounded-full border border-white/40 text-white text-xs hover:border-white"
+                  >
+                    Kapat
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

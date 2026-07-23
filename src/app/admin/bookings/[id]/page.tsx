@@ -17,6 +17,17 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
   if (!booking) notFound();
 
+  // Müşteri teklif sayfasından konsept seçtiyse adını çöz (tablo yoksa sessizce geç)
+  let selectedConceptName: string | null = null;
+  if (booking.offer_selected_concept_id) {
+    const { data: concept } = await supabase
+      .from("offer_concepts")
+      .select("name")
+      .eq("id", booking.offer_selected_concept_id)
+      .single();
+    selectedConceptName = concept?.name ?? null;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -26,7 +37,13 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         <span className="text-muted-foreground/40">/</span>
         <h1 className="text-2xl font-semibold text-foreground">{booking.client_name}</h1>
       </div>
-      <BookingDetail booking={booking} payments={payments ?? []} artists={artists ?? []} items={items} />
+      <BookingDetail
+        booking={booking}
+        payments={payments ?? []}
+        artists={artists ?? []}
+        items={items}
+        selectedConceptName={selectedConceptName}
+      />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase";
 import { sendOfferViewedNotification } from "@/lib/email";
 import { fetchBookingItems, itemsArtistNames } from "@/lib/bookingItems";
-import OfferView from "./OfferView";
+import OfferView, { type OfferArtist, type OfferConcept } from "./OfferView";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -80,6 +80,33 @@ export default async function OfferPage({ params, searchParams }: Props) {
     !agreement
   );
 
+  // Teklifte sunulan sanatçı adayları (portfolyo önizlemesiyle) — migration
+  // çalıştırılmadıysa kolon select(*)'te gelmez, bölüm sessizce gizlenir.
+  const offeredArtistIds: string[] = Array.isArray(booking.offer_artist_ids) ? booking.offer_artist_ids : [];
+  let offerArtists: OfferArtist[] = [];
+  if (offeredArtistIds.length > 0) {
+    const { data } = await supabase
+      .from("dj_profiles")
+      .select("id, name, performer_type, photo_url, bio, speciality, slug")
+      .in("id", offeredArtistIds);
+    // Admin'in seçtiği sıra korunur
+    offerArtists = offeredArtistIds
+      .map((id) => (data ?? []).find((a) => a.id === id))
+      .filter(Boolean) as OfferArtist[];
+  }
+
+  // Konsept görsel seçenekleri — tablo henüz yoksa hata yutulur, bölüm gizlenir
+  let offerConcepts: OfferConcept[] = [];
+  if (booking.offer_concept_category) {
+    const { data } = await supabase
+      .from("offer_concepts")
+      .select("id, name, image_url")
+      .eq("category", booking.offer_concept_category)
+      .eq("is_active", true)
+      .order("sort_order");
+    offerConcepts = (data ?? []) as OfferConcept[];
+  }
+
   return (
     <OfferView
       booking={booking}
@@ -90,6 +117,8 @@ export default async function OfferPage({ params, searchParams }: Props) {
       expired={expired}
       paymentResult={odeme === "basarili" ? "success" : odeme === "hata" ? "error" : null}
       paymentMessage={mesaj ?? null}
+      offerArtists={offerArtists}
+      offerConcepts={offerConcepts}
     />
   );
 }

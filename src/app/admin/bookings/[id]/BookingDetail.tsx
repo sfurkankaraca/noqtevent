@@ -44,12 +44,13 @@ type Payment = {
   description: string | null; paid_at: string | null; status: string;
 };
 
-export default function BookingDetail({ booking, payments, artists, items = [] }: {
+export default function BookingDetail({ booking, payments, artists, items = [], selectedConceptName = null }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   booking: Record<string, any>;
   payments: Payment[];
   artists: { id: string; name: string; performer_type: string | null }[];
   items?: BookingItem[];
+  selectedConceptName?: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
   const [contractGenerating, setContractGenerating] = useState(false);
@@ -470,6 +471,19 @@ export default function BookingDetail({ booking, payments, artists, items = [] }
           prepayMarkupRate={booking.prepay_markup_rate ?? 25}
           initialSlug={booking.offer_slug}
           paymentPlan={booking.payment_plan}
+          artists={artists}
+          initialArtistIds={Array.isArray(booking.offer_artist_ids) ? booking.offer_artist_ids : []}
+          initialConceptCategory={booking.offer_concept_category ?? null}
+          selection={
+            booking.offer_selection_at
+              ? {
+                  artistName: artists.find((a) => a.id === booking.offer_selected_artist_id)?.name ?? null,
+                  conceptName: selectedConceptName,
+                  note: booking.offer_selection_note ?? null,
+                  at: booking.offer_selection_at,
+                }
+              : null
+          }
         />
 
         {/* Sözleşme */}
