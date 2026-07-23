@@ -8,6 +8,8 @@ import { readdirSync, readFileSync, existsSync } from "fs";
 import { join, extname, basename } from "path";
 import { config } from "dotenv";
 
+// Önce .env.vercel (npx vercel env pull .env.vercel ile indirilir), yoksa .env.local
+config({ path: ".env.vercel" });
 config({ path: ".env.local" });
 
 const FOLDER_CATEGORY_MAP = {
