@@ -24,12 +24,23 @@ import {
   updateLeadFields,
   setCallReminder,
   markCallMade,
+  attachOfferToLead,
 } from "../actions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LeadRow = Record<string, any>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type EventRow = Record<string, any>;
+type Artist = { id: string; name: string; performer_type: string | null };
+type OfferState = { offerUrl: string | null; artistIds: string[]; conceptCategory: string | null } | null;
+
+const CONCEPT_CATEGORIES: { value: string; label: string }[] = [
+  { value: "", label: "— Konsept gösterme —" },
+  { value: "nisan", label: "Nişan" },
+  { value: "evde-nisan", label: "Evde Nişan" },
+  { value: "evlilik-teklifi", label: "Evlilik Teklifi" },
+  { value: "kurumsal", label: "Kurumsal Etkinlik" },
+];
 
 const SOURCE_LABELS = Object.fromEntries(LEAD_SOURCES.map((s) => [s.id, s.label]));
 const inputCls =
@@ -66,10 +77,52 @@ function Card({ title, children, extra }: { title: string; children: React.React
   );
 }
 
-export default function LeadWorkbench({ lead, events }: { lead: LeadRow; events: EventRow[] }) {
+export default function LeadWorkbench({
+  lead, events, artists = [], initialOfferState = null,
+}: {
+  lead: LeadRow;
+  events: EventRow[];
+  artists?: Artist[];
+  initialOfferState?: OfferState;
+}) {
   const [pending, startTransition] = useTransition();
   const [reply, setReply] = useState<string>(lead.suggested_reply ?? "");
   const [replyDirty, setReplyDirty] = useState(false);
+  const [offerArtistIds, setOfferArtistIds] = useState<string[]>(initialOfferState?.artistIds ?? []);
+  const [offerConceptCategory, setOfferConceptCategory] = useState(initialOfferState?.conceptCategory ?? "");
+  const [offerUrl, setOfferUrl] = useState<string | null>(initialOfferState?.offerUrl ?? null);
+  const [offerGenerating, setOfferGenerating] = useState(false);
+  const [offerError, setOfferError] = useState<string | null>(null);
+  const [offerLinkCopied, setOfferLinkCopied] = useState(false);
+  const [addedToReply, setAddedToReply] = useState(false);
+
+  const toggleOfferArtist = (id: string) => {
+    setOfferArtistIds((prev) => (prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]));
+  };
+
+  const handleGenerateOfferLink = async () => {
+    setOfferError(null);
+    setOfferGenerating(true);
+    try {
+      const { offerUrl } = await attachOfferToLead(lead.id, {
+        artistIds: offerArtistIds,
+        conceptCategory: offerConceptCategory || null,
+      });
+      setOfferUrl(offerUrl);
+    } catch (e) {
+      setOfferError(e instanceof Error ? e.message : "Link oluşturulamadı");
+    } finally {
+      setOfferGenerating(false);
+    }
+  };
+
+  const handleAddOfferLinkToReply = () => {
+    if (!offerUrl) return;
+    setReply((prev) => `${prev}${prev.trim() ? "\n\n" : ""}Sizin için hazırladığımız sanatçı ve konsept seçeneklerini görmek için: ${offerUrl}`);
+    setReplyDirty(true);
+    setAddedToReply(true);
+    setTimeout(() => setAddedToReply(false), 2500);
+  };
   // "Yeniden analiz" sonrası sunucudan gelen yeni yanıtı yakala (render sırasında
   // state düzeltme deseni — kullanıcının kaydedilmemiş düzenlemesi varsa ezilmez).
   const [prevSuggested, setPrevSuggested] = useState<string>(lead.suggested_reply ?? "");
@@ -279,6 +332,70 @@ export default function LeadWorkbench({ lead, events }: { lead: LeadRow; events:
               )}
             </div>
           )}
+        </Card>
+
+        <Card title="Kişiye Özel Teklif Linki — sanatçı & konsept seçenekleri">
+          {offerError && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{offerError}</p>
+          )}
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Sanatçı adayları (portfolyolarını görüp seçebilir)</p>
+              <div className="max-h-40 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                {artists.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-3">Aktif sanatçı bulunamadı.</p>
+                ) : (
+                  artists.map((a) => (
+                    <label key={a.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-secondary/30 transition-colors">
+                      <input type="checkbox" checked={offerArtistIds.includes(a.id)} onChange={() => toggleOfferArtist(a.id)}
+                        className="w-4 h-4 rounded border-border" />
+                      <span className="text-sm text-foreground flex-1">{a.name}</span>
+                      {a.performer_type && <span className="text-xs text-muted-foreground">{a.performer_type}</span>}
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Konsept görselleri kategorisi</p>
+              <select value={offerConceptCategory} onChange={(e) => setOfferConceptCategory(e.target.value)} className={inputCls}>
+                {CONCEPT_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={handleGenerateOfferLink}
+              disabled={offerGenerating}
+              className="w-full py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-50"
+            >
+              {offerGenerating ? "Oluşturuluyor…" : offerUrl ? "Teklif Linkini Güncelle" : "Teklif Linkini Oluştur"}
+            </button>
+
+            {offerUrl && (
+              <div className="pt-2 border-t border-border space-y-2">
+                <p className="text-xs font-mono text-muted-foreground break-all">{offerUrl}</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(offerUrl);
+                      setOfferLinkCopied(true);
+                      setTimeout(() => setOfferLinkCopied(false), 2000);
+                    }}
+                    className="flex-1 py-1.5 rounded-full border border-border text-xs text-foreground hover:bg-secondary transition-colors"
+                  >
+                    {offerLinkCopied ? "✓ Kopyalandı" : "Kopyala"}
+                  </button>
+                  <button
+                    onClick={handleAddOfferLinkToReply}
+                    className="flex-1 py-1.5 rounded-full border border-border text-xs text-foreground hover:bg-secondary transition-colors"
+                  >
+                    {addedToReply ? "✓ Eklendi" : "Yanıta Ekle"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </Card>
 
         <Card title="Önerilen Yanıt — onaysız hiçbir şey gönderilmez">

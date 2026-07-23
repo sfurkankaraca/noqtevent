@@ -12,6 +12,13 @@ import {
   sanitizeReply,
 } from "@/lib/leads";
 import { ingestLead, runAnalysisAndReply, logLeadEvent as logEvent } from "@/lib/leadPipeline";
+import { updateOfferOptions } from "../bookings/actions";
+
+const toSlug = (s: string) =>
+  s.toLowerCase()
+    .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
+    .replace(/ı/g, "i").replace(/ö/g, "o").replace(/ç/g, "c")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 // ── Lead oluşturma — ortak pipeline üzerinden (cron ile aynı yol) ────────────
 
@@ -254,4 +261,61 @@ export async function getLeadsForMonthAction(monthKey: string) {
   const { getLeadsForMonth } = await import("@/lib/monthlyStats");
   const rows = await getLeadsForMonth(monthKey);
   return rows.map((r) => ({ ...r, demand_date: r.demand_date.toISOString() }));
+}
+
+// ── Lead için kişiye özel teklif linki — sanatçı seçenekleri + konsept ──────
+// Lead'in bağlı olduğu booking yoksa arka planda taslak bir booking oluşturup
+// bağlar; varsa mevcut booking'i günceller. /teklif/[slug] altyapısını yeniden
+// kullanır — yanıt metnine eklenecek linki döner.
+export async function attachOfferToLead(
+  leadId: string,
+  options: { artistIds: string[]; conceptCategory: string | null }
+): Promise<{ offerUrl: string }> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { data: lead, error: leadError } = await supabase
+    .from("leads")
+    .select("id, customer_name, event_type, event_date, booking_id")
+    .eq("id", leadId)
+    .single();
+  if (leadError || !lead) {
+    if (leadError?.message.includes("column")) {
+      throw new Error("Lead-booking bağlantısı migration'ı henüz Supabase'de çalıştırılmadı (20260724000000_add_lead_booking_link.sql).");
+    }
+    throw new Error("Lead bulunamadı.");
+  }
+
+  let bookingId: string = lead.booking_id;
+
+  if (!bookingId) {
+    const clientName = lead.customer_name?.trim() || "İsimsiz Müşteri";
+    const offerSlug = `${toSlug(clientName)}-${leadId.slice(0, 6)}`;
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .insert({
+        client_name: clientName,
+        event_type: lead.event_type ?? null,
+        event_date: lead.event_date ?? null,
+        fee: 0,
+        status: "draft",
+        offer_slug: offerSlug,
+      })
+      .select("id, offer_slug")
+      .single();
+    if (bookingError || !booking) throw new Error(bookingError?.message ?? "Taslak booking oluşturulamadı.");
+
+    const { error: linkError } = await supabase.from("leads").update({ booking_id: booking.id }).eq("id", leadId);
+    if (linkError) throw new Error(linkError.message);
+    bookingId = booking.id;
+  }
+
+  await updateOfferOptions(bookingId, options);
+
+  const { data: updated } = await supabase.from("bookings").select("offer_slug").eq("id", bookingId).single();
+  if (!updated?.offer_slug) throw new Error("Teklif linki oluşturulamadı.");
+
+  const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
+  revalidatePath(`/admin/leads/${leadId}`);
+  return { offerUrl: `${BASE}/teklif/${updated.offer_slug}` };
 }
