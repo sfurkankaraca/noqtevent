@@ -34,11 +34,18 @@ if (!rootDir || !existsSync(rootDir)) {
 }
 
 // "BOHO CHIC SET" → "Boho Chic Set"
+// Not: Türkçe locale (tr-TR) ile küçültme, İngilizce "I" harfini yanlışlıkla
+// noktasız "ı"ya çevirir (Chic → Chıc). Ayrıca kaynak dosya adlarında Türkçe
+// klavyeyle yazılmış "İ" (U+0130) harfi de olabiliyor ("WHİTE") — bu, ASCII
+// toLowerCase ile "i̇" (nokta + bileşik işaret) üretir. Bu isimler İngilizce
+// olduğundan önce İ/ı ASCII I/i'ye normalize edilir, sonra locale'siz case
+// dönüşümü uygulanır.
 function titleCase(s) {
   return s
-    .toLocaleLowerCase("tr-TR")
+    .replace(/İ/g, "I").replace(/ı/g, "i")
+    .toLowerCase()
     .split(/\s+/)
-    .map((w) => w.charAt(0).toLocaleUpperCase("tr-TR") + w.slice(1))
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 }
 
@@ -66,7 +73,10 @@ for (const [folderName, category] of Object.entries(FOLDER_CATEGORY_MAP)) {
   let sortOrder = 0;
   for (const file of files.sort()) {
     const ext = extname(file).toLowerCase();
-    const rawName = basename(file, extname(file)).replace(/\s*&\s*/g, " & ").trim();
+    // macOS (APFS) dosya adlarını NFD (ayrıştırılmış) formda döndürür — "İ" harfi
+    // "I" + birleşik nokta işareti (U+0307) olarak gelir ve normalize edilmeden
+    // küçültülürse "i̇" gibi bozuk çıktı üretir. NFC'ye çevirip tek karaktere indirgiyoruz.
+    const rawName = basename(file, extname(file)).normalize("NFC").replace(/\s*&\s*/g, " & ").trim();
     const name = titleCase(rawName);
     const storagePath = `offer-concepts/${category}/${slugify(rawName)}${ext}`;
 
