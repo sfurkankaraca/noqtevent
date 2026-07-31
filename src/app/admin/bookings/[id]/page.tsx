@@ -9,7 +9,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const supabase = createServiceClient();
 
-  const [{ data: booking }, { data: payments }, { data: artists }, items, packages] = await Promise.all([
+  const [{ data: booking, error: bookingError }, { data: payments }, { data: artists }, items, packages] = await Promise.all([
     supabase.from("bookings").select("*, dj_profiles(id, name, performer_type, slug, photo_url)").eq("id", id).single(),
     supabase.from("booking_payments").select("*").eq("booking_id", id).order("created_at"),
     supabase.from("dj_profiles").select("id, name, performer_type").eq("is_active", true).order("name"),
@@ -17,7 +17,18 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     fetchOfferPackages(supabase, id),
   ]);
 
-  if (!booking) notFound();
+  // Kayıt gerçekten yoksa 404; sorgu hatasıysa (ör. şema/embed sorunu) hatayı göster
+  if (!booking) {
+    if (bookingError && bookingError.code !== "PGRST116") {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+          <p className="text-sm font-medium text-red-800">Booking yüklenemedi</p>
+          <p className="text-xs text-red-700 mt-1 leading-relaxed">{bookingError.message}</p>
+        </div>
+      );
+    }
+    notFound();
+  }
 
   // Müşteri teklif sayfasından konsept seçtiyse adını çöz (tablo yoksa sessizce geç)
   let selectedConceptName: string | null = null;

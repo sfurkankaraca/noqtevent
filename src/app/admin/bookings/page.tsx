@@ -15,7 +15,7 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
 
 export default async function BookingsPage() {
   const supabase = createServiceClient();
-  const { data: bookings } = await supabase
+  const { data: bookings, error } = await supabase
     .from("bookings")
     .select("*, dj_profiles(name, performer_type)")
     .order("created_at", { ascending: false });
@@ -38,7 +38,15 @@ export default async function BookingsPage() {
         </Link>
       </div>
 
-      {(!bookings || bookings.length === 0) && (
+      {/* Sorgu hatasını yutup "kayıt yok" göstermek gerçek sorunu gizliyordu */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+          <p className="text-sm font-medium text-red-800">Booking listesi yüklenemedi</p>
+          <p className="text-xs text-red-700 mt-1 leading-relaxed">{error.message}</p>
+        </div>
+      )}
+
+      {!error && (!bookings || bookings.length === 0) && (
         <div className="bg-white rounded-2xl border border-border p-16 text-center">
           <p className="text-4xl mb-4">🎤</p>
           <p className="text-foreground font-medium">Henüz booking yok</p>
