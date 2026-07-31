@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   calcCashPrice, calcPrepayPrice, isPrepayAvailable, daysUntil,
   TERMS_TEXT, PREPAY_DEADLINE_DAYS, FINAL_PAYMENT_GRACE_DAYS, NON_REFUNDABLE_WINDOW_DAYS,
 } from "@/lib/bookingTerms";
-import { acceptOffer, notifyPaymentClaim, sendOfferOtp, startOnlinePayment, submitOfferSelections } from "./actions";
+import { acceptOffer, notifyPaymentClaim, selectOfferPackage, sendOfferOtp, startOnlinePayment, submitOfferSelections } from "./actions";
 import type { BookingItem } from "@/lib/bookingItems";
+import type { OfferPackage } from "@/lib/offerPackages";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Booking = Record<string, any>;
@@ -35,12 +37,13 @@ const fmt = (n: number) => n.toLocaleString("tr-TR") + " ₺";
 type BankInfo = { iban: string; accountName: string; bankName: string | null } | null;
 
 export default function OfferView({
-  booking, slug, items = [], agreement, bankInfo = null, expired = false, paymentResult = null, paymentMessage = null,
+  booking, slug, items = [], packages = [], agreement, bankInfo = null, expired = false, paymentResult = null, paymentMessage = null,
   offerArtists = [], offerConcepts = [],
 }: {
   booking: Booking;
   slug: string;
   items?: BookingItem[];
+  packages?: OfferPackage[];
   agreement: Agreement;
   bankInfo?: BankInfo;
   expired?: boolean;
@@ -49,6 +52,32 @@ export default function OfferView({
   offerArtists?: OfferArtist[];
   offerConcepts?: OfferConcept[];
 }) {
+  const router = useRouter();
+
+  // Çok seçenekli teklif — müşteri paketlerden birini seçmeden fiyat/onay açılmaz
+  const [selPackageId, setSelPackageId] = useState<string | null>(booking.selected_package_id ?? null);
+  const [pkgPending, setPkgPending] = useState<string | null>(null);
+  const [pkgError, setPkgError] = useState<string | null>(null);
+  const packagesLocked = packages.length > 0 && !!agreement;
+  // Sözleşme zaten onaylandıysa (fiyat kilitli) paket seçimi dayatılmaz
+  const needsPackageChoice = packages.length > 0 && !selPackageId && !agreement;
+
+  const handleSelectPackage = async (id: string) => {
+    if (packagesLocked) return;
+    setPkgError(null);
+    setPkgPending(id);
+    try {
+      await selectOfferPackage(slug, id);
+      setSelPackageId(id);
+      // Seçilen paketin bedeli sunucuda booking.fee'ye yazıldı — fiyatları tazele
+      router.refresh();
+    } catch (e) {
+      setPkgError(e instanceof Error ? e.message : "Paket seçilemedi. Lütfen tekrar deneyin.");
+    } finally {
+      setPkgPending(null);
+    }
+  };
+
   const [selectedPlan, setSelectedPlan] = useState<"cash" | "prepay">(
     agreement?.payment_plan ?? (isPrepayAvailable(booking.event_date) ? "prepay" : "cash")
   );
@@ -435,7 +464,89 @@ export default function OfferView({
           </div>
         )}
 
-        {/* Fiyat kartları */}
+        {/* Çok seçenekli teklif — paket kartları */}
+        {packages.length > 0 && (
+          <div className="mb-8">
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-foreground">Size Özel Paketler</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {packagesLocked
+                  ? "Sözleşme onaylandığı için paket değişikliği yapılamaz."
+                  : "Etkinliğiniz için hazırladığımız seçenekler — size uyanı seçin, fiyat ve sözleşme buna göre güncellensin."}
+              </p>
+            </div>
+
+            {pkgError && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-3">{pkgError}</p>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {packages.map((pkg) => {
+                const isSelected = selPackageId === pkg.id;
+                return (
+                  <div
+                    key={pkg.id}
+                    className={`rounded-2xl border-2 bg-white p-5 flex flex-col transition-all ${
+                      isSelected ? "border-foreground" : "border-border"
+                    }`}
+                  >
+                    {pkg.is_recommended && (
+                      <span className="self-start text-[10px] uppercase tracking-wide font-medium px-2 py-1 rounded-full bg-foreground text-background mb-2">
+                        Önerilen
+                      </span>
+                    )}
+                    <p className="text-base font-semibold text-foreground">{pkg.title}</p>
+                    {pkg.subtitle && (
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{pkg.subtitle}</p>
+                    )}
+                    <p className="text-2xl font-semibold text-foreground tabular-nums mt-3">
+                      {fmt(calcCashPrice(pkg.fee))}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">peşin fiyat</p>
+
+                    {pkg.lines.length > 0 && (
+                      <ul className="mt-3 space-y-1.5 flex-1">
+                        {pkg.lines.map((line, i) => (
+                          <li key={i} className="text-xs text-muted-foreground leading-relaxed flex gap-2">
+                            <span className="text-foreground">•</span>
+                            <span>
+                              <span className="text-foreground">{line.title}</span>
+                              {line.description && <span> — {line.description}</span>}
+                              {line.amount ? <span className="tabular-nums"> ({fmt(line.amount)})</span> : null}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectPackage(pkg.id)}
+                      disabled={packagesLocked || pkgPending !== null || isSelected}
+                      className={`mt-4 w-full py-2.5 rounded-full text-xs font-medium transition-colors disabled:opacity-60 ${
+                        isSelected
+                          ? "bg-foreground text-background"
+                          : "border border-border text-foreground hover:border-foreground/40"
+                      }`}
+                    >
+                      {pkgPending === pkg.id ? "Seçiliyor…" : isSelected ? "✓ Seçtiğiniz paket" : "Bu Paketi Seç"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Fiyat kartları — paketli teklifte önce paket seçilmeli */}
+        {needsPackageChoice ? (
+          <div className="rounded-2xl border border-border bg-white p-6 mb-8 text-center">
+            <p className="text-sm font-medium text-foreground">Devam etmek için bir paket seçin</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Paketi seçtiğinizde ödeme seçenekleri ve sözleşme onayı burada açılır.
+            </p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <button
             type="button"
@@ -467,6 +578,7 @@ export default function OfferView({
             </p>
           </button>
         </div>
+        )}
 
         {/* Şartlar */}
         <div className="bg-white rounded-2xl border border-border p-6 mb-8">
@@ -486,7 +598,7 @@ export default function OfferView({
           <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">{error}</p>
         )}
 
-        {expired && !accepted ? (
+        {needsPackageChoice ? null : expired && !accepted ? (
           <div className="bg-white rounded-2xl border border-amber-200 bg-amber-50/50 p-6 text-center">
             <p className="text-sm font-semibold text-foreground mb-1">Bu teklifin süresi doldu</p>
             <p className="text-xs text-muted-foreground leading-relaxed">

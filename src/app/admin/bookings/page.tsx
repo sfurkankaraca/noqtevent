@@ -42,7 +42,7 @@ export default async function BookingsPage() {
         <div className="bg-white rounded-2xl border border-border p-16 text-center">
           <p className="text-4xl mb-4">🎤</p>
           <p className="text-foreground font-medium">Henüz booking yok</p>
-          <p className="text-sm text-muted-foreground mt-1">İlk booking'i oluşturmak için butona tıkla</p>
+          <p className="text-sm text-muted-foreground mt-1">İlk booking&apos;i oluşturmak için butona tıkla</p>
         </div>
       )}
 

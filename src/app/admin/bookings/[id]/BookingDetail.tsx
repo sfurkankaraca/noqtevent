@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { updateBookingStatus, addPayment, type BookingStatus } from "../actions";
 import type { BookingItem } from "@/lib/bookingItems";
+import type { OfferPackage } from "@/lib/offerPackages";
 import DeliveryManager from "./DeliveryManager";
 import OfferManager from "./OfferManager";
+import PackageManager from "./PackageManager";
 import CancelBookingPanel from "./CancelBookingPanel";
 import ChecklistManager from "./ChecklistManager";
 
@@ -44,12 +46,15 @@ type Payment = {
   description: string | null; paid_at: string | null; status: string;
 };
 
-export default function BookingDetail({ booking, payments, artists, items = [], selectedConceptName = null }: {
+export default function BookingDetail({
+  booking, payments, artists, items = [], packages = [], selectedConceptName = null,
+}: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   booking: Record<string, any>;
   payments: Payment[];
   artists: { id: string; name: string; performer_type: string | null }[];
   items?: BookingItem[];
+  packages?: OfferPackage[];
   selectedConceptName?: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -484,6 +489,15 @@ export default function BookingDetail({ booking, payments, artists, items = [], 
                 }
               : null
           }
+        />
+
+        {/* Çok seçenekli teklif — paketler */}
+        <PackageManager
+          bookingId={booking.id}
+          packages={packages}
+          selectedPackageId={booking.selected_package_id ?? null}
+          packageSelectedAt={booking.package_selected_at ?? null}
+          offerSlug={booking.offer_slug ?? null}
         />
 
         {/* Sözleşme */}

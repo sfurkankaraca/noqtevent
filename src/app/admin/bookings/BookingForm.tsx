@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upsertBooking, type BookingPayload, type BookingItemPayload } from "./actions";
 import type { BookingItem } from "@/lib/bookingItems";
@@ -41,6 +41,16 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
+
+  // Hata mesajı formun tepesinde kalırsa uzun formda görünmez — kaydet
+  // butonunun yanında da gösterilir ve ekrana kaydırılır.
+  const fail = (message: string) => {
+    setError(message);
+    requestAnimationFrame(() => {
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
 
   const [inquiryId, setInquiryId] = useState(booking?.inquiry_id ?? "");
   const [artistId, setArtistId] = useState(booking?.artist_id ?? "");
@@ -87,7 +97,9 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
   const artistName = (id: string) => artists.find((a) => a.id === id)?.name ?? "";
   const itemsTotal = items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
 
-  const feeNum = parseFloat(fee) || 0;
+  // Ücret boş bırakıldıysa kalem tutarları toplamı kullanılır — admin'in
+  // kalemleri girip toplamı yazmayı unutması kaydı engellememeli.
+  const feeNum = parseFloat(fee) || itemsTotal;
   const commission = feeNum * (parseFloat(commissionRate) / 100);
   const artistNet = feeNum - commission;
   const prepayPrice = calcPrepayPrice(feeNum, parseFloat(prepayMarkupRate) || 25);
@@ -103,11 +115,11 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
   };
 
   const handleSave = () => {
-    if (!clientName.trim()) { setError("Müşteri adı zorunlu"); return; }
-    if (!feeNum) { setError("Ücret girilmeli — kalem ekleyin veya ücret girin"); return; }
+    if (!clientName.trim()) { fail("Müşteri adı zorunlu"); return; }
+    if (!feeNum) { fail("Ücret girilmeli — “Toplam Ücret” alanını doldurun veya tutarlı kalem ekleyin"); return; }
     for (const it of items) {
-      if (it.kind === "artist" && !it.artist_id) { setError("Sanatçı kaleminde sanatçı seçilmeli"); return; }
-      if (it.kind === "service" && !it.title.trim()) { setError("Hizmet kaleminde başlık girilmeli"); return; }
+      if (it.kind === "artist" && !it.artist_id) { fail("Sanatçı kaleminde sanatçı seçilmeli"); return; }
+      if (it.kind === "service" && !it.title.trim()) { fail("Hizmet kaleminde başlık girilmeli"); return; }
     }
     setError(null);
     const itemsPayload: BookingItemPayload[] = items.map((it) => ({
@@ -119,7 +131,7 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
     }));
     startTransition(async () => {
       try {
-        await upsertBooking({
+        const result = await upsertBooking({
           id: booking?.id,
           inquiry_id: inquiryId || null,
           artist_id: artistId || null,
@@ -144,9 +156,19 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
           notes: notes || null,
           internal_notes: internalNotes || null,
         });
+        if (!result?.ok) {
+          fail(result?.error ?? "Booking kaydedilemedi — sunucu yanıt vermedi.");
+          return;
+        }
+        // Liste sunucuda yeniden render edilsin; yeni kayıt anında görünür
         router.push("/admin/bookings");
+        router.refresh();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Hata oluştu");
+        fail(
+          e instanceof Error
+            ? `Kaydetme isteği tamamlanamadı: ${e.message}`
+            : "Kaydetme isteği tamamlanamadı."
+        );
       }
     });
   };
@@ -331,8 +353,13 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
           <div>
             <label className={labelCls}>Toplam Ücret (₺)</label>
             <input type="number" min="0" value={fee} onChange={(e) => setFee(e.target.value)}
-              placeholder="25000" className={inputCls} />
-            {itemsTotal > 0 && parseFloat(fee) !== itemsTotal && (
+              placeholder={itemsTotal > 0 ? String(itemsTotal) : "25000"} className={inputCls} />
+            {!fee.trim() && itemsTotal > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Boş bırakırsanız kalem toplamı ({itemsTotal.toLocaleString("tr-TR")} ₺) kullanılır.
+              </p>
+            )}
+            {itemsTotal > 0 && fee.trim() !== "" && parseFloat(fee) !== itemsTotal && (
               <button type="button" onClick={() => setFee(String(itemsTotal))}
                 className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 mt-1">
                 Kalem tutarları toplamını kullan ({itemsTotal.toLocaleString("tr-TR")} ₺)
@@ -434,10 +461,17 @@ export default function BookingForm({ artists, inquiries = [], booking, items: i
         </div>
       </div>
 
-      <button onClick={handleSave} disabled={isPending}
-        className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
-        {isPending ? "Kaydediliyor…" : booking?.id ? "Güncelle" : "Booking Oluştur"}
-      </button>
+      <div ref={errorRef} className="space-y-3">
+        {error && (
+          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3 leading-relaxed">
+            {error}
+          </p>
+        )}
+        <button onClick={handleSave} disabled={isPending}
+          className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+          {isPending ? "Kaydediliyor…" : booking?.id ? "Güncelle" : "Booking Oluştur"}
+        </button>
+      </div>
     </div>
   );
 }

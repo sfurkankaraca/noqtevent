@@ -1033,12 +1033,14 @@ export async function sendOfferSelectionNotification(data: {
   artistName: string | null;
   conceptName: string | null;
   note: string | null;
+  packageName?: string | null;
 }) {
   const resend = getResend();
   if (!resend) return;
 
   const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
   const rows = [
+    data.packageName ? `<tr><td style="padding:8px 0;color:#666;">Seçilen Paket</td><td style="padding:8px 0;font-weight:600;">${data.packageName}</td></tr>` : "",
     data.artistName ? `<tr><td style="padding:8px 0;color:#666;">Seçilen Sanatçı</td><td style="padding:8px 0;font-weight:600;">${data.artistName}</td></tr>` : "",
     data.conceptName ? `<tr><td style="padding:8px 0;color:#666;">Seçilen Konsept</td><td style="padding:8px 0;font-weight:600;">${data.conceptName}</td></tr>` : "",
     data.note ? `<tr><td style="padding:8px 0;color:#666;">Not</td><td style="padding:8px 0;">${data.note}</td></tr>` : "",

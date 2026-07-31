@@ -2,17 +2,19 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { fetchBookingItems } from "@/lib/bookingItems";
+import { fetchOfferPackages } from "@/lib/offerPackages";
 import BookingDetail from "./BookingDetail";
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = createServiceClient();
 
-  const [{ data: booking }, { data: payments }, { data: artists }, items] = await Promise.all([
+  const [{ data: booking }, { data: payments }, { data: artists }, items, packages] = await Promise.all([
     supabase.from("bookings").select("*, dj_profiles(id, name, performer_type, slug, photo_url)").eq("id", id).single(),
     supabase.from("booking_payments").select("*").eq("booking_id", id).order("created_at"),
     supabase.from("dj_profiles").select("id, name, performer_type").eq("is_active", true).order("name"),
     fetchBookingItems(supabase, id),
+    fetchOfferPackages(supabase, id),
   ]);
 
   if (!booking) notFound();
@@ -42,6 +44,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         payments={payments ?? []}
         artists={artists ?? []}
         items={items}
+        packages={packages}
         selectedConceptName={selectedConceptName}
       />
     </div>

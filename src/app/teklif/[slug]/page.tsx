@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase";
 import { sendOfferViewedNotification } from "@/lib/email";
 import { fetchBookingItems, itemsArtistNames } from "@/lib/bookingItems";
+import { fetchOfferPackages } from "@/lib/offerPackages";
 import OfferView, { type OfferArtist, type OfferConcept } from "./OfferView";
 
 type Props = {
@@ -37,7 +38,10 @@ export default async function OfferPage({ params, searchParams }: Props) {
 
   if (!booking) notFound();
 
-  const items = await fetchBookingItems(supabase, booking.id);
+  const [items, packages] = await Promise.all([
+    fetchBookingItems(supabase, booking.id),
+    fetchOfferPackages(supabase, booking.id),
+  ]);
 
   // İlk görüntülemede admin'e "sıcakken ara" bildirimi.
   // Serverless'ta response sonrası arka plan işi kesilebileceğinden burada await ediyoruz.
@@ -112,6 +116,7 @@ export default async function OfferPage({ params, searchParams }: Props) {
       booking={booking}
       slug={slug}
       items={items}
+      packages={packages}
       agreement={agreement}
       bankInfo={bankInfo}
       expired={expired}

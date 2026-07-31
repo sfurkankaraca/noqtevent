@@ -7,6 +7,7 @@ import { sendBookingDeliveryEmail, sendOfferEmail as sendOfferEmailLib, sendPaym
 import { calcDuePayment } from "@/lib/paymentPlan";
 import { createAndStoreContract } from "@/lib/contract";
 import { fetchBookingItems, itemsArtistNames } from "@/lib/bookingItems";
+import { isMissingPackageSchema, PACKAGE_MIGRATION_HINT } from "@/lib/offerPackages";
 
 const BASE = () => process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
@@ -49,8 +50,45 @@ export type BookingPayload = {
   items?: BookingItemPayload[];
 };
 
-export async function upsertBooking(payload: BookingPayload) {
-  await requireAdmin();
+export type UpsertBookingResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string };
+
+// Postgres/PostgREST hatalarını admin'in anlayacağı Türkçe mesaja çevirir.
+// Ham mesaj da eklenir — teşhis için gerekli.
+function dbErrorMessage(message: string, context: string): string {
+  const m = message ?? "";
+  if (/invalid input syntax for type uuid/i.test(m)) {
+    return `${context}: geçersiz kimlik (UUID) değeri gönderildi — sanatçı/talep seçimini kontrol edin. (${m})`;
+  }
+  if (/violates foreign key constraint/i.test(m)) {
+    return `${context}: seçilen sanatçı veya talep kaydı veritabanında bulunamadı. (${m})`;
+  }
+  if (/violates check constraint/i.test(m)) {
+    return `${context}: gönderilen değer izin verilen aralık/listede değil. (${m})`;
+  }
+  if (/violates not-null constraint/i.test(m)) {
+    return `${context}: zorunlu bir alan boş bırakıldı. (${m})`;
+  }
+  if (/numeric field overflow/i.test(m)) {
+    return `${context}: girilen tutar çok büyük. (${m})`;
+  }
+  if (/could not find the .* column|schema cache/i.test(m)) {
+    return `${context}: veritabanı şeması güncel değil — bekleyen migration'ları Supabase'de çalıştırın. (${m})`;
+  }
+  return `${context}: ${m}`;
+}
+
+// NOT: Bu action bilerek throw ETMEZ. Next.js production'da Server Action'dan
+// fırlatılan hata mesajlarını gizler ("An error occurred..."), böylece admin
+// paneli sessizce başarısız olur. Sonucu döndürerek gerçek hata forma yansır.
+export async function upsertBooking(payload: BookingPayload): Promise<UpsertBookingResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { ok: false, error: "Yetkisiz erişim — admin hesabıyla giriş yapmanız gerekiyor." };
+  }
+
   const supabase = createServiceClient();
   const { id, items, ...data } = payload;
 
@@ -67,9 +105,9 @@ export async function upsertBooking(payload: BookingPayload) {
       if (error.message.includes("prepay_markup_rate")) {
         const { prepay_markup_rate: _pmr, ...safe } = data;
         const { error: e2 } = await supabase.from("bookings").update(safe).eq("id", id);
-        if (e2) throw new Error(e2.message);
+        if (e2) return { ok: false, error: dbErrorMessage(e2.message, "Booking güncellenemedi") };
       } else {
-        throw new Error(error.message);
+        return { ok: false, error: dbErrorMessage(error.message, "Booking güncellenemedi") };
       }
     }
   } else {
@@ -79,24 +117,29 @@ export async function upsertBooking(payload: BookingPayload) {
       const { prepay_markup_rate: _pmr, ...safe } = data;
       ({ data: inserted, error } = await supabase.from("bookings").insert(safe).select("id").single());
     }
-    if (error) throw new Error(error.message);
-    bookingId = inserted!.id;
+    if (error) return { ok: false, error: dbErrorMessage(error.message, "Booking oluşturulamadı") };
+    if (!inserted?.id) return { ok: false, error: "Booking oluşturulamadı: veritabanı kayıt kimliği döndürmedi." };
+    bookingId = inserted.id;
   }
 
-  if (items !== undefined && bookingId) {
+  if (!bookingId) return { ok: false, error: "Booking kimliği belirlenemedi." };
+
+  if (items !== undefined) {
     const { error: delError } = await supabase
       .from("booking_items").delete().eq("booking_id", bookingId);
     if (delError) {
       // Migration henüz çalıştırılmadıysa: kalemsiz kayıtları engelleme, kalemli kayıtta net hata ver
       if (items.length === 0) {
         revalidatePath("/admin/bookings");
-        return;
+        revalidatePath(`/admin/bookings/${bookingId}`);
+        return { ok: true, id: bookingId };
       }
-      throw new Error(
-        /booking_items|relation|schema/i.test(delError.message)
-          ? "booking_items tablosu bulunamadı — supabase-migration-booking-items.sql'i Supabase SQL Editor'da çalıştırın."
-          : delError.message
-      );
+      return {
+        ok: false,
+        error: /booking_items|relation|schema/i.test(delError.message)
+          ? "Booking kaydedildi ama teklif kalemleri yazılamadı: booking_items tablosu bulunamadı — supabase/migrations altındaki migration'ları Supabase'de çalıştırın."
+          : dbErrorMessage(delError.message, "Teklif kalemleri güncellenemedi"),
+      };
     }
     if (items.length > 0) {
       const { error: insError } = await supabase.from("booking_items").insert(
@@ -110,12 +153,13 @@ export async function upsertBooking(payload: BookingPayload) {
           sort_order: i,
         }))
       );
-      if (insError) throw new Error(insError.message);
+      if (insError) return { ok: false, error: dbErrorMessage(insError.message, "Teklif kalemleri kaydedilemedi") };
     }
   }
 
   revalidatePath("/admin/bookings");
-  if (bookingId) revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  return { ok: true, id: bookingId };
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
@@ -320,6 +364,137 @@ export async function updateOfferOptions(
   }
   revalidatePath(`/admin/bookings/${bookingId}`);
   if (booking?.offer_slug) revalidatePath(`/teklif/${booking.offer_slug}`);
+}
+
+// ── Çok seçenekli teklif (paketler) ─────────────────────────────────────────
+// Admin bir booking için birden fazla paket tanımlar (ör. Klasik / Premium /
+// Full Prodüksiyon). Müşteri teklif sayfasından birini seçince o paketin bedeli
+// booking.fee'ye yazılır; sözleşme, PDF ve ödeme akışı değişmeden çalışır.
+
+export type OfferPackagePayload = {
+  id?: string | null;
+  title: string;
+  subtitle?: string | null;
+  fee: number;
+  is_recommended: boolean;
+  lines: { title: string; description?: string | null; amount?: number | null }[];
+};
+
+export type SavePackagesResult = { ok: true } | { ok: false; error: string };
+
+export async function saveOfferPackages(
+  bookingId: string,
+  packages: OfferPackagePayload[]
+): Promise<SavePackagesResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { ok: false, error: "Yetkisiz erişim — admin hesabıyla giriş yapmanız gerekiyor." };
+  }
+
+  const supabase = createServiceClient();
+
+  const clean = packages
+    .map((p, i) => ({
+      title: p.title.trim(),
+      subtitle: p.subtitle?.trim() || null,
+      fee: Number(p.fee) || 0,
+      is_recommended: Boolean(p.is_recommended),
+      sort_order: i,
+      lines: (p.lines ?? [])
+        .map((l) => ({
+          title: l.title?.trim() ?? "",
+          description: l.description?.trim() || null,
+          amount: l.amount === null || l.amount === undefined || l.amount === 0 ? null : Number(l.amount) || null,
+        }))
+        .filter((l) => l.title.length > 0),
+    }))
+    .filter((p) => p.title.length > 0);
+
+  if (clean.some((p) => p.fee <= 0)) {
+    return { ok: false, error: "Her paket için 0'dan büyük bir fiyat girin." };
+  }
+
+  const { data: booking } = await supabase
+    .from("bookings").select("offer_slug").eq("id", bookingId).single();
+
+  // Tam değiştirme: mevcut paketler silinip yenileri yazılır.
+  // Seçili paket FK'sı ON DELETE SET NULL olduğundan seçim de sıfırlanır.
+  const { error: delError } = await supabase
+    .from("booking_offer_packages").delete().eq("booking_id", bookingId);
+  if (delError) {
+    return {
+      ok: false,
+      error: isMissingPackageSchema(delError.message)
+        ? PACKAGE_MIGRATION_HINT
+        : dbErrorMessage(delError.message, "Paketler güncellenemedi"),
+    };
+  }
+
+  if (clean.length > 0) {
+    const { error: insError } = await supabase
+      .from("booking_offer_packages")
+      .insert(clean.map((p) => ({ ...p, booking_id: bookingId })));
+    if (insError) {
+      return {
+        ok: false,
+        error: isMissingPackageSchema(insError.message)
+          ? PACKAGE_MIGRATION_HINT
+          : dbErrorMessage(insError.message, "Paketler kaydedilemedi"),
+      };
+    }
+  }
+
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  if (booking?.offer_slug) revalidatePath(`/teklif/${booking.offer_slug}`);
+  return { ok: true };
+}
+
+// Admin, müşteri adına paketi kesinleştirir (telefonda karar verildiyse)
+export async function applyOfferPackage(
+  bookingId: string,
+  packageId: string
+): Promise<SavePackagesResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { ok: false, error: "Yetkisiz erişim — admin hesabıyla giriş yapmanız gerekiyor." };
+  }
+
+  const supabase = createServiceClient();
+  const { data: pkg, error } = await supabase
+    .from("booking_offer_packages")
+    .select("id, fee, booking_id")
+    .eq("id", packageId)
+    .eq("booking_id", bookingId)
+    .single();
+  if (error || !pkg) {
+    return { ok: false, error: error ? dbErrorMessage(error.message, "Paket bulunamadı") : "Paket bulunamadı." };
+  }
+
+  const { error: updateError } = await supabase
+    .from("bookings")
+    .update({
+      fee: Number(pkg.fee) || 0,
+      selected_package_id: pkg.id,
+      package_selected_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId);
+  if (updateError) {
+    return {
+      ok: false,
+      error: isMissingPackageSchema(updateError.message)
+        ? PACKAGE_MIGRATION_HINT
+        : dbErrorMessage(updateError.message, "Paket uygulanamadı"),
+    };
+  }
+
+  const { data: booking } = await supabase
+    .from("bookings").select("offer_slug").eq("id", bookingId).single();
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath("/admin/bookings");
+  if (booking?.offer_slug) revalidatePath(`/teklif/${booking.offer_slug}`);
+  return { ok: true };
 }
 
 export async function deleteBooking(id: string) {

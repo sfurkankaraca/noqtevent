@@ -84,6 +84,59 @@ export async function submitOfferSelections(
   revalidatePath(`/teklif/${slug}`);
 }
 
+// Müşteri, çok seçenekli teklifte kendisine sunulan paketlerden birini seçer.
+// Seçilen paketin bedeli booking.fee'ye yazılır — peşin/ön ödemeli fiyat,
+// sözleşme ve ödeme akışı bu tutar üzerinden hesaplanır.
+export async function selectOfferPackage(slug: string, packageId: string) {
+  const { ip } = await getRequestMeta();
+  const { ok } = rateLimit(ip, "offer-package", { max: 20, windowMs: 10 * 60_000 });
+  if (!ok) throw new Error("Çok fazla istek. Lütfen birkaç dakika bekleyin.");
+
+  const supabase = createServiceClient();
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("id, client_name, status")
+    .eq("offer_slug", slug)
+    .single();
+  if (error || !booking) throw new Error("Teklif bulunamadı.");
+
+  // Sözleşme onaylandıktan sonra paket değiştirilemez — fiyat kilitlenmiştir
+  if (!["draft", "offer_sent"].includes(booking.status)) {
+    throw new Error("Teklif onaylandığı için paket değiştirilemiyor. Değişiklik için bizimle iletişime geçin.");
+  }
+
+  // Paket bu teklife ait olmalı — client'tan gelen fiyata güvenilmez
+  const { data: pkg, error: pkgError } = await supabase
+    .from("booking_offer_packages")
+    .select("id, title, fee")
+    .eq("id", packageId)
+    .eq("booking_id", booking.id)
+    .single();
+  if (pkgError || !pkg) throw new Error("Geçersiz paket seçimi.");
+
+  const { error: updateError } = await supabase
+    .from("bookings")
+    .update({
+      fee: Number(pkg.fee) || 0,
+      selected_package_id: pkg.id,
+      package_selected_at: new Date().toISOString(),
+    })
+    .eq("id", booking.id);
+  if (updateError) throw new Error("Seçiminiz kaydedilemedi. Lütfen tekrar deneyin.");
+
+  await sendOfferSelectionNotification({
+    clientName: booking.client_name,
+    bookingId: booking.id,
+    artistName: null,
+    conceptName: null,
+    packageName: `${pkg.title} — ${Number(pkg.fee).toLocaleString("tr-TR")} ₺`,
+    note: null,
+  }).catch((err) => console.error("[offer-package]", err));
+
+  revalidatePath(`/teklif/${slug}`);
+  revalidatePath(`/admin/bookings/${booking.id}`);
+}
+
 // Onay öncesi e-posta doğrulama kodu gönderir — onaylayanın e-posta
 // sahibi olduğunu kanıtlamak sözleşmenin ispat gücünü artırır.
 export async function sendOfferOtp(slug: string, email: string) {
