@@ -99,25 +99,49 @@ export async function getAdminCounts(): Promise<AdminCounts> {
 // (NOT is_published OR review_status = 'approved') diğer sekmelerde yayın
 // denemesini zaten reddeder; UI de bu yüzden toggle'ı yalnız approved'ta gösterir.
 
+// İçe aktarım (scripts/supply-import/import-external.mjs) sonrası "potential"
+// sekmesi yüzlerce satıra çıkabiliyor — tek sayfada hepsini basmak yerine
+// sabit boyutlu sayfalarla getiriyoruz (bkz. AdminListResult).
+export const ADMIN_LIST_PAGE_SIZE = 50;
+
+export interface AdminListResult<T> {
+  rows: T[];
+  total: number;
+  page: number; // 1-tabanlı
+  pageSize: number;
+}
+
 export interface VenueAdminFilters {
   reviewStatus: "potential" | "approved" | "archived";
   published?: "all" | "published" | "hidden"; // yalnız approved sekmesinde anlamlı
   claimStatus?: "all" | VenueDetailsRow["claim_status"];
   district?: string; // "all" veya tam eşleşme
+  search?: string; // mekan adında serbest metin arama (ilike)
+  page?: number; // 1-tabanlı, varsayılan 1
 }
 
-export async function getAllVenuesAdmin(filters: VenueAdminFilters): Promise<VenueDetailsRow[]> {
+export async function getAllVenuesAdmin(filters: VenueAdminFilters): Promise<AdminListResult<VenueDetailsRow>> {
   const supabase = createServiceClient();
-  let q = supabase.from("venue_details").select("*").eq("review_status", filters.reviewStatus).order("name", { ascending: true });
+  const page = Math.max(1, Math.trunc(filters.page ?? 1));
+  const from = (page - 1) * ADMIN_LIST_PAGE_SIZE;
+  const to = from + ADMIN_LIST_PAGE_SIZE - 1;
+
+  let q = supabase
+    .from("venue_details")
+    .select("*", { count: "exact" })
+    .eq("review_status", filters.reviewStatus)
+    .order("name", { ascending: true })
+    .range(from, to);
 
   if (filters.published === "published") q = q.eq("is_published", true);
   if (filters.published === "hidden") q = q.eq("is_published", false);
   if (filters.claimStatus && filters.claimStatus !== "all") q = q.eq("claim_status", filters.claimStatus);
   if (filters.district && filters.district !== "all") q = q.eq("district", filters.district);
+  if (filters.search && filters.search.trim()) q = q.ilike("name", `%${filters.search.trim()}%`);
 
-  const { data, error } = await q;
+  const { data, error, count } = await q;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return { rows: data ?? [], total: count ?? 0, page, pageSize: ADMIN_LIST_PAGE_SIZE };
 }
 
 export interface ReviewStatusCounts {
@@ -152,23 +176,31 @@ export interface ArtistAdminFilters {
   reviewStatus: "potential" | "approved" | "archived";
   published?: "all" | "published" | "hidden"; // yalnız approved sekmesinde anlamlı
   claimStatus?: "all" | ArtistProfileRow["claim_status"];
+  search?: string; // sanatçı adında serbest metin arama (ilike)
+  page?: number; // 1-tabanlı, varsayılan 1
 }
 
-export async function getAllArtistsAdmin(filters: ArtistAdminFilters): Promise<ArtistProfileRow[]> {
+export async function getAllArtistsAdmin(filters: ArtistAdminFilters): Promise<AdminListResult<ArtistProfileRow>> {
   const supabase = createServiceClient();
+  const page = Math.max(1, Math.trunc(filters.page ?? 1));
+  const from = (page - 1) * ADMIN_LIST_PAGE_SIZE;
+  const to = from + ADMIN_LIST_PAGE_SIZE - 1;
+
   let q = supabase
     .from("artist_profiles")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("review_status", filters.reviewStatus)
-    .order("display_name", { ascending: true });
+    .order("display_name", { ascending: true })
+    .range(from, to);
 
   if (filters.published === "published") q = q.eq("is_published", true);
   if (filters.published === "hidden") q = q.eq("is_published", false);
   if (filters.claimStatus && filters.claimStatus !== "all") q = q.eq("claim_status", filters.claimStatus);
+  if (filters.search && filters.search.trim()) q = q.ilike("display_name", `%${filters.search.trim()}%`);
 
-  const { data, error } = await q;
+  const { data, error, count } = await q;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return { rows: data ?? [], total: count ?? 0, page, pageSize: ADMIN_LIST_PAGE_SIZE };
 }
 
 export async function getArtistReviewStatusCounts(): Promise<ReviewStatusCounts> {

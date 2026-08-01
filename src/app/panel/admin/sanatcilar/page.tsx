@@ -35,7 +35,7 @@ function buildQuery(params: Record<string, string | undefined>): string {
 export default async function AdminArtistsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sekme?: string; claim?: string; yayin?: string; kaydedildi?: string }>;
+  searchParams: Promise<{ sekme?: string; claim?: string; yayin?: string; q?: string; sayfa?: string; kaydedildi?: string }>;
 }) {
   const user = await getPanelUser();
   if (!user) redirect("/panel/giris");
@@ -45,13 +45,21 @@ export default async function AdminArtistsPage({
   const reviewStatus: ReviewStatus = sp.sekme === "approved" || sp.sekme === "archived" ? sp.sekme : "potential";
   const claim = (sp.claim as ClaimStatus | undefined) ?? "all";
   const yayin = (sp.yayin as ArtistAdminFilters["published"]) ?? "all";
+  const search = sp.q?.trim() ?? "";
+  const page = Math.max(1, Number.parseInt(sp.sayfa ?? "1", 10) || 1);
 
-  const [counts, artists] = await Promise.all([
+  const [counts, artistsResult] = await Promise.all([
     getArtistReviewStatusCounts(),
-    getAllArtistsAdmin({ reviewStatus, claimStatus: claim, published: reviewStatus === "approved" ? yayin : "all" }),
+    getAllArtistsAdmin({ reviewStatus, claimStatus: claim, published: reviewStatus === "approved" ? yayin : "all", search, page }),
   ]);
+  const { rows: artists, total, pageSize } = artistsResult;
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
 
-  const filterQs = { claim: claim !== "all" ? claim : undefined, yayin: yayin !== "all" ? yayin : undefined };
+  const filterQs = {
+    claim: claim !== "all" ? claim : undefined,
+    yayin: yayin !== "all" ? yayin : undefined,
+    q: search || undefined,
+  };
 
   return (
     <div className="space-y-6">
@@ -87,6 +95,16 @@ export default async function AdminArtistsPage({
       <form method="get" className="flex flex-wrap items-end gap-3 rounded-lg border p-3">
         <input type="hidden" name="sekme" value={reviewStatus} />
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+          Sanatçı adı
+          <input
+            type="search"
+            name="q"
+            defaultValue={search}
+            placeholder="Ara..."
+            className="h-8 w-48 rounded-lg border border-input bg-transparent px-2 text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           Sahiplenme durumu
           <select name="claim" defaultValue={claim} className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm">
             <option value="all">Tümü</option>
@@ -117,7 +135,7 @@ export default async function AdminArtistsPage({
       ) : (
         <div className="space-y-3">
           {artists.map((a) => {
-            const redirectTo = `/panel/admin/sanatcilar${buildQuery({ sekme: reviewStatus, ...filterQs })}`;
+            const redirectTo = `/panel/admin/sanatcilar${buildQuery({ sekme: reviewStatus, ...filterQs, sayfa: page > 1 ? String(page) : undefined })}`;
             return (
               <Card key={a.entity_id}>
                 <CardHeader>
@@ -211,6 +229,33 @@ export default async function AdminArtistsPage({
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {total > pageSize && (
+        <div className="flex items-center justify-between border-t pt-3 text-sm text-muted-foreground">
+          <span>
+            {total === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} / {total} sanatçı
+          </span>
+          <div className="flex gap-2">
+            <Link
+              href={`/panel/admin/sanatcilar${buildQuery({ sekme: reviewStatus, ...filterQs, sayfa: page > 2 ? String(page - 1) : undefined })}`}
+              aria-disabled={page <= 1}
+              className={`rounded-lg border px-3 py-1.5 ${page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-muted"}`}
+            >
+              ‹ Önceki
+            </Link>
+            <span className="px-2 py-1.5">
+              Sayfa {page} / {lastPage}
+            </span>
+            <Link
+              href={`/panel/admin/sanatcilar${buildQuery({ sekme: reviewStatus, ...filterQs, sayfa: String(page + 1) })}`}
+              aria-disabled={page >= lastPage}
+              className={`rounded-lg border px-3 py-1.5 ${page >= lastPage ? "pointer-events-none opacity-40" : "hover:bg-muted"}`}
+            >
+              Sonraki ›
+            </Link>
+          </div>
         </div>
       )}
     </div>

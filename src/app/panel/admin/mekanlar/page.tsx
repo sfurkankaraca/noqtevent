@@ -35,7 +35,7 @@ function buildQuery(params: Record<string, string | undefined>): string {
 export default async function AdminVenuesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sekme?: string; claim?: string; ilce?: string; yayin?: string; kaydedildi?: string }>;
+  searchParams: Promise<{ sekme?: string; claim?: string; ilce?: string; yayin?: string; q?: string; sayfa?: string; kaydedildi?: string }>;
 }) {
   const user = await getPanelUser();
   if (!user) redirect("/panel/giris");
@@ -47,14 +47,30 @@ export default async function AdminVenuesPage({
   const claim = (sp.claim as ClaimStatus | undefined) ?? "all";
   const district = sp.ilce ?? "all";
   const yayin = (sp.yayin as VenueAdminFilters["published"]) ?? "all";
+  const search = sp.q?.trim() ?? "";
+  const page = Math.max(1, Number.parseInt(sp.sayfa ?? "1", 10) || 1);
 
-  const [counts, districts, venues] = await Promise.all([
+  const [counts, districts, venuesResult] = await Promise.all([
     getVenueReviewStatusCounts(),
     getDistinctVenueDistricts(),
-    getAllVenuesAdmin({ reviewStatus, claimStatus: claim, district, published: reviewStatus === "approved" ? yayin : "all" }),
+    getAllVenuesAdmin({
+      reviewStatus,
+      claimStatus: claim,
+      district,
+      published: reviewStatus === "approved" ? yayin : "all",
+      search,
+      page,
+    }),
   ]);
+  const { rows: venues, total, pageSize } = venuesResult;
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
 
-  const filterQs = { claim: claim !== "all" ? claim : undefined, ilce: district !== "all" ? district : undefined, yayin: yayin !== "all" ? yayin : undefined };
+  const filterQs = {
+    claim: claim !== "all" ? claim : undefined,
+    ilce: district !== "all" ? district : undefined,
+    yayin: yayin !== "all" ? yayin : undefined,
+    q: search || undefined,
+  };
 
   return (
     <div className="space-y-6">
@@ -90,6 +106,16 @@ export default async function AdminVenuesPage({
 
       <form method="get" className="flex flex-wrap items-end gap-3 rounded-lg border p-3">
         <input type="hidden" name="sekme" value={reviewStatus} />
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+          Mekan adı
+          <input
+            type="search"
+            name="q"
+            defaultValue={search}
+            placeholder="Ara..."
+            className="h-8 w-48 rounded-lg border border-input bg-transparent px-2 text-sm"
+          />
+        </label>
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           Sahiplenme durumu
           <select name="claim" defaultValue={claim} className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm">
@@ -132,7 +158,7 @@ export default async function AdminVenuesPage({
       ) : (
         <div className="space-y-3">
           {venues.map((v) => {
-            const redirectTo = `/panel/admin/mekanlar${buildQuery({ sekme: reviewStatus, ...filterQs })}`;
+            const redirectTo = `/panel/admin/mekanlar${buildQuery({ sekme: reviewStatus, ...filterQs, sayfa: page > 1 ? String(page) : undefined })}`;
             return (
               <Card key={v.entity_id}>
                 <CardHeader>
@@ -226,6 +252,33 @@ export default async function AdminVenuesPage({
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {total > pageSize && (
+        <div className="flex items-center justify-between border-t pt-3 text-sm text-muted-foreground">
+          <span>
+            {total === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} / {total} mekan
+          </span>
+          <div className="flex gap-2">
+            <Link
+              href={`/panel/admin/mekanlar${buildQuery({ sekme: reviewStatus, ...filterQs, sayfa: page > 2 ? String(page - 1) : undefined })}`}
+              aria-disabled={page <= 1}
+              className={`rounded-lg border px-3 py-1.5 ${page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-muted"}`}
+            >
+              ‹ Önceki
+            </Link>
+            <span className="px-2 py-1.5">
+              Sayfa {page} / {lastPage}
+            </span>
+            <Link
+              href={`/panel/admin/mekanlar${buildQuery({ sekme: reviewStatus, ...filterQs, sayfa: String(page + 1) })}`}
+              aria-disabled={page >= lastPage}
+              className={`rounded-lg border px-3 py-1.5 ${page >= lastPage ? "pointer-events-none opacity-40" : "hover:bg-muted"}`}
+            >
+              Sonraki ›
+            </Link>
+          </div>
         </div>
       )}
     </div>
