@@ -51,6 +51,41 @@ export async function sendMagicLinkAction(formData: FormData): Promise<void> {
   redirect(`/panel/giris?gonderildi=${encodeURIComponent(email)}`);
 }
 
+// 6 haneli kodla giriş: magic link, Gmail benzeri istemcilerin link tarama
+// botları tarafından "önceden tıklanıp" tüketilebiliyor (otp_expired) ve
+// link hangi host'tan istendiyse oraya dönmek zorunda (PKCE çerezi). Kod
+// girişi iki soruna da bağışık — signInWithOtp zaten hem linki hem kodu
+// (e-posta şablonundaki {{ .Token }}) aynı mailde üretir; burada yalnız
+// kodun doğrulanması eklenir.
+export async function verifyOtpCodeAction(formData: FormData): Promise<void> {
+  const headersList = await headers();
+  const ip = headersList.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const { ok } = rateLimit(ip, "panel-otp-verify", { max: 10, windowMs: 15 * 60_000 });
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const code = String(formData.get("code") ?? "").trim();
+
+  if (!ok) {
+    redirect(`/panel/giris?hata=${encodeURIComponent("Çok fazla deneme yapıldı, birkaç dakika sonra tekrar deneyin.")}`);
+  }
+  if (!EMAIL_RE.test(email) || !/^\d{6}$/.test(code)) {
+    redirect(
+      `/panel/giris?gonderildi=${encodeURIComponent(email)}&hata=${encodeURIComponent("6 haneli kodu kontrol edip tekrar deneyin.")}`,
+    );
+  }
+
+  const supabase = await createPanelServerClient();
+  const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
+
+  if (error) {
+    redirect(
+      `/panel/giris?gonderildi=${encodeURIComponent(email)}&hata=${encodeURIComponent("Kod doğrulanamadı: süresi dolmuş veya hatalı olabilir. Yeni kod isteyin.")}`,
+    );
+  }
+
+  redirect("/panel");
+}
+
 export async function signOutAction(): Promise<void> {
   const supabase = await createPanelServerClient();
   await supabase.auth.signOut();
