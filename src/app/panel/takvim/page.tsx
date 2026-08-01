@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPanelUser } from "@/lib/panel/supabaseServer";
-import { getMyEntities, getSupplyEventsForEntities } from "@/lib/panel/queries";
+import { getConfirmedEventsForEntityInRange, getMyEntities, getSupplyEventsForEntities } from "@/lib/panel/queries";
 import { EVENT_KIND_LABEL, SUPPLY_EVENT_STATUS_BADGE, SUPPLY_EVENT_STATUS_LABEL, formatDateTime } from "@/lib/panel/format";
+import { getWeekRange, getMonthRange } from "@/lib/panel/gorsel/period";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "../LinkButton";
+import { ImageOptionsControls } from "../ImageOptionsControls";
 
 export default async function TakvimPage({
   searchParams,
@@ -37,6 +39,21 @@ export default async function TakvimPage({
   const events = await getSupplyEventsForEntities(scopedEntityIds);
   const nameByEntityId = new Map(entities.map((e) => [e.entityId, e.displayName]));
 
+  // Takvim görseli (haftalık/aylık) tek bir entity'ye ait olmak zorunda —
+  // "Tümü" görünümünde birden çok profil varsa kullanıcının önce birini
+  // seçmesi gerekiyor (bkz. aşağıdaki uyarı bloğu).
+  const calendarEntityId = sp.entity ?? (entities.length === 1 ? entities[0].entityId : null);
+  let weekCount = 0;
+  let monthCount = 0;
+  if (calendarEntityId) {
+    const weekRange = getWeekRange();
+    const monthRange = getMonthRange();
+    [weekCount, monthCount] = await Promise.all([
+      getConfirmedEventsForEntityInRange(calendarEntityId, weekRange.startIso, weekRange.endIso).then((r) => r.length),
+      getConfirmedEventsForEntityInRange(calendarEntityId, monthRange.startIso, monthRange.endIso).then((r) => r.length),
+    ]);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -63,6 +80,37 @@ export default async function TakvimPage({
         <div className="rounded-lg bg-primary/10 px-4 py-3 text-sm text-primary">Etkinlik oluşturuldu.</div>
       )}
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Takvim görseli</CardTitle>
+          <CardDescription>
+            {calendarEntityId
+              ? "Bu haftaki veya bu aydaki onaylı etkinliklerinizi tek bir story/post görselinde paylaşın."
+              : "Takvim görseli üretmek için yukarıdan bir profil seçin."}
+          </CardDescription>
+        </CardHeader>
+        {calendarEntityId && (
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Haftalık</p>
+              <ImageOptionsControls
+                basePath={`/panel/takvim/gorsel?entityId=${calendarEntityId}&period=week`}
+                disabled={weekCount === 0}
+                disabledReason="Bu hafta onaylı etkinlik yok."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Aylık</p>
+              <ImageOptionsControls
+                basePath={`/panel/takvim/gorsel?entityId=${calendarEntityId}&period=month`}
+                disabled={monthCount === 0}
+                disabledReason="Bu ay (bugünden itibaren) onaylı etkinlik yok."
+              />
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
       {events.length === 0 ? (
         <p className="text-sm text-muted-foreground">Henüz etkinlik yok.</p>
       ) : (
@@ -80,13 +128,14 @@ export default async function TakvimPage({
                   {ev.city ? ` · ${ev.city}` : ""}
                 </CardDescription>
               </CardHeader>
-              {ev.status === "pending_counterparty" && (
-                <CardContent>
+              <CardContent className="space-y-3">
+                {ev.status === "pending_counterparty" && (
                   <p className="text-xs text-muted-foreground">
                     Karşı tarafın onayı bekleniyor — yalnız sizin profilinizde görünüyor.
                   </p>
-                </CardContent>
-              )}
+                )}
+                <ImageOptionsControls basePath={`/panel/etkinlik/${ev.id}/gorsel`} />
+              </CardContent>
             </Card>
           ))}
         </div>

@@ -32,6 +32,13 @@ export const ENTRY_POLICY_LABEL: Record<EntryPolicy, string> = {
   reservation: "Rezervasyonla",
 };
 
+// Story/post görselindeki rozet için kısa biçim (TASARIM §2.5: "Ücretsiz/Kapıda/Rezervasyonlu").
+export const ENTRY_POLICY_SHORT_LABEL: Record<EntryPolicy, string> = {
+  free: "Ücretsiz",
+  door_fee: "Kapıda",
+  reservation: "Rezervasyonlu",
+};
+
 // artist_profiles.performer_type CHECK listesi.
 export const PERFORMER_TYPE_OPTIONS = ["dj", "band", "solo", "acoustic", "other"] as const;
 export type PerformerType = (typeof PERFORMER_TYPE_OPTIONS)[number];
@@ -97,4 +104,10 @@ export function formatDateTime(iso: string | null | undefined): string {
   } catch {
     return iso;
   }
+}
+
+// Etkinliğin story/post paylaşım görseli — src/app/panel/etkinlik/[id]/gorsel/route.tsx
+// (TASARIM §2.5: "NOQT etkinlikten paylaşılabilir story görseli ÜRETİR").
+export function panelEventImageHref(eventId: string, format: "story" | "post"): string {
+  return `/panel/etkinlik/${eventId}/gorsel?format=${format}`;
 }

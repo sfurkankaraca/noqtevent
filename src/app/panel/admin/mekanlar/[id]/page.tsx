@@ -2,15 +2,17 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getPanelUser } from "@/lib/panel/supabaseServer";
 import { isPanelAdmin } from "@/lib/panel/adminAuth";
-import { getVenueByEntityId } from "@/lib/panel/queries";
+import { getConfirmedEventsForEntityInRange, getVenueByEntityId } from "@/lib/panel/queries";
 import { updateVenueAdminAction } from "@/lib/panel/actions/admin";
 import { CLAIM_STATUS_LABEL, ENTRY_POLICY_LABEL, ENTRY_POLICY_OPTIONS, REVIEW_STATUS_LABEL, VENUE_TYPE_LABEL, VENUE_TYPE_OPTIONS } from "@/lib/panel/format";
+import { getMonthRange, getWeekRange } from "@/lib/panel/gorsel/period";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ImageOptionsControls } from "../../../ImageOptionsControls";
 
 export default async function AdminVenueEditPage({
   params,
@@ -30,6 +32,15 @@ export default async function AdminVenueEditPage({
 
   const listRedirectTo = sp.redirectTo ?? "/panel/admin/mekanlar";
   const isPublishEditable = venue.review_status === "approved";
+
+  // Kurucu, mekan adına takvim görseli üretebilsin — lansman öncesi davet
+  // mesajlarına eklemek için (kurucu talebi, "KAPSAM EKLEMESİ" §4).
+  const weekRange = getWeekRange();
+  const monthRange = getMonthRange();
+  const [weekCount, monthCount] = await Promise.all([
+    getConfirmedEventsForEntityInRange(venue.entity_id, weekRange.startIso, weekRange.endIso).then((r) => r.length),
+    getConfirmedEventsForEntityInRange(venue.entity_id, monthRange.startIso, monthRange.endIso).then((r) => r.length),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -58,6 +69,33 @@ export default async function AdminVenueEditPage({
           listesinden onaylayın.
         </p>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Takvim görseli</CardTitle>
+          <CardDescription>
+            Mekanın bu haftaki / bu aydaki onaylı etkinliklerini tek görselde paylaşın (davet mesajlarına eklemek için).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">Haftalık</p>
+            <ImageOptionsControls
+              basePath={`/panel/takvim/gorsel?entityId=${venue.entity_id}&period=week`}
+              disabled={weekCount === 0}
+              disabledReason="Bu hafta onaylı etkinlik yok."
+            />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">Aylık</p>
+            <ImageOptionsControls
+              basePath={`/panel/takvim/gorsel?entityId=${venue.entity_id}&period=month`}
+              disabled={monthCount === 0}
+              disabledReason="Bu ay (bugünden itibaren) onaylı etkinlik yok."
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

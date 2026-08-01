@@ -124,6 +124,69 @@ export async function getPendingApprovalsForEntities(entityIds: string[]): Promi
   return data ?? [];
 }
 
+// Bir entity'nin (mekan veya sanatçı, taraflardan biri olarak) onaylı
+// (confirmed) etkinlikleri, [startIso, endIso) aralığında — haftalık/aylık
+// takvim görseli (src/app/panel/takvim/gorsel/route.tsx) için. artist_entity_ids
+// bir array kolon olduğundan PostgREST "contains" (cs) operatörü kullanılıyor.
+export async function getConfirmedEventsForEntityInRange(
+  entityId: string,
+  startIso: string,
+  endIso: string
+): Promise<SupplyEventRow[]> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("supply_events")
+    .select("*")
+    .or(`venue_entity_id.eq.${entityId},artist_entity_ids.cs.{${entityId}}`)
+    .eq("status", "confirmed")
+    .gte("start_at", startIso)
+    .lt("start_at", endIso)
+    .order("start_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+// Birden çok sanatçı entity_id'si için tek sorguda görünen ad haritası —
+// takvim görselinde her satırda "sanatçı: X" göstermek için (N+1 sorgudan kaçınır).
+export async function getArtistDisplayNames(entityIds: string[]): Promise<Map<string, string>> {
+  if (entityIds.length === 0) return new Map();
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("artist_profiles")
+    .select("entity_id, display_name")
+    .in("entity_id", Array.from(new Set(entityIds)));
+  if (error) throw new Error(error.message);
+  return new Map((data ?? []).map((a) => [a.entity_id, a.display_name]));
+}
+
+// Görsel route'ları için "entity kim" özeti — mekan mı sanatçı mı olduğuna
+// bakmaksızın ad + kapak fotoğrafı + Instagram kullanıcı adını tek çağrıda
+// döndürür (venue_details/artist_profiles'tan hangisi doluysa o kullanılır).
+export interface EntityImageProfile {
+  displayName: string;
+  photoUrl: string | null;
+  instagramHandle: string | null;
+}
+
+export async function getEntityImageProfile(entityId: string): Promise<EntityImageProfile | null> {
+  const [venue, artist] = await Promise.all([getVenueByEntityId(entityId), getArtistByEntityId(entityId)]);
+  if (venue) {
+    return {
+      displayName: venue.name,
+      photoUrl: venue.photo_urls[0] ?? null,
+      instagramHandle: venue.instagram_handle,
+    };
+  }
+  if (artist) {
+    return {
+      displayName: artist.display_name,
+      photoUrl: artist.photo_url,
+      instagramHandle: artist.links?.instagram ?? null,
+    };
+  }
+  return null;
+}
+
 export async function getSupplyEventById(id: string): Promise<SupplyEventRow | null> {
   const supabase = createServiceClient();
   const { data, error } = await supabase.from("supply_events").select("*").eq("id", id).maybeSingle();
@@ -173,4 +236,17 @@ export async function getArtistByEntityId(entityId: string): Promise<ArtistProfi
   const supabase = createServiceClient();
   const { data } = await supabase.from("artist_profiles").select("*").eq("entity_id", entityId).maybeSingle();
   return data;
+}
+
+// Bir kullanıcı bir supply_event'in taraflarından (mekan VEYA sanatçılardan
+// biri) herhangi birinin entity_members üyesi mi? Story/post görsel route'u
+// (src/app/panel/etkinlik/[id]/gorsel/route.tsx) gibi "bu etkinliğe erişebilir
+// mi" kontrolü gereken yerlerde isEntityMember'ı tek tek çağırmak yerine kullan.
+export async function canManageSupplyEvent(
+  userId: string,
+  event: Pick<SupplyEventRow, "venue_entity_id" | "artist_entity_ids">
+): Promise<boolean> {
+  const partyEntityIds = [event.venue_entity_id, ...event.artist_entity_ids].filter(Boolean);
+  const checks = await Promise.all(partyEntityIds.map((entityId) => isEntityMember(userId, entityId)));
+  return checks.some(Boolean);
 }

@@ -8,6 +8,7 @@ import { EVENT_KIND_LABEL, formatDateTime } from "@/lib/panel/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageOptionsControls } from "../../ImageOptionsControls";
 
 export default async function AdminEventsPage({
   searchParams,
@@ -56,23 +57,26 @@ export default async function AdminEventsPage({
                   {ev.created_by_side === "venue" ? "Mekan ekledi" : "Sanatçı ekledi"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-wrap items-center gap-2">
-                <form action={confirmEventAdminAction}>
-                  <input type="hidden" name="eventId" value={ev.id} />
-                  <Button type="submit" size="sm">
-                    Onayla
-                  </Button>
-                </form>
-                <details>
-                  <summary className="cursor-pointer text-sm text-destructive">Reddet</summary>
-                  <form action={rejectEventAdminAction} className="mt-2 space-y-2">
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <form action={confirmEventAdminAction}>
                     <input type="hidden" name="eventId" value={ev.id} />
-                    <Textarea name="reason" placeholder="Red gerekçesi (opsiyonel)" rows={2} />
-                    <Button type="submit" size="sm" variant="destructive">
-                      Reddi onayla
+                    <Button type="submit" size="sm">
+                      Onayla
                     </Button>
                   </form>
-                </details>
+                  <details>
+                    <summary className="cursor-pointer text-sm text-destructive">Reddet</summary>
+                    <form action={rejectEventAdminAction} className="mt-2 space-y-2">
+                      <input type="hidden" name="eventId" value={ev.id} />
+                      <Textarea name="reason" placeholder="Red gerekçesi (opsiyonel)" rows={2} />
+                      <Button type="submit" size="sm" variant="destructive">
+                        Reddi onayla
+                      </Button>
+                    </form>
+                  </details>
+                </div>
+                <ImageOptionsControls basePath={`/panel/etkinlik/${ev.id}/gorsel`} />
               </CardContent>
             </Card>
           ))}
