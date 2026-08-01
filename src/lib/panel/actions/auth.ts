@@ -24,7 +24,17 @@ export async function sendMagicLinkAction(formData: FormData): Promise<void> {
     redirect(`/panel/giris?hata=${encodeURIComponent("Geçerli bir e-posta adresi girin.")}`);
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_URL || headersList.get("origin") || "";
+  // Magic link, İSTEĞİN GELDİĞİ host'a dönmeli: doğrulama çerezi (PKCE code
+  // verifier) o host'a yazılıyor; link başka host'a dönerse "süresi dolmuş"
+  // hatası çıkar. Bu yüzden öncelik istek origin'inde — NEXT_PUBLIC_URL ana
+  // sitenin değişkeni (www.noqt.events; sitemap/meta kullanıyor), panel için
+  // yalnız son çare. Güvenlik: Supabase Redirect URL izin listesi zaten
+  // yalnız kayıtlı callback adreslerini kabul eder, host header'ı bu yüzden
+  // güvenle kullanılabilir.
+  const proto = headersList.get("x-forwarded-proto") ?? "https";
+  const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
+  const requestOrigin = headersList.get("origin") || (host ? `${proto}://${host}` : "");
+  const baseUrl = requestOrigin || process.env.NEXT_PUBLIC_URL || "";
   const supabase = await createPanelServerClient();
   const { error } = await supabase.auth.signInWithOtp({
     email,
