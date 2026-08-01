@@ -210,23 +210,50 @@ function extractExternalLinks(externalLinks) {
   return links;
 }
 
+// TM Discovery "derin sayfalama" limiti: (page * size) < 1000 — yani tek
+// sorguyla en fazla ~1000 etkinlik gezilebilir (DIS1035). TR kataloğu bunu
+// aşıyor; çözüm TARİH PENCERELEME: katalog 61 günlük dilimlere bölünür, her
+// dilim kendi 1000'lik sayfalama bütçesiyle taranır. Dedup zaten Map'lerde.
+function tmDateWindows() {
+  const windows = [];
+  const start = new Date();
+  const WINDOW_DAYS = 61;
+  const WINDOW_COUNT = 6; // ~12 ay
+  const fmt = (d) => d.toISOString().replace(/\.\d{3}Z$/, "Z"); // TM milisaniye kabul etmez
+  for (let i = 0; i < WINDOW_COUNT; i++) {
+    const from = new Date(start.getTime() + i * WINDOW_DAYS * 86400_000);
+    const to = new Date(start.getTime() + (i + 1) * WINDOW_DAYS * 86400_000);
+    windows.push({ startDateTime: fmt(from), endDateTime: fmt(to) });
+  }
+  // 12 aydan sonrası için açık uçlu son pencere (nadir ama kaybetmeyelim).
+  windows.push({ startDateTime: fmt(new Date(start.getTime() + WINDOW_COUNT * WINDOW_DAYS * 86400_000)) });
+  return windows;
+}
+
 async function fetchTicketmaster({ apiKey, maxPages, pageSize, verbose }) {
   const venues = new Map();
   const artists = new Map();
-  let page = 0;
-  let totalPages = 1;
   let totalElements = 0;
   let rawVenueMentions = 0;
   let rawArtistMentions = 0;
+  let pagesFetchedTotal = 0;
+  let truncatedWindows = 0;
 
-  while (page < totalPages && page < maxPages) {
+  for (const window of tmDateWindows()) {
+  let page = 0;
+  let totalPages = 1;
+
+  // (page+1)*size <= 1000 şartı: DIS1035'e hiç çarpmadan pencere içinde kal.
+  while (page < totalPages && pagesFetchedTotal < maxPages && (page + 1) * pageSize <= 1000) {
     const params = new URLSearchParams({
       apikey: apiKey,
       countryCode: "TR",
       size: String(pageSize),
       page: String(page),
       sort: "date,asc",
+      startDateTime: window.startDateTime,
     });
+    if (window.endDateTime) params.set("endDateTime", window.endDateTime);
     const url = `https://app.ticketmaster.com/discovery/v2/events.json?${params}`;
 
     let res;
@@ -244,8 +271,8 @@ async function fetchTicketmaster({ apiKey, maxPages, pageSize, verbose }) {
     }
 
     const data = await res.json();
-    totalPages = Math.max(1, Math.min(data.page?.totalPages ?? 1, maxPages));
-    totalElements = data.page?.totalElements ?? totalElements;
+    totalPages = Math.max(1, data.page?.totalPages ?? 1);
+    if (page === 0) totalElements += data.page?.totalElements ?? 0;
     const events = data._embedded?.events ?? [];
 
     for (const e of events) {
@@ -283,19 +310,30 @@ async function fetchTicketmaster({ apiKey, maxPages, pageSize, verbose }) {
       }
     }
 
-    if (verbose) console.log(`  [tm] sayfa ${page + 1}/${totalPages} — ${events.length} etkinlik`);
+    if (verbose) console.log(`  [tm] ${window.startDateTime.slice(0, 10)} penceresi — sayfa ${page + 1}/${totalPages} — ${events.length} etkinlik`);
     page++;
+    pagesFetchedTotal++;
     await sleep(220); // TM rate limitine (varsayılan ~5 istek/sn) nazik davran
   }
+
+  if (page < totalPages && (page + 1) * pageSize > 1000) {
+    truncatedWindows++;
+    console.warn(
+      `  UYARI: ${window.startDateTime.slice(0, 10)} penceresi 1000 etkinlik bütçesini aştı — ` +
+      `pencere daraltılmalı (WINDOW_DAYS düşür) ya da kalanlar bir sonraki koşuda gelir.`,
+    );
+  }
+  } // pencere döngüsü sonu
 
   return {
     venues,
     artists,
-    pagesFetched: page,
-    totalPages,
+    pagesFetched: pagesFetchedTotal,
+    totalPages: pagesFetchedTotal, // pencereli modda "kalan sayfa" kavramı pencere-içi; uyarılar yukarıda
     totalElements,
     rawVenueMentions,
     rawArtistMentions,
+    truncatedWindows,
   };
 }
 
