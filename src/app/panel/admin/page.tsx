@@ -23,27 +23,49 @@ export default async function AdminDashboardPage() {
     { label: "Gönderilen davet", value: counts.invitesSent, href: "/panel/admin/davetler" },
   ];
 
+  const appTiles = [
+    { label: "Kullanıcılar", href: "/panel/admin/uygulama/kullanicilar" },
+    { label: "Geri bildirim", href: "/panel/admin/uygulama/geribildirim" },
+    { label: "İstatistikler", href: "/panel/admin/uygulama/istatistikler" },
+  ];
+
   return (
-    <div className="space-y-6">
-      <h1 className="font-heading text-2xl">Admin — Arz operasyonu</h1>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {tiles.map((t) => {
-          const content = (
-            <Card key={t.label} className="h-full">
-              <CardHeader>
-                <CardTitle className="text-3xl">{t.value}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">{t.label}</CardContent>
-            </Card>
-          );
-          return t.href ? (
+    <div className="space-y-8">
+      <div>
+        <h1 className="font-heading text-2xl">Admin — Arz operasyonu</h1>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {tiles.map((t) => {
+            const content = (
+              <Card key={t.label} className="h-full">
+                <CardHeader>
+                  <CardTitle className="text-3xl">{t.value}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">{t.label}</CardContent>
+              </Card>
+            );
+            return t.href ? (
+              <Link key={t.label} href={t.href}>
+                {content}
+              </Link>
+            ) : (
+              content
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="font-heading text-xl">Uygulama (eventmatch)</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Firebase tarafındaki kurucu admin ekranlarının web köprüsü.</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {appTiles.map((t) => (
             <Link key={t.label} href={t.href}>
-              {content}
+              <Card className="h-full transition-colors hover:bg-muted/50">
+                <CardContent className="pt-4 text-sm font-medium">{t.label}</CardContent>
+              </Card>
             </Link>
-          ) : (
-            content
-          );
-        })}
+          ))}
+        </div>
       </div>
     </div>
   );

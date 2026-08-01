@@ -58,7 +58,13 @@ const nextConfig: NextConfig = {
     },
   },
   async redirects() {
-    return [
+    type RedirectRule = {
+      source: string;
+      destination: string;
+      permanent: boolean;
+      has?: { type: "host"; value: string }[];
+    };
+    const redirectRules: RedirectRule[] = [
       {
         // Eski yazım hatalı slug — indexlenmiş URL'leri koru
         source: "/etkinlikler/bekarlga-veda-bride",
@@ -71,6 +77,42 @@ const nextConfig: NextConfig = {
       { source: "/deneyimler/acilis", destination: "/etkinlikler/acilis-lansman", permanent: true },
       { source: "/deneyimler/ozel-parti", destination: "/etkinlikler/ozel-parti", permanent: true },
     ];
+
+    // Panel domain yönlendirmesi (ETKINLIK_KESIF_V1_TASARIM.md §2.6): panel
+    // yalnız panel.noqt.social'dan sunulur, noqt.events'ten /panel* veya
+    // /onay* isteği gelirse oraya 308 (kalıcı) redirect edilir. `has: host`
+    // kontrolü sayesinde AYNI Vercel projesi/build'i hem noqt.events hem
+    // panel.noqt.social host'larına cevap verebilir — yalnız noqt.events'e
+    // gelen isteklerde bu kural devreye girer; panel.noqt.social'ın kendisi
+    // ve localhost (host eşleşmediği için) ASLA yönlendirilmez.
+    //
+    // PANEL_CANONICAL_HOST env'i boşsa kural hiç eklenmez — domain
+    // panel.noqt.social'a bağlanana kadar mevcut davranış (yönlendirme yok)
+    // sürer. Env değişikliği yalnız yeni bir build/deploy sonrası etkili
+    // olur (next.config.ts build-time'da değerlendirilir).
+    const panelHost = process.env.PANEL_CANONICAL_HOST?.trim();
+    if (panelHost) {
+      for (const sourceHost of ["noqt.events", "www.noqt.events"]) {
+        for (const prefix of ["/panel", "/onay"]) {
+          redirectRules.push(
+            {
+              source: prefix,
+              has: [{ type: "host" as const, value: sourceHost }],
+              destination: `https://${panelHost}${prefix}`,
+              permanent: true,
+            },
+            {
+              source: `${prefix}/:path*`,
+              has: [{ type: "host" as const, value: sourceHost }],
+              destination: `https://${panelHost}${prefix}/:path*`,
+              permanent: true,
+            }
+          );
+        }
+      }
+    }
+
+    return redirectRules;
   },
   async headers() {
     return [
