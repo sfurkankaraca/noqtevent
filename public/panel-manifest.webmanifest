@@ -1,0 +1,19 @@
+{
+  "name": "NOQT Panel — Mekan & Sanatçı",
+  "short_name": "NOQT Panel",
+  "description": "Mekan ve sanatçı profillerini yönet, etkinlik oluştur, onayları takip et.",
+  "start_url": "/panel",
+  "scope": "/panel",
+  "display": "standalone",
+  "background_color": "#f7f6f4",
+  "theme_color": "#151312",
+  "lang": "tr",
+  "icons": [
+    {
+      "src": "/apple-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
