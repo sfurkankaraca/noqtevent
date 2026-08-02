@@ -69,9 +69,9 @@ export async function verifyOtpCodeAction(formData: FormData): Promise<void> {
   if (!ok) {
     redirect(`/panel/giris?hata=${encodeURIComponent("Çok fazla deneme yapıldı, birkaç dakika sonra tekrar deneyin.")}`);
   }
-  if (!EMAIL_RE.test(email) || !/^\d{6}$/.test(code)) {
+  if (!EMAIL_RE.test(email) || !/^\d{6,10}$/.test(code)) {
     redirect(
-      `/panel/giris?gonderildi=${encodeURIComponent(email)}&hata=${encodeURIComponent("6 haneli kodu kontrol edip tekrar deneyin.")}`,
+      `/panel/giris?gonderildi=${encodeURIComponent(email)}&hata=${encodeURIComponent("Maildeki kodu eksiksiz girip tekrar deneyin.")}`,
     );
   }
 

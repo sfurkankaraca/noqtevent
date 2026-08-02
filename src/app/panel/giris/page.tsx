@@ -23,7 +23,7 @@ export default async function PanelGirisPage({
         <CardContent className="space-y-4">
           {sp.gonderildi && (
             <div className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
-              <strong>{sp.gonderildi}</strong> adresine gönderildi. Maildeki <strong>6 haneli kodu</strong>{" "}
+              <strong>{sp.gonderildi}</strong> adresine gönderildi. Maildeki <strong>giriş kodunu</strong>{" "}
               aşağıya girin (veya bağlantıya tıklayın). Spam klasörünü de kontrol edin.
             </div>
           )}
@@ -36,16 +36,18 @@ export default async function PanelGirisPage({
             <form action={verifyOtpCodeAction} className="space-y-3">
               <input type="hidden" name="email" value={sp.gonderildi} />
               <div className="space-y-1.5">
-                <Label htmlFor="code">Maildeki 6 haneli kod</Label>
+                <Label htmlFor="code">Maildeki giriş kodu</Label>
+                {/* Supabase OTP uzunluğu proje ayarına göre 6-10 hane olabilir
+                    (bu projede 8 geldiği görüldü) — kutu sabit 6'ya kilitlenmez. */}
                 <Input
                   id="code"
                   name="code"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
+                  pattern="[0-9]{6,10}"
+                  maxLength={10}
                   required
-                  placeholder="000000"
+                  placeholder="12345678"
                 />
               </div>
               <Button type="submit" className="w-full">
