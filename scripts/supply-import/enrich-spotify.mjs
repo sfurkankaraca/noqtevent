@@ -161,20 +161,29 @@ async function searchSpotifyArtist(token, name, limit = 5) {
 }
 
 // Güven kuralı — bkz. dosya başı açıklama.
+// REVİZYON (2026-08-02, ilk koşu 87/581 otomatik verince): popülerlik
+// kıyası yalnız AYNI İSİMLİ ikinci aday varsa anlamlı — farklı isimli bir
+// #2'yle kıyaslamak ("13 Killoki" vs "SWIRF") sahte şüpheli üretiyordu
+// (493/581). Belirsizlik yalnız ad çakışmasında vardır: birebir eşleşen
+// TEK aday varsa otomatik; birden çok aynı isimli aday varsa popülerlik
+// farkı eşiği devreye girer.
 function decideMatch(dbName, candidates) {
   if (candidates.length === 0) return { verdict: "no_match" };
   const target = normalizeName(dbName);
-  const top = candidates[0];
-  if (normalizeName(top.name) !== target) {
-    return { verdict: "suspicious", reason: "İlk sonucun adı DB'deki adla birebir eşleşmiyor" };
+  const exactMatches = candidates.filter((c) => normalizeName(c.name) === target);
+  if (exactMatches.length === 0) {
+    return { verdict: "suspicious", reason: "Hiçbir adayın adı DB'deki adla birebir eşleşmiyor" };
   }
-  const second = candidates[1];
-  if (!second) return { verdict: "auto", reason: "Tek aday, ad birebir eşleşiyor" };
-  const gap = top.popularity - second.popularity;
+  if (exactMatches.length === 1) {
+    return { verdict: "auto", reason: "Ad birebir eşleşen tek aday", candidate: exactMatches[0] };
+  }
+  // Aynı isimli birden çok sanatçı — gerçek belirsizlik burada.
+  const [first, second] = [...exactMatches].sort((a, b) => b.popularity - a.popularity);
+  const gap = first.popularity - second.popularity;
   if (gap >= POPULARITY_GAP_THRESHOLD) {
-    return { verdict: "auto", reason: `Ad eşleşiyor, popülerlik farkı belirgin (Δ=${gap})` };
+    return { verdict: "auto", reason: `${exactMatches.length} aynı isimli aday, popülerlik farkı belirgin (Δ=${gap})`, candidate: first };
   }
-  return { verdict: "suspicious", reason: `Ad eşleşiyor ama popülerlik farkı yetersiz (Δ=${gap}, eşik=${POPULARITY_GAP_THRESHOLD})` };
+  return { verdict: "suspicious", reason: `${exactMatches.length} AYNI isimli aday ve popülerlik farkı yetersiz (Δ=${gap}, eşik=${POPULARITY_GAP_THRESHOLD})` };
 }
 
 // ── PostgREST istemcisi (import-external.mjs ile AYNI desen) ────────────────
@@ -355,7 +364,9 @@ async function main() {
     } else if (decision.verdict === "suspicious") {
       suspiciousRows.push({ row, candidates: candidates.slice(0, 3), reason: decision.reason });
     } else {
-      const top = candidates[0];
+      // decideMatch'in seçtiği aday — listenin ilk sırası OLMAYABİLİR
+      // (birebir isim eşleşmesi 2. veya 3. sırada olabilir).
+      const top = decision.candidate;
       if (VERBOSE) console.log(`  -> otomatik: ${formatCandidate(top)} (${decision.reason})`);
       if (APPLY) {
         try {
