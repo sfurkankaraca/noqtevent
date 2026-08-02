@@ -69,6 +69,15 @@ export interface ArtistProfileRow {
   genres: string[];
   performer_type: string;
   links: { instagram?: string; spotify?: string; youtube?: string; soundcloud?: string };
+  // Şemada baştan beri vardı (20260801130000) ama bu tipte eksikti — panel
+  // Spotify/YouTube zenginleştirme özelliği (bkz. ArtistEnrich.tsx) eklenirken
+  // tamamlandı.
+  spotify_artist_id: string | null;
+  youtube_channel_id: string | null;
+  // 20260802140000_add_artist_spotify_enrichment.sql
+  spotify_popularity: number | null;
+  spotify_followers: number | null;
+  enriched_at: string | null;
   claim_status: ClaimStatus;
   managed_by_manager: boolean;
   // 20260801150000_add_supply_publish_flags.sql — bkz. VenueDetailsRow.is_published notu.

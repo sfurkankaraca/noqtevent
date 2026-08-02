@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import MediaManager from "@/components/panel/MediaManager";
+import ArtistEnrich from "@/components/panel/ArtistEnrich";
 
 export default async function AdminArtistEditPage({
   params,
@@ -58,6 +59,15 @@ export default async function AdminArtistEditPage({
           gösterilmiyor. Önce sanatçı listesinden onaylayın.
         </p>
       )}
+
+      <ArtistEnrich
+        entityId={artist.entity_id}
+        spotifyArtistId={artist.spotify_artist_id}
+        spotifyPopularity={artist.spotify_popularity}
+        spotifyFollowers={artist.spotify_followers}
+        enrichedAt={artist.enriched_at}
+        youtubeChannelId={artist.youtube_channel_id}
+      />
 
       <Card>
         <CardHeader>

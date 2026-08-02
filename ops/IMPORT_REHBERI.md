@@ -189,3 +189,79 @@ Her satırda:
 Onaylı bir satırı **Yayınla** butonuyla ayrıca, bilinçli olarak
 yayınlaman gerekiyor — onay ≠ yayın (bkz.
 `supabase/migrations/20260801150000_add_supply_publish_flags.sql`).
+
+## 7. Sonraki adım: Spotify zenginleştirme (toplu eşleştirme)
+
+Script: `scripts/supply-import/enrich-spotify.mjs`
+
+İçe aktarımdan gelen (veya elle girilen) sanatçılarda `spotify_artist_id`
+genelde boştur — bu script `artist_profiles`'ta bu alanı boş olan **TÜM**
+sanatçıları (yalnız "Potansiyel" değil, onaylı olanlar dahil) tarar, Spotify'da
+arar ve **güven kuralını geçenleri otomatik uygular**: kapak fotoğrafı
+(yalnız boşsa), türler (birleşim), `spotify_artist_id`, popülerlik, takipçi.
+Kurucunun elle koyduğu kapak fotoğrafı **asla ezilmez**.
+
+**Güven kuralı** (ikisi BİRDEN sağlanmalı, aksi halde otomatik yazılmaz):
+1. Normalize edilmiş ad (Türkçe karaktersiz, küçük harf) Spotify'ın ilk
+   sonucuyla birebir eşleşiyor.
+2. İkinci bir aday yoksa yeterli; varsa 1. ile 2. adayın popülerlik farkı
+   belirgin (`Δ ≥ 15`, script içinde `POPULARITY_GAP_THRESHOLD`) — aksi halde
+   hangi "Ahmet Yılmaz"ın doğru olduğu belirsiz demektir, otomatik uygulanmaz.
+
+Kuralı geçemeyen her satır **"şüpheli"** sayılır ve HİÇBİR ŞEY YAZILMAZ —
+`ops/spotify-eslesme-raporu.md`'ye, panelden tek tıkla açılacak bir düzenleme
+linkiyle (`https://panel.noqt.social/panel/admin/sanatcilar/{entityId}`) ve
+en fazla 3 Spotify adayıyla (ad, popülerlik, takipçi, link) yazılır — panelde
+formdaki "Spotify'dan doldur" arama kutusuyla 30 saniyede elle çözülür.
+
+**İDEMPOTENT:** sorgu zaten `spotify_artist_id IS NULL` filtresiyle çalışır —
+bir kez eşleştirilen satır bir daha taranmaz. Yeni sanatçılar geldikçe (ör.
+her `import-external.mjs --apply` koşusundan sonra) script'i tekrar tekrar
+çalıştırmak güvenlidir.
+
+### Sıralı akış (içe aktarım → toplu zenginleştirme → şüpheli raporu)
+
+```bash
+cd ~/noqt/noqteventweb
+
+# 1) Yeni mekan/sanatçıları içe aktar (bkz. §2)
+SUPABASE_URL="https://xxxx.supabase.co" \
+SUPABASE_SERVICE_ROLE_KEY="ey..." \
+TICKETMASTER_API_KEY="..." \
+node scripts/supply-import/import-external.mjs --source=both --apply
+
+# 2) DRY RUN — kaç sanatçı otomatik eşleşecek, kaçı şüpheli olacak gör
+SUPABASE_URL="https://xxxx.supabase.co" \
+SUPABASE_SERVICE_ROLE_KEY="ey..." \
+SPOTIFY_CLIENT_ID="..." \
+SPOTIFY_CLIENT_SECRET="..." \
+node scripts/supply-import/enrich-spotify.mjs --verbose
+
+# 3) Rakamlar mantıklı görünüyorsa gerçek yazım
+SUPABASE_URL="https://xxxx.supabase.co" \
+SUPABASE_SERVICE_ROLE_KEY="ey..." \
+SPOTIFY_CLIENT_ID="..." \
+SPOTIFY_CLIENT_SECRET="..." \
+node scripts/supply-import/enrich-spotify.mjs --apply
+
+# 4) Şüpheli listeyi gözden geçir
+cat ops/spotify-eslesme-raporu.md
+```
+
+`SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` — panelin kendi Spotify
+uygulamasının kimlik bilgileri (Vercel'de `SPOTIFY_CLIENT_ID`/
+`SPOTIFY_CLIENT_SECRET` olarak tanımlı olmalı; aynı uygulama
+`~/noqt/eventmatch/.env`'de de kullanılıyor — iki taşıyıcı da AYNI Spotify
+Developer Dashboard uygulamasına ait).
+
+### Kullanışlı bayraklar
+
+| Bayrak | Varsayılan | Ne işe yarar |
+| --- | --- | --- |
+| `--apply` | kapalı (dry-run) | Gerçek yazım — bu OLMADAN hiçbir şey yazılmaz |
+| `--verbose` | kapalı | Sanatçı sanatçı ilerleme + 429 backoff logu |
+| `--limit=N` | sınırsız | Test için ilk N sanatçıyla sınırla |
+
+YouTube kanalı bağlama şimdilik yalnız panelden tek tek yapılıyor (bkz. sanatçı
+düzenleme sayfası "YouTube kanalı bağla" bölümü) — toplu bir YouTube
+script'i bu iş kaleminin kapsamında değildi.
