@@ -499,21 +499,25 @@ async function insertVenue(base, key, candidate) {
     review_status: "potential",
   };
 
-  let details;
+  // NOT: on_conflict=slug KULLANILMIYOR — venue_details'in slug benzersizliği
+  // KISMİ indeks (WHERE slug IS NOT NULL) ve PostgREST'in ON CONFLICT'i kısmi
+  // indeksle eşleşemiyor (42P10). Script mevcut slug'ları zaten önden süzüyor;
+  // yarış durumunda düz insert 23505/409 döner ve çakışma olarak ele alınır.
   try {
-    details = await postgrest(base, key, "POST", "/venue_details?on_conflict=slug", [row], {
-      Prefer: "resolution=ignore-duplicates,return=representation",
+    await postgrest(base, key, "POST", "/venue_details", [row], {
+      Prefer: "return=representation",
     });
   } catch (err) {
     await postgrest(base, key, "DELETE", `/entities?id=eq.${entityId}`).catch(() => {});
+    if (isUniqueViolation(err)) return { status: "conflict" };
     throw err;
   }
-  if (!details || details.length === 0) {
-    // slug çakışması — yetim entity'yi geri al, mevcut satıra dokunma
-    await postgrest(base, key, "DELETE", `/entities?id=eq.${entityId}`).catch(() => {});
-    return { status: "conflict" };
-  }
   return { status: "inserted", entityId };
+}
+
+function isUniqueViolation(err) {
+  const msg = String(err?.message ?? "");
+  return msg.includes("23505") || msg.includes("HTTP 409");
 }
 
 async function insertArtist(base, key, candidate) {
@@ -540,18 +544,14 @@ async function insertArtist(base, key, candidate) {
     review_status: "potential",
   };
 
-  let details;
   try {
-    details = await postgrest(base, key, "POST", "/artist_profiles?on_conflict=slug", [row], {
-      Prefer: "resolution=ignore-duplicates,return=representation",
+    await postgrest(base, key, "POST", "/artist_profiles", [row], {
+      Prefer: "return=representation",
     });
   } catch (err) {
     await postgrest(base, key, "DELETE", `/entities?id=eq.${entityId}`).catch(() => {});
+    if (isUniqueViolation(err)) return { status: "conflict" };
     throw err;
-  }
-  if (!details || details.length === 0) {
-    await postgrest(base, key, "DELETE", `/entities?id=eq.${entityId}`).catch(() => {});
-    return { status: "conflict" };
   }
   return { status: "inserted", entityId };
 }
