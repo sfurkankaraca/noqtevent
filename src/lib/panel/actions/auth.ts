@@ -63,7 +63,8 @@ export async function verifyOtpCodeAction(formData: FormData): Promise<void> {
   const { ok } = rateLimit(ip, "panel-otp-verify", { max: 10, windowMs: 15 * 60_000 });
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const code = String(formData.get("code") ?? "").trim();
+  // Yapıştırmadan gelen boşluk/ayraçları temizle ("912 693" → "912693").
+  const code = String(formData.get("code") ?? "").replace(/\D/g, "");
 
   if (!ok) {
     redirect(`/panel/giris?hata=${encodeURIComponent("Çok fazla deneme yapıldı, birkaç dakika sonra tekrar deneyin.")}`);
@@ -78,8 +79,10 @@ export async function verifyOtpCodeAction(formData: FormData): Promise<void> {
   const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
 
   if (error) {
+    // Ham Supabase mesajı bilinçli olarak gösteriliyor — "expired" ile
+    // "invalid" ile "rate limit" ayrımı teşhis için kritik.
     redirect(
-      `/panel/giris?gonderildi=${encodeURIComponent(email)}&hata=${encodeURIComponent("Kod doğrulanamadı: süresi dolmuş veya hatalı olabilir. Yeni kod isteyin.")}`,
+      `/panel/giris?gonderildi=${encodeURIComponent(email)}&hata=${encodeURIComponent(`Kod doğrulanamadı (${error.message}). Yeni kod isteyip 10 dk içinde deneyin.`)}`,
     );
   }
 
