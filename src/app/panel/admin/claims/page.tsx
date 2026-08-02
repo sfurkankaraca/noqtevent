@@ -34,7 +34,12 @@ export default async function AdminClaimsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl">Sahiplenme başvuruları</h1>
+      <div>
+        <h1 className="font-heading text-2xl">Sahiplenme başvuruları</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Mekan/sanatçı profilini sahiplenmek isteyen kullanıcıların bekleyen başvuruları.
+        </p>
+      </div>
 
       {sp.islem === "onaylandi" && (
         <div className="rounded-lg bg-primary/10 px-4 py-3 text-sm text-primary">Başvuru onaylandı.</div>
