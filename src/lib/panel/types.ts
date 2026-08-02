@@ -43,6 +43,11 @@ export interface VenueDetailsRow {
   photo_urls: string[];
   // 20260802090000_add_supply_media_gallery.sql — mekan video galerisi.
   video_urls: string[];
+  // 20260802150000_add_venue_google_enrichment.sql — panel "Google'dan doldur".
+  google_place_id: string | null;
+  google_rating: number | null;
+  google_ratings_total: number | null;
+  enriched_at: string | null;
   claim_status: ClaimStatus;
   // 20260801150000_add_supply_publish_flags.sql — varsayılan false; kurucu
   // panelden bilinçli olarak yayınlar. Sync worker yalnız true olanları projekte eder.

@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ImageOptionsControls } from "../../../ImageOptionsControls";
 import MediaManager from "@/components/panel/MediaManager";
+import VenueGoogleEnrich from "@/components/panel/VenueGoogleEnrich";
 
 export default async function AdminVenueEditPage({
   params,
@@ -97,6 +98,16 @@ export default async function AdminVenueEditPage({
           </div>
         </CardContent>
       </Card>
+
+      <VenueGoogleEnrich
+        entityId={venue.entity_id}
+        venueName={venue.name}
+        district={venue.district}
+        googlePlaceId={venue.google_place_id}
+        googleRating={venue.google_rating}
+        googleRatingsTotal={venue.google_ratings_total}
+        enrichedAt={venue.enriched_at}
+      />
 
       <Card>
         <CardHeader>
