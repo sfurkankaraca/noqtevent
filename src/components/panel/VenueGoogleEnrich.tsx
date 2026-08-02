@@ -38,6 +38,7 @@ function formatCount(n: number | null | undefined): string {
 export default function VenueGoogleEnrich({
   entityId,
   venueName,
+  city,
   district,
   googlePlaceId,
   googleRating,
@@ -46,6 +47,7 @@ export default function VenueGoogleEnrich({
 }: {
   entityId: string;
   venueName: string;
+  city: string | null;
   district: string | null;
   googlePlaceId: string | null;
   googleRating: number | null;
@@ -53,12 +55,12 @@ export default function VenueGoogleEnrich({
   enrichedAt: string | null;
 }) {
   const router = useRouter();
-  // Varsayılan sorgu ad + ilçe/şehir ile önceden dolduruluyor — kurucu
-  // dilerse serbestçe düzenleyip yeniden arayabilir. venue_details'te ayrı
-  // bir `city` kolonu yok (bkz. eventmatch/functions/src/supplySync.ts'teki
-  // aynı not); mevcut mekanların tamamı Kayseri/Nevşehir pazarında olduğu
-  // için "Kayseri" sabit son ek olarak ekleniyor.
-  const defaultQuery = [venueName, district, "Kayseri"].filter(Boolean).join(" ").trim();
+  // Varsayılan sorgu ad + şehir/ilçe ile önceden dolduruluyor — kurucu
+  // dilerse serbestçe düzenleyip yeniden arayabilir. 20260802160000_add_venue_city.sql
+  // ile venue_details'e city eklendi (scripts/supply-import/enrich-google-venues.mjs
+  // ile AYNI kural: city ?? district — artık "Kayseri" SABİT VARSAYILMIYOR,
+  // çünkü içe aktarılan mekanların çoğu Kayseri'de değil).
+  const defaultQuery = [venueName, city || district].filter(Boolean).join(" ").trim();
   const [query, setQuery] = useState(defaultQuery);
   const [candidates, setCandidates] = useState<GoogleCandidate[]>([]);
   const [loading, setLoading] = useState(false);

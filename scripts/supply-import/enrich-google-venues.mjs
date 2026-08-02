@@ -20,14 +20,16 @@
  * ops/google-mekan-eslesme-raporu.md'ye, panelden tek tıkla düzeltilebilecek
  * bir link ve aday listesiyle yazılır.
  *
- * NOT (şehir): venue_details'te ayrı bir `city` kolonu YOK (yalnız
- * `district`) — bkz. eventmatch/functions/src/supplySync.ts'teki aynı not.
- * Mevcut mekanların tamamı Kayseri/Nevşehir pazarında; bu script "beklenen
- * şehir" olarak "Kayseri"yi VARSAYAR (arama sorgusuna da eklenir) ve adayın
- * adresinde "kayseri" veya mekanın kendi `district` alanı geçiyor mu diye
- * bakar. Nevşehir'deki mekanlar için bu kontrol yanlış negatif üretebilir —
- * o satırlar "şüpheli" listesine düşer, elle panelden çözülür (veri kaybı
- * YOK, yalnız otomasyon atlanır).
+ * NOT (şehir): 20260802160000_add_venue_city.sql ile venue_details'e `city`
+ * kolonu eklendi — bu script ARTIK "Kayseri" VARSAYMIYOR (önceki sürümün
+ * hatası: içe aktarılan TM/RA mekanlarının çoğu Kayseri'de değil, ör.
+ * İstanbul/Ankara/İzmir; sabit "Kayseri" varsayımı bu mekanlar için YANLIŞ
+ * sorgu ve yanlış-negatif güven kontrolü üretiyordu). "Beklenen konum" artık
+ * mekanın KENDİ `city` alanı, o da yoksa `district`'i — arama sorgusu da
+ * "{ad} {city ?? district ?? ''}" olarak kurulur. İkisi de NULL'sa (henüz
+ * backfill edilmemiş satır — bkz. import-external.mjs --backfill-city)
+ * otomatik uygulama YAPILMAZ, satır doğrudan "şüpheli"ye düşer (şehir
+ * doğrulanamadan otomatik yazmak riskli).
  *
  * Uygulanan alanlar (venue-google-apply route'uyla AYNI kural, bkz.
  * src/app/api/panel/enrich/venue-google-apply/route.ts):
@@ -160,13 +162,13 @@ function nameSimilarity(a, b) {
   return maxLen === 0 ? 0 : 1 - dist / maxLen;
 }
 
-// Bkz. dosya başı "NOT (şehir)" açıklaması.
-function cityMatches(address, district) {
-  if (!address) return false;
+// Bkz. dosya başı "NOT (şehir)" açıklaması — sabit "Kayseri" YOK, yalnız
+// mekanın kendi city/district'i (expectedLocation, çağıran tarafından
+// city ?? district olarak hazırlanır) adayın adresinde geçiyor mu bakılır.
+function cityMatches(address, expectedLocation) {
+  if (!address || !expectedLocation) return false;
   const normalizedAddr = normalizeName(address);
-  if (normalizedAddr.includes("kayseri")) return true;
-  if (district && normalizedAddr.includes(normalizeName(district))) return true;
-  return false;
+  return normalizedAddr.includes(normalizeName(expectedLocation));
 }
 
 // ── Google Places (legacy) — 429/OVER_QUERY_LIMIT'te artan bekleme ile en
@@ -305,7 +307,7 @@ async function fetchVenuesNeedingEnrichment(base, key) {
       base,
       key,
       "GET",
-      "/venue_details?select=entity_id,name,district,address,google_maps_phone,photo_urls,review_status&google_place_id=is.null&order=name.asc",
+      "/venue_details?select=entity_id,name,city,district,address,google_maps_phone,photo_urls,review_status&google_place_id=is.null&order=name.asc",
       undefined,
       { Range: `${from}-${from + pageSize - 1}` }
     );
@@ -387,7 +389,8 @@ function writeReport({ scannedCount, autoCount, suspiciousRows, noMatchRows }) {
     );
     lines.push("");
     for (const { row, candidates, reason } of suspiciousRows) {
-      lines.push(`### ${row.name}${row.district ? ` — ${row.district}` : ""}`);
+      const location = row.city || row.district || null;
+      lines.push(`### ${row.name}${location ? ` — ${location}` : ""}`);
       lines.push(`- Panel: ${PANEL_BASE_URL}/panel/admin/mekanlar/${row.entity_id}`);
       lines.push(`- Neden şüpheli: ${reason}`);
       lines.push("- Google adayları:");
@@ -400,7 +403,8 @@ function writeReport({ scannedCount, autoCount, suspiciousRows, noMatchRows }) {
     lines.push(`## Sonuç bulunamayan (${noMatchRows.length})`);
     lines.push("");
     for (const { row } of noMatchRows) {
-      lines.push(`- ${row.name}${row.district ? ` (${row.district})` : ""} — ${PANEL_BASE_URL}/panel/admin/mekanlar/${row.entity_id}`);
+      const location = row.city || row.district || null;
+      lines.push(`- ${row.name}${location ? ` (${location})` : ""} — ${PANEL_BASE_URL}/panel/admin/mekanlar/${row.entity_id}`);
     }
     lines.push("");
   }
@@ -413,14 +417,22 @@ function writeReport({ scannedCount, autoCount, suspiciousRows, noMatchRows }) {
 // Güven kuralı — bkz. dosya başı açıklama.
 function decideMatch(row, candidates) {
   if (candidates.length === 0) return { verdict: "no_match" };
+
+  // Mekanın kendi city'si yoksa district'e düş; ikisi de yoksa şehir hiç
+  // doğrulanamaz — otomatik uygulama YOK (sabit "Kayseri" varsayımı kaldırıldı).
+  const expectedLocation = row.city || row.district || null;
+  if (!expectedLocation) {
+    return { verdict: "suspicious", reason: "Mekanın city/district bilgisi yok — şehir doğrulanamıyor (backfill gerekebilir)" };
+  }
+
   const top = candidates[0];
   const sim = nameSimilarity(row.name, top.name);
-  const cityOk = cityMatches(top.address, row.district);
+  const cityOk = cityMatches(top.address, expectedLocation);
   if (sim >= NAME_SIMILARITY_THRESHOLD && cityOk) {
-    return { verdict: "auto", reason: `Ad benzerliği %${Math.round(sim * 100)}, şehir eşleşiyor` };
+    return { verdict: "auto", reason: `Ad benzerliği %${Math.round(sim * 100)}, şehir (${expectedLocation}) eşleşiyor` };
   }
   if (sim >= NAME_SIMILARITY_THRESHOLD) {
-    return { verdict: "suspicious", reason: `Ad benzerliği yüksek (%${Math.round(sim * 100)}) ama adres beklenen şehri içermiyor` };
+    return { verdict: "suspicious", reason: `Ad benzerliği yüksek (%${Math.round(sim * 100)}) ama adres beklenen şehri (${expectedLocation}) içermiyor` };
   }
   return { verdict: "suspicious", reason: `Ad benzerliği yetersiz (%${Math.round(sim * 100)}, eşik %${Math.round(NAME_SIMILARITY_THRESHOLD * 100)})` };
 }
@@ -459,7 +471,8 @@ async function main() {
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const query = [row.name, row.district, "Kayseri"].filter(Boolean).join(" ").trim();
+    // Sabit "Kayseri" YOK — mekanın kendi city'si, o da yoksa district'i.
+    const query = [row.name, row.city || row.district || ""].filter(Boolean).join(" ").trim();
     if (VERBOSE) console.log(`[${i + 1}/${rows.length}] ${row.name} — sorgu: "${query}"`);
 
     let candidates;

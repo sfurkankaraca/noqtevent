@@ -67,6 +67,7 @@ export default async function AdminArtistEditPage({
         spotifyFollowers={artist.spotify_followers}
         enrichedAt={artist.enriched_at}
         youtubeChannelId={artist.youtube_channel_id}
+        videoUrls={artist.video_urls}
       />
 
       <Card>

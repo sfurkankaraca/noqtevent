@@ -263,5 +263,56 @@ Developer Dashboard uygulamasına ait).
 | `--limit=N` | sınırsız | Test için ilk N sanatçıyla sınırla |
 
 YouTube kanalı bağlama şimdilik yalnız panelden tek tek yapılıyor (bkz. sanatçı
-düzenleme sayfası "YouTube kanalı bağla" bölümü) — toplu bir YouTube
-script'i bu iş kaleminin kapsamında değildi.
+düzenleme sayfası "YouTube kanalı bağla" bölümü, `src/components/panel/ArtistEnrich.tsx`).
+Kanal bağlıyken "Kanaldan video getir" bölümü de aynı sayfada — kanalın son
+videolarını listeleyip seçilenleri tek tıkla `video_urls`'e ekler
+(`search.list` KULLANMAZ, bkz. `src/lib/panel/youtube.ts`).
+
+## 8. Mevcut sanatçı stoğu için toplu canlı/konser video eşleştirme
+
+Script: `scripts/supply-import/enrich-youtube-videos.mjs`
+
+Yukarıdaki panel özelliği yalnız kanalı ZATEN bağlı sanatçılar için işe yarar
+ve tek tek tıklama gerektirir — yüzlerce mevcut sanatçının video listesini
+elle doldurmak gerçekçi değil. Bu script `artist_profiles`'ta `video_urls`
+BOŞ olan **TÜM** sanatçıları (`spotify_artist_id` dolu olanlar önce — adı
+zaten Spotify'da doğrulanmış, yanlış eşleşme riski düşük) YouTube'da arar ve
+**güven kuralını geçen** en fazla 3 videoyu otomatik ekler.
+
+**Güven kuralı** (HEPSİ birden gerekli, aksi halde hiçbir şey yazılmaz):
+1. Video başlığı veya kanal adı, sanatçının adını içeriyor.
+2. Başlıkta canlı/live/konser/concert/akustik/performans/sahne
+   kelimelerinden en az biri geçiyor.
+3. Video süresi ≥ 60 saniye (Shorts ve kısa klipler elenir).
+
+Geçemeyen sanatçılar `ops/youtube-video-raporu.md`'ye, panel linkiyle,
+"uygun video bulunamadı" olarak yazılır — HİÇBİR ŞEY YAZILMAZ.
+
+**Kota:** her sanatçı için TAM BİR `search.list` çağrısı (100 birim/gün
+kotasından). Script varsayılan olarak `--limit=90` sanatçıda durur (9.000
+birim) ve kalanları bir sonraki koşuya bırakır; `İDEMPOTENT`tir (video
+eklenen sanatçı bir daha taranmaz), yani script'i her gün tekrar çalıştırmak
+güvenlidir. `HTTP 403 quotaExceeded` gelirse script o ana kadarki işi
+raporlayıp temiz durur.
+
+```bash
+cd ~/noqt/noqteventweb
+
+# Dry run
+SUPABASE_URL="https://xxxx.supabase.co" \
+SUPABASE_SERVICE_ROLE_KEY="ey..." \
+YOUTUBE_API_KEY="..." \
+node scripts/supply-import/enrich-youtube-videos.mjs --verbose
+
+# Gerçek yazım
+SUPABASE_URL="https://xxxx.supabase.co" \
+SUPABASE_SERVICE_ROLE_KEY="ey..." \
+YOUTUBE_API_KEY="..." \
+node scripts/supply-import/enrich-youtube-videos.mjs --apply
+
+# Rapor
+cat ops/youtube-video-raporu.md
+```
+
+`YOUTUBE_API_KEY` — panelin zaten kullandığı aynı env değişkeni (Vercel'de
+tanımlı olmalı, bkz. `src/lib/panel/youtube.ts`).

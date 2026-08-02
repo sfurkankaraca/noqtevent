@@ -196,6 +196,9 @@ export async function updateVenueAdminAction(formData: FormData): Promise<void> 
 
   const address = String(formData.get("address") ?? "").trim() || null;
   const slug = String(formData.get("slug") ?? "").trim().toLowerCase() || null;
+  // 20260802160000_add_venue_city.sql — city district'ten AYRI (district
+  // Kayseri'nin kendi ilçeleri için, city il/şehir için).
+  const city = String(formData.get("city") ?? "").trim() || null;
   const district = String(formData.get("district") ?? "").trim() || null;
   const instagramHandle = String(formData.get("instagramHandle") ?? "").trim().replace(/^@/, "") || null;
   const googleMapsPhone = String(formData.get("googleMapsPhone") ?? "").trim() || null;
@@ -229,6 +232,7 @@ export async function updateVenueAdminAction(formData: FormData): Promise<void> 
     name,
     address,
     slug,
+    city,
     district,
     venue_type: venueType,
     capacity,

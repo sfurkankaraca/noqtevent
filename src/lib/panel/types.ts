@@ -34,6 +34,10 @@ export interface VenueDetailsRow {
   name: string;
   address: string | null;
   slug: string | null;
+  // 20260802160000_add_venue_city.sql — daha önce YOKTU (import-external.mjs
+  // içe aktarılan mekanların şehrini sessizce düşürüyordu, bkz. migration
+  // yorumu). district ondan bağımsız (Kayseri içi ilçeler için) ayrı alan.
+  city: string | null;
   district: string | null;
   venue_type: string | null;
   capacity: number | null;

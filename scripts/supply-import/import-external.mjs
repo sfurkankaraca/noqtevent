@@ -29,6 +29,12 @@
  *   node scripts/supply-import/import-external.mjs --source=ra --verbose
  *   node scripts/supply-import/import-external.mjs --apply               # GERÇEK YAZIM
  *
+ *   # Geçmiş veri düzeltmesi (20260802160000_add_venue_city.sql sonrası):
+ *   # city'si NULL olan mevcut mekanları TM/RA'dan taze çekip slug eşleşmesiyle
+ *   # doldurur — BAŞKA HİÇBİR ALANA dokunmaz, yeni satır İNSERT ETMEZ.
+ *   node scripts/supply-import/import-external.mjs --backfill-city              # dry-run
+ *   node scripts/supply-import/import-external.mjs --backfill-city --apply      # gerçek yazım
+ *
  * Env (.env.local otomatik yüklenir, repo kökünden çalıştırılmalı):
  *   TICKETMASTER_API_KEY        (yalnız --source=tm|both için gerekli)
  *   SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL   (ikisi de kabul edilir — repo
@@ -105,6 +111,12 @@ const TM_MAX_PAGES = Number(getOpt("tm-max-pages", "50"));
 const TM_PAGE_SIZE = Number(getOpt("tm-page-size", "200")); // TM Discovery'nin izin verdiği azami sayfa boyutu
 const RA_MAX_PAGES = Number(getOpt("ra-max-pages", "30"));
 const SAMPLE_LIMIT = Number(getOpt("sample", "8"));
+// 20260802160000_add_venue_city.sql sonrası geçmiş veri düzeltmesi: normal
+// içe aktarım akışını ATLAR, bunun yerine TM/RA'dan taze çekip slug
+// eşleşmesiyle city'si NULL olan MEVCUT satırlara yalnız city yazar (bkz.
+// runBackfillCity()). --source/--apply/--verbose/--tm-max-pages vb. aynı
+// bayraklar bu modda da geçerli.
+const BACKFILL_CITY = hasFlag("backfill-city");
 
 if (!["tm", "ra", "both"].includes(SOURCE)) {
   console.error(`Geçersiz --source=${SOURCE} (tm | ra | both olmalı)`);
@@ -487,6 +499,12 @@ async function insertVenue(base, key, candidate) {
     name: candidate.name,
     address: candidate.address,
     slug: candidate.slug,
+    // 20260802160000_add_venue_city.sql — BUG FIX: candidate.city her zaman
+    // fetchTicketmaster/fetchRA'da doğru okunuyordu ama bu satır onu hiç
+    // yazmıyordu (yalnız address kaydediliyordu, ki TM'nin line1'i genelde
+    // şehir İÇERMEZ) — yüzlerce mekan sessizce şehirsiz kaldı. Bkz. migration
+    // yorumu ve --backfill-city modu (geçmiş satırları düzeltmek için).
+    city: candidate.city,
     district: null,
     venue_type: null,
     capacity: null,
@@ -556,8 +574,143 @@ async function insertArtist(base, key, candidate) {
   return { status: "inserted", entityId };
 }
 
+// ── geçmiş veri düzeltmesi: --backfill-city ─────────────────────────────────
+// 20260802160000_add_venue_city.sql'in yorumundaki bulgunun düzeltmesi:
+// insertVenue() candidate.city'yi geçmişte hiç yazmadığı için yüzlerce mekan
+// şehirsiz kaldı. Bu fonksiyon YENİDEN aday üretmez/insert ETMEZ — yalnız
+// TM/RA'dan taze bir çekim yapıp (aynı fetchTicketmaster/fetchRA), her
+// adayın temel slug'ını (ve şehir ekli varyantını) hesaplayıp bir
+// slug -> city eşlemesi çıkarır, sonra veritabanında city'si NULL olan
+// satırların `slug`'ını bu eşlemede arar. Eşleşirse SADECE city PATCH edilir
+// — name/address/district/vb. hiçbir alana dokunulmaz.
+//
+// Sınırlama: eşleştirme mevcut satırın PERSİSTE EDİLMİŞ slug'ına karşı yapılır
+// (assignSlugs'ın orijinal çalıştırmadaki tam çakışma-çözme geçmişini
+// yeniden üretmeye ÇALIŞMAZ) — bu yüzden yalnız iki slug biçimini dener:
+// çıplak temel slug (`{ad}`) ve şehir ekli biçim (`{ad}-{sehir}`). Bu ikisi
+// dışında bir numaralı çakışma soneki (`-2`, `-3`) almış nadir satırlar
+// eşleşmez, "eşleşmeyen" sayısına düşer — veri kaybı yok, yalnız otomasyon
+// o satırı atlar.
+async function runBackfillCity() {
+  console.log("================================================================");
+  console.log(` NOQT mekan city backfill — ${APPLY ? "APPLY (yazılıyor)" : "DRY RUN (yazma yapılmıyor)"}`);
+  console.log(`  Kaynak: ${SOURCE}`);
+  console.log("================================================================\n");
+
+  const { url: supabaseUrl, key: supabaseKey } = getSupabaseConfig();
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("SUPABASE_URL (veya NEXT_PUBLIC_SUPABASE_URL) ve SUPABASE_SERVICE_ROLE_KEY gerekli.");
+    process.exit(1);
+  }
+
+  const wantsTm = SOURCE === "tm" || SOURCE === "both";
+  const wantsRa = SOURCE === "ra" || SOURCE === "both";
+
+  let tmResult = null;
+  let raResult = null;
+
+  if (wantsTm) {
+    const apiKey = process.env.TICKETMASTER_API_KEY;
+    if (!apiKey) {
+      console.error("TICKETMASTER_API_KEY tanımlı değil — --source=tm|both için gerekli.");
+      process.exit(1);
+    }
+    console.log("[Ticketmaster] taze çekiliyor (backfill için)...");
+    tmResult = await fetchTicketmaster({ apiKey, maxPages: TM_MAX_PAGES, pageSize: TM_PAGE_SIZE, verbose: VERBOSE });
+    console.log(`  ${tmResult.venues.size} benzersiz mekan (şehirli).\n`);
+  }
+  if (wantsRa) {
+    console.log("[Resident Advisor] taze çekiliyor (backfill için)...");
+    raResult = await fetchRA({ maxPages: RA_MAX_PAGES, verbose: VERBOSE });
+    console.log(`  ${raResult.venues.size} benzersiz mekan (şehirli).\n`);
+  }
+
+  // slug -> city eşlemesi (bkz. fonksiyon başı "Sınırlama" notu).
+  const slugToCity = new Map();
+  for (const result of [tmResult, raResult]) {
+    if (!result) continue;
+    for (const v of result.venues.values()) {
+      if (!v.city) continue;
+      const base = slugifyBase(v.name) || "kayit";
+      if (!slugToCity.has(base)) slugToCity.set(base, v.city);
+      const withCity = `${base}-${slugifyBase(v.city)}`;
+      if (!slugToCity.has(withCity)) slugToCity.set(withCity, v.city);
+    }
+  }
+  console.log(`Taze çekimden ${slugToCity.size} slug varyantı için şehir bilgisi çıkarıldı.\n`);
+
+  console.log("city'si NULL olan mevcut mekanlar çekiliyor...");
+  const rows = [];
+  const pageSize = 1000;
+  let from = 0;
+  for (;;) {
+    const batch = await postgrest(
+      supabaseUrl,
+      supabaseKey,
+      "GET",
+      "/venue_details?select=entity_id,name,slug&city=is.null&slug=not.is.null&order=name.asc",
+      undefined,
+      { Range: `${from}-${from + pageSize - 1}` }
+    );
+    if (!batch || batch.length === 0) break;
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+    from += pageSize;
+  }
+  console.log(`  ${rows.length} mekan (city NULL, slug dolu).\n`);
+
+  const matches = [];
+  let unmatched = 0;
+  for (const row of rows) {
+    const city = slugToCity.get(row.slug);
+    if (!city) {
+      unmatched++;
+      continue;
+    }
+    matches.push({ row, city });
+  }
+
+  console.log("================================================================");
+  console.log(" Özet");
+  console.log("================================================================");
+  console.log(`Eşleşen (city doldurulacak): ${matches.length}`);
+  console.log(`Eşleşmeyen (slug taze çekimde bulunamadı): ${unmatched}`);
+  console.log("");
+  console.log(`Örnek eşleşmeler (ilk ${SAMPLE_LIMIT}):`);
+  matches.slice(0, SAMPLE_LIMIT).forEach(({ row, city }) => console.log(`  - ${row.name} (slug: ${row.slug}) -> ${city}`));
+  console.log("");
+
+  if (!APPLY) {
+    console.log("Bu bir DRY RUN'dı — hiçbir şey yazılmadı. Gerçek yazım için --apply ekleyin.");
+    return;
+  }
+
+  console.log("================================================================");
+  console.log(" Yazılıyor...");
+  console.log("================================================================");
+  let written = 0;
+  let failed = 0;
+  for (const { row, city } of matches) {
+    try {
+      await postgrest(supabaseUrl, supabaseKey, "PATCH", `/venue_details?entity_id=eq.${row.entity_id}`, { city }, {
+        Prefer: "return=minimal",
+      });
+      written++;
+    } catch (err) {
+      failed++;
+      console.error(`  [hata] ${row.name}: ${err.message}`);
+    }
+  }
+  console.log(`\nSonuç: ${written} satır güncellendi, ${failed} hata, ${unmatched} eşleşmeyen (atlandı).`);
+}
+
 // ── ana akış ──────────────────────────────────────────────────────────────
 async function main() {
+  if (BACKFILL_CITY) {
+    await runBackfillCity();
+    return;
+  }
+
   console.log("================================================================");
   console.log(` NOQT kürasyon içe aktarım — ${APPLY ? "APPLY (yazılıyor)" : "DRY RUN (yazma yapılmıyor)"}`);
   console.log(`  Kaynak: ${SOURCE}`);

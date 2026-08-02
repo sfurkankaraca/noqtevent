@@ -4,6 +4,7 @@ import { getPanelUser } from "@/lib/panel/supabaseServer";
 import { isPanelAdmin } from "@/lib/panel/adminAuth";
 import {
   getAllVenuesAdmin,
+  getDistinctVenueCities,
   getDistinctVenueDistricts,
   getVenueReviewStatusCounts,
   type VenueAdminFilters,
@@ -35,7 +36,16 @@ function buildQuery(params: Record<string, string | undefined>): string {
 export default async function AdminVenuesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sekme?: string; claim?: string; ilce?: string; yayin?: string; q?: string; sayfa?: string; kaydedildi?: string }>;
+  searchParams: Promise<{
+    sekme?: string;
+    claim?: string;
+    sehir?: string;
+    ilce?: string;
+    yayin?: string;
+    q?: string;
+    sayfa?: string;
+    kaydedildi?: string;
+  }>;
 }) {
   const user = await getPanelUser();
   if (!user) redirect("/panel/giris");
@@ -45,17 +55,20 @@ export default async function AdminVenuesPage({
   const reviewStatus: ReviewStatus =
     sp.sekme === "approved" || sp.sekme === "archived" ? sp.sekme : "potential";
   const claim = (sp.claim as ClaimStatus | undefined) ?? "all";
+  const city = sp.sehir ?? "all";
   const district = sp.ilce ?? "all";
   const yayin = (sp.yayin as VenueAdminFilters["published"]) ?? "all";
   const search = sp.q?.trim() ?? "";
   const page = Math.max(1, Number.parseInt(sp.sayfa ?? "1", 10) || 1);
 
-  const [counts, districts, venuesResult] = await Promise.all([
+  const [counts, cities, districts, venuesResult] = await Promise.all([
     getVenueReviewStatusCounts(),
+    getDistinctVenueCities(),
     getDistinctVenueDistricts(),
     getAllVenuesAdmin({
       reviewStatus,
       claimStatus: claim,
+      city,
       district,
       published: reviewStatus === "approved" ? yayin : "all",
       search,
@@ -67,6 +80,7 @@ export default async function AdminVenuesPage({
 
   const filterQs = {
     claim: claim !== "all" ? claim : undefined,
+    sehir: city !== "all" ? city : undefined,
     ilce: district !== "all" ? district : undefined,
     yayin: yayin !== "all" ? yayin : undefined,
     q: search || undefined,
@@ -128,6 +142,17 @@ export default async function AdminVenuesPage({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+          Şehir
+          <select name="sehir" defaultValue={city} className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm">
+            <option value="all">Tümü</option>
+            {cities.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           İlçe
           <select name="ilce" defaultValue={district} className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm">
             <option value="all">Tümü</option>
@@ -170,9 +195,9 @@ export default async function AdminVenuesPage({
                     <Badge variant="outline">{CLAIM_STATUS_LABEL[v.claim_status]}</Badge>
                   </CardTitle>
                   <CardDescription>
-                    {[v.district, v.venue_type ? VENUE_TYPE_LABEL[v.venue_type as keyof typeof VENUE_TYPE_LABEL] : null]
+                    {[v.city, v.district, v.venue_type ? VENUE_TYPE_LABEL[v.venue_type as keyof typeof VENUE_TYPE_LABEL] : null]
                       .filter(Boolean)
-                      .join(" · ") || "İlçe/tür bilgisi yok"}
+                      .join(" · ") || "Şehir/ilçe/tür bilgisi yok"}
                     {v.instagram_handle && <> · @{v.instagram_handle}</>}
                   </CardDescription>
                 </CardHeader>

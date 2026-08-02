@@ -115,6 +115,11 @@ export interface VenueAdminFilters {
   reviewStatus: "potential" | "approved" | "archived";
   published?: "all" | "published" | "hidden"; // yalnız approved sekmesinde anlamlı
   claimStatus?: "all" | VenueDetailsRow["claim_status"];
+  // 20260802160000_add_venue_city.sql öncesi tüm içe aktarılan mekanlarda
+  // district hep NULL'du (yalnız Kayseri seed'inde vardı) — bu filtre o
+  // yüzden pratikte işlevsizdi. city artık AYRI ve birincil coğrafi filtre;
+  // district Kayseri'nin kendi içindeki ilçeler için hâlâ kullanışlı.
+  city?: string; // "all" veya tam eşleşme
   district?: string; // "all" veya tam eşleşme
   search?: string; // mekan adında serbest metin arama (ilike)
   page?: number; // 1-tabanlı, varsayılan 1
@@ -136,6 +141,7 @@ export async function getAllVenuesAdmin(filters: VenueAdminFilters): Promise<Adm
   if (filters.published === "published") q = q.eq("is_published", true);
   if (filters.published === "hidden") q = q.eq("is_published", false);
   if (filters.claimStatus && filters.claimStatus !== "all") q = q.eq("claim_status", filters.claimStatus);
+  if (filters.city && filters.city !== "all") q = q.eq("city", filters.city);
   if (filters.district && filters.district !== "all") q = q.eq("district", filters.district);
   if (filters.search && filters.search.trim()) q = q.ilike("name", `%${filters.search.trim()}%`);
 
@@ -167,6 +173,16 @@ export async function getDistinctVenueDistricts(): Promise<string[]> {
   const { data, error } = await supabase.from("venue_details").select("district").not("district", "is", null);
   if (error) throw new Error(error.message);
   const set = new Set((data ?? []).map((r) => r.district as string).filter(Boolean));
+  return Array.from(set).sort((a, b) => a.localeCompare(b, "tr"));
+}
+
+// 20260802160000_add_venue_city.sql — şehir bazlı filtre (import-external.mjs
+// artık şehri doğru yazıyor; getDistinctVenueDistricts'in AYNISI, city için).
+export async function getDistinctVenueCities(): Promise<string[]> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase.from("venue_details").select("city").not("city", "is", null);
+  if (error) throw new Error(error.message);
+  const set = new Set((data ?? []).map((r) => r.city as string).filter(Boolean));
   return Array.from(set).sort((a, b) => a.localeCompare(b, "tr"));
 }
 

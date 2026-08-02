@@ -102,6 +102,7 @@ export default async function AdminVenueEditPage({
       <VenueGoogleEnrich
         entityId={venue.entity_id}
         venueName={venue.name}
+        city={venue.city}
         district={venue.district}
         googlePlaceId={venue.google_place_id}
         googleRating={venue.google_rating}
@@ -135,6 +136,15 @@ export default async function AdminVenueEditPage({
                 <Label htmlFor="slug">Slug</Label>
                 <Input id="slug" name="slug" defaultValue={venue.slug ?? ""} placeholder="orn-mekan-adi" />
               </div>
+              <div className="space-y-1.5">
+                {/* 20260802160000_add_venue_city.sql — district'ten AYRI: city il/şehir
+                    (İstanbul, Kayseri...), district Kayseri'nin kendi ilçeleri. */}
+                <Label htmlFor="city">Şehir</Label>
+                <Input id="city" name="city" defaultValue={venue.city ?? ""} placeholder="Kayseri" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="district">İlçe</Label>
                 <Input id="district" name="district" defaultValue={venue.district ?? ""} placeholder="Melikgazi" />

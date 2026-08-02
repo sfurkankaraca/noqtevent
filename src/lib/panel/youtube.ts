@@ -79,3 +79,89 @@ export async function getYoutubeChannel(channelId: string): Promise<YoutubeChann
   const stats = await fetchChannelStats([channelId]);
   return stats[0] ?? null;
 }
+
+// ── "Kanaldan video getir" (panel: bağlı bir sanatçı için son yüklenen
+// videoları listeler) — search.list KULLANMAZ (100 birim kota, arama başına).
+// Bunun yerine ucuz üçlü: channels.list(1 birim, uploads playlist id'si için)
+// + playlistItems.list(1 birim, video listesi) + videos.list(1 birim,
+// izlenme sayısı) = toplam 3 birim, search.list'in 1/33'ü.
+
+export interface YoutubeVideoSummary {
+  id: string;
+  title: string;
+  thumbnailUrl: string | null;
+  viewCount: number | null;
+  publishedAt: string | null;
+  url: string;
+}
+
+async function getUploadsPlaylistId(channelId: string): Promise<string | null> {
+  const apiKey = getApiKey();
+  const url = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`YouTube kanal detayı alınamadı: HTTP ${res.status}`);
+  const data = await res.json();
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const uploads = items[0]?.contentDetails?.relatedPlaylists?.uploads;
+  return typeof uploads === "string" ? uploads : null;
+}
+
+interface RawPlaylistItem {
+  snippet?: {
+    title?: string;
+    publishedAt?: string;
+    thumbnails?: { medium?: { url?: string }; default?: { url?: string } };
+    resourceId?: { videoId?: string };
+  };
+}
+
+async function fetchVideoViewCounts(videoIds: string[]): Promise<Map<string, number | null>> {
+  const map = new Map<string, number | null>();
+  if (videoIds.length === 0) return map;
+  const apiKey = getApiKey();
+  const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoIds.join(",")}&key=${apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`YouTube video istatistiği alınamadı: HTTP ${res.status}`);
+  const data = await res.json();
+  const items = Array.isArray(data?.items) ? data.items : [];
+  for (const it of items) {
+    const id = typeof it?.id === "string" ? it.id : "";
+    if (!id) continue;
+    const views = Number(it?.statistics?.viewCount);
+    map.set(id, Number.isFinite(views) ? views : null);
+  }
+  return map;
+}
+
+export async function getChannelVideos(channelId: string, limit = 12): Promise<YoutubeVideoSummary[]> {
+  if (!YOUTUBE_CHANNEL_ID_RE.test(channelId)) return [];
+  const uploadsPlaylistId = await getUploadsPlaylistId(channelId);
+  if (!uploadsPlaylistId) return [];
+
+  const apiKey = getApiKey();
+  const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${limit}&playlistId=${uploadsPlaylistId}&key=${apiKey}`;
+  const res = await fetch(playlistUrl);
+  if (!res.ok) throw new Error(`YouTube video listesi alınamadı: HTTP ${res.status}`);
+  const data = await res.json();
+  const items: RawPlaylistItem[] = Array.isArray(data?.items) ? data.items : [];
+
+  const videoIds = items
+    .map((it) => it.snippet?.resourceId?.videoId)
+    .filter((id): id is string => typeof id === "string");
+  const viewsById = await fetchVideoViewCounts(videoIds);
+
+  return items
+    .map((it) => {
+      const id = it.snippet?.resourceId?.videoId;
+      if (typeof id !== "string") return null;
+      return {
+        id,
+        title: typeof it.snippet?.title === "string" ? it.snippet.title : "",
+        thumbnailUrl: it.snippet?.thumbnails?.medium?.url ?? it.snippet?.thumbnails?.default?.url ?? null,
+        viewCount: viewsById.get(id) ?? null,
+        publishedAt: typeof it.snippet?.publishedAt === "string" ? it.snippet.publishedAt : null,
+        url: `https://www.youtube.com/watch?v=${id}`,
+      };
+    })
+    .filter((v): v is YoutubeVideoSummary => v !== null && !!v.title);
+}
