@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ImageOptionsControls } from "../../../ImageOptionsControls";
+import MediaManager from "@/components/panel/MediaManager";
 
 export default async function AdminVenueEditPage({
   params,
@@ -180,10 +181,12 @@ export default async function AdminVenueEditPage({
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="photoUrls">Fotoğraf URL&apos;leri (her satıra bir tane)</Label>
-              <Textarea id="photoUrls" name="photoUrls" defaultValue={venue.photo_urls.join("\n")} rows={3} />
-            </div>
+            <MediaManager
+              entityId={venue.entity_id}
+              kind="venue"
+              initialGalleryUrls={venue.photo_urls}
+              initialVideoUrls={venue.video_urls}
+            />
 
             {isPublishEditable && (
               <label className="flex items-center gap-2 text-sm">

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import MediaManager from "@/components/panel/MediaManager";
 
 export default async function AdminArtistEditPage({
   params,
@@ -106,10 +107,13 @@ export default async function AdminArtistEditPage({
               <Input id="genres" name="genres" defaultValue={artist.genres.join(", ")} placeholder="rock, pop" />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="photoUrl">Fotoğraf URL</Label>
-              <Input id="photoUrl" name="photoUrl" defaultValue={artist.photo_url ?? ""} />
-            </div>
+            <MediaManager
+              entityId={artist.entity_id}
+              kind="artist"
+              initialCoverUrl={artist.photo_url ?? ""}
+              initialGalleryUrls={artist.photo_urls}
+              initialVideoUrls={artist.video_urls}
+            />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">

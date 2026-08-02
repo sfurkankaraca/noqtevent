@@ -41,6 +41,8 @@ export interface VenueDetailsRow {
   instagram_handle: string | null;
   google_maps_phone: string | null;
   photo_urls: string[];
+  // 20260802090000_add_supply_media_gallery.sql — mekan video galerisi.
+  video_urls: string[];
   claim_status: ClaimStatus;
   // 20260801150000_add_supply_publish_flags.sql — varsayılan false; kurucu
   // panelden bilinçli olarak yayınlar. Sync worker yalnız true olanları projekte eder.
@@ -59,6 +61,10 @@ export interface ArtistProfileRow {
   display_name: string;
   bio: string | null;
   photo_url: string | null;
+  // 20260802090000_add_supply_media_gallery.sql — kapak (photo_url) ile ayrı,
+  // sanatçı medya galerisi.
+  photo_urls: string[];
+  video_urls: string[];
   city: string | null;
   genres: string[];
   performer_type: string;

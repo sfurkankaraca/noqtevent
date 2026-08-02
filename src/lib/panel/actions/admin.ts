@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 import { requirePanelAdminUser } from "@/lib/panel/adminAuth";
 import { ENTRY_POLICY_OPTIONS, PERFORMER_TYPE_OPTIONS, VENUE_TYPE_OPTIONS } from "@/lib/panel/format";
+import { parsePhotoUrlList, parseVideoUrlList } from "@/lib/panel/media";
 
 // redirectTo alanı formlardan geliyor (mevcut sekme/filtre querystring'ini
 // korumak için) — açık yönlendirme riskine karşı yalnız beklenen path'lerle
@@ -218,10 +219,11 @@ export async function updateVenueAdminAction(formData: FormData): Promise<void> 
     if (!Number.isFinite(capacity) || capacity < 0) throw new Error("Geçersiz kapasite.");
   }
 
-  const photoUrls = String(formData.get("photoUrls") ?? "")
-    .split("\n")
-    .map((u) => u.trim())
-    .filter(Boolean);
+  const photoUrls = parsePhotoUrlList(formData.get("photoUrls"));
+  // Video URL'leri, MediaManager istemci tarafında zaten youtube/vimeo'ya
+  // kısıtlıyor (bkz. src/components/panel/MediaManager.tsx) — burada aynı
+  // kural sunucu tarafında TEKRAR uygulanıyor (asıl güvenlik sınırı).
+  const videoUrls = parseVideoUrlList(formData.get("videoUrls"));
 
   const update: Record<string, unknown> = {
     name,
@@ -234,6 +236,7 @@ export async function updateVenueAdminAction(formData: FormData): Promise<void> 
     instagram_handle: instagramHandle,
     google_maps_phone: googleMapsPhone,
     photo_urls: photoUrls,
+    video_urls: videoUrls,
   };
 
   // is_published yalnız form bu alanı editable olarak sunduysa (marker ile
@@ -323,6 +326,8 @@ export async function updateArtistAdminAction(formData: FormData): Promise<void>
 
   const bio = String(formData.get("bio") ?? "").trim() || null;
   const photoUrl = String(formData.get("photoUrl") ?? "").trim() || null;
+  const photoUrls = parsePhotoUrlList(formData.get("photoUrls"));
+  const videoUrls = parseVideoUrlList(formData.get("videoUrls"));
   const city = String(formData.get("city") ?? "").trim() || null;
 
   const performerTypeRaw = String(formData.get("performerType") ?? "").trim();
@@ -349,6 +354,8 @@ export async function updateArtistAdminAction(formData: FormData): Promise<void>
     display_name: displayName,
     bio,
     photo_url: photoUrl,
+    photo_urls: photoUrls,
+    video_urls: videoUrls,
     city,
     performer_type: performerTypeRaw,
     genres,
