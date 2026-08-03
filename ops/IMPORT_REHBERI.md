@@ -316,3 +316,86 @@ cat ops/youtube-video-raporu.md
 
 `YOUTUBE_API_KEY` — panelin zaten kullandığı aynı env değişkeni (Vercel'de
 tanımlı olmalı, bkz. `src/lib/panel/youtube.ts`).
+
+## 9. Mevcut sanatçı stoğu için toplu Wikipedia biyografi doldurma
+
+Script: `scripts/supply-import/enrich-wikipedia-bios.mjs`
+
+`artist_profiles`'ta `bio` BOŞ olan **TÜM** sanatçıları (review_status ile
+SINIRLI DEĞİL — enrich-spotify.mjs'teki AYNI gerekçe) Türkçe Wikipedia'nın
+herkese açık REST özet API'sinde (`tr.wikipedia.org/api/rest_v1/page/summary/`,
+**anahtar istemez**) arar. Mantık `eventmatch/functions/src/artist-info.ts`
+(uygulamanın kendi Wikipedia biyografi mantığı) ile BİREBİR aynı — yalnız o
+dosya App Check/Firebase auth gerektiren bir Cloud Function içinde yaşadığı
+için buradan çağrılamıyor, aynı `wikipediaTitle`/`trimBio` algoritması düz
+Node fetch ile yeniden kuruldu.
+
+**Güven kuralı** (Spotify/Google script'lerinden FARKLI — burada "aday
+listesi" yok, tek Wikipedia sayfası ya vardır ya yoktur):
+1. HTTP 404 → sayfa yok, atla.
+2. `type === "disambiguation"` (anlam ayrımı sayfası) VEYA özet
+   `MIN_EXTRACT_LENGTH` (40) karakterden kısa → **şüpheli**, hiçbir şey
+   yazılmaz.
+3. Aksi halde → **otomatik uygulanır**: özet `MAX_BIO_LENGTH` (600) karaktere
+   kırpılır (cümle sonu > kelime sonu, üç nokta ile).
+
+**BİLİNEN SINIRLAMA (canlı doğrulamada bulundu, 2026-08-03):** yukarıdaki
+kural "yaygın Türkçe kelimeyle aynı ada sahip sanatçı" senaryosunu
+YAKALAYAMIYOR. Örnek: `Duman` sorgusu HTTP 200 + `type: "standard"` +
+40 karakterden uzun bir özetle dönüyor, ama o özet GRUP hakkında değil,
+"duman" kelimesinin fiziksel tanımı ("bir maddenin yanması ile çıkan... gaz").
+Aynı şekilde `Kaya` sorgusu `Kayaç` (taş/mineral) sayfasına yönleniyor.
+Wikipedia'nın "birincil konu" ataması bu durumlarda grubu/sanatçıyı değil,
+ortak ismi kazanıyor — ne disambiguation tipi ne de kısa-özet kontrolü bunu
+yakalar, çünkü sayfa gerçekten var ve özet gerçekten uzun. **Sonuç: Türkçe
+ortak isimlerle çakışan sanatçı adlarında (Duman, Kaya, Yıldız, Ateş, Gece
+gibi) script YANLIŞ bir biyografiyi otomatik yazabilir.** `--apply`'dan önce
+en az bir kez `--verbose` ile çalıştırıp konsol çıktısındaki "otomatik"
+satırlarını gözden geçirmen, ya da bu tür ortak-isim adayları için ileride bir
+ek süzgeç (ör. Wikidata `description` alanında müzik/sanatçı ile ilgili bir
+anahtar kelime aranması) eklenmesi önerilir — bu script'in şimdiki hâli
+GÖREV'de tarif edilen kuralı harfiyen uyguluyor, bu ek süzgeç BİLEREK
+eklenmedi (kapsam dışı bırakıldı, kurucunun kararına bırakıldı).
+
+Uygulanan alanlar:
+- `bio`: yalnız sorgu zaten `bio IS NULL` getirdiği için her zaman boş satıra
+  yazılır.
+- `enriched_at`: enrich-spotify.mjs ile AYNI kolon (satıya en son ne zaman
+  otomatik dokunulduğu bilgisi, zenginleştirme türüne özel değil).
+
+**Rate limit:** istekler arası ~200ms bekleme + tanımlayıcı `User-Agent`
+(`noqt-social/1.0 (+https://noqt.social)` — artist-info.ts'teki ile AYNI
+değer; Wikimedia boş/varsayılan UA'ları 403'leyebiliyor). 429/5xx'te
+Retry-After'a uyarak en fazla 4 deneme.
+
+**İDEMPOTENT:** sorgu zaten `bio IS NULL` filtresiyle çalışır — bir kez
+doldurulan satır bir daha taranmaz.
+
+```bash
+cd ~/noqt/noqteventweb
+
+# Dry run
+SUPABASE_URL="https://xxxx.supabase.co" \
+SUPABASE_SERVICE_ROLE_KEY="ey..." \
+node scripts/supply-import/enrich-wikipedia-bios.mjs --verbose
+
+# Gerçek yazım
+SUPABASE_URL="https://xxxx.supabase.co" \
+SUPABASE_SERVICE_ROLE_KEY="ey..." \
+node scripts/supply-import/enrich-wikipedia-bios.mjs --apply
+
+# Rapor
+cat ops/wikipedia-bio-raporu.md
+```
+
+### Kullanışlı bayraklar
+
+| Bayrak | Varsayılan | Ne işe yarar |
+| --- | --- | --- |
+| `--apply` | kapalı (dry-run) | Gerçek yazım — bu OLMADAN hiçbir şey yazılmaz |
+| `--verbose` | kapalı | Sanatçı sanatçı ilerleme + sınıflandırma logu |
+| `--limit=N` | sınırsız | Test için ilk N sanatçıyla sınırla |
+
+Bu script'in de `SPOTIFY_CLIENT_ID`/`GOOGLE_PLACES_API_KEY`'e benzer bir
+üçüncü taraf anahtarı YOKTUR — Wikipedia'nın özet uç noktası herkese açıktır,
+yalnız Supabase kimlik bilgileri gerekir.
