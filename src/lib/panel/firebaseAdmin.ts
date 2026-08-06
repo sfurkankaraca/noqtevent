@@ -1,8 +1,8 @@
 import "server-only";
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
+// "firebase-admin/auth" BİLEREK statik import edilmiyor — bkz. getAdminAuth().
 
 // Uygulama yönetimi köprüsü (ETKINLIK_KESIF_V1_TASARIM.md §4.3, Dalga 1) —
 // eventmatch Firestore projesine (eventmatch-bd8ad) Firebase Admin SDK ile
@@ -66,7 +66,21 @@ export function getAdminFirestore() {
   return getFirestore(getFirebaseAdminApp());
 }
 
-export function getAdminAuth() {
+// GEÇİCİ (2026-08-06): "firebase-admin/auth" alt modülü jwks-rsa → jose
+// zincirinden geçiyor ve kurulu jose@6.x artık salt ESM (CJS require() ile
+// hiç açılamıyor — jwks-rsa'nın kendi kaynağı require('jose') yaptığı için
+// bu Node'un kendi çözümlemesinde de kırılır, bundler'a özgü değil). Statik
+// `import { getAuth } from "firebase-admin/auth"` modül YÜKLENİRKEN
+// çalıştığı için, getAdminAuth() HİÇ ÇAĞRILMASA BİLE onu içeren her dosya
+// (appAdminQueries.ts üzerinden kullanicilar/geribildirim/istatistikler)
+// ERR_REQUIRE_ESM ile 500 veriyordu. Dinamik import bunu yalnız GERÇEKTEN
+// çağrıldığında yükler — bugün tek çağıran eventmatchAdminApi.ts'in
+// "Hesabı Sil" köprüsü (mintFounderIdToken), o da BU HATAYA hâlâ açık
+// olacak ta ki jose bir CJS-uyumlu sürüme sabitlenene/jwks-rsa güncellenene
+// kadar. Kalıcı çözüm: package.json'da jose'yi jwks-rsa'nın CJS
+// destekleyen bir sürümüne pinlemek (ayrı bir iş, burada yapılmadı).
+export async function getAdminAuth() {
+  const { getAuth } = await import("firebase-admin/auth");
   return getAuth(getFirebaseAdminApp());
 }
 

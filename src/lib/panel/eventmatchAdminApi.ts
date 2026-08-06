@@ -45,7 +45,7 @@ async function mintFounderIdToken(): Promise<string> {
     throw new Error("FIREBASE_WEB_API_KEY env değişkeni tanımlı değil — adminDeleteUser çağrısı için gerekli.");
   }
 
-  const auth = getAdminAuth();
+  const auth = await getAdminAuth();
   const founder = await auth.getUserByEmail(founderEmail);
   if (!founder.emailVerified) {
     throw new Error(
