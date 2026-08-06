@@ -1,4 +1,4 @@
-import { getAdminFirestore } from "@/lib/panel/firebaseAdmin";
+import { getAdminFirestore, getAdminStorageBucket } from "@/lib/panel/firebaseAdmin";
 import { FieldPath, Timestamp } from "firebase-admin/firestore";
 
 // Uygulama yönetimi (eventmatch Firestore) okuma yardımcıları — çağrılmadan
@@ -395,4 +395,149 @@ export async function getSupplyHealth(): Promise<SupplyHealth> {
       ? { runAt: lastRunAt ? lastRunAt.toDate() : null, status: (syncData.lastRunStatus as string) ?? null }
       : null,
   };
+}
+
+// ── Şikayetler (uygulama/sikayetler) ────────────────────────────────────────
+// lib/screens/admin_reports_screen.dart ile aynı mantık: `reports` koleksiyonu,
+// status=new, en yeni üstte. Moderasyon KARARI burada YAZILMAZ — bkz.
+// src/lib/panel/eventmatchAdminApi.ts::callModerateReport (Cloud Function
+// çağrısı, sahiplik doğrulaması orada yapılıyor).
+
+export interface AppReportRow {
+  id: string;
+  reason: string;
+  source: string;
+  reportedUserId: string;
+  contentId: string | null; // boşsa profil/sohbet şikayeti — içerik kanıtı yok
+  contentPreview: string | null; // şikayetçinin yazdığı DOĞRULANMAMIŞ serbest metin
+  timestamp: Date | null;
+  hoursAgo: number | null;
+  urgent: boolean; // >= 20 saat — admin_reports_screen.dart'taki 24 saatlik taahhüt eşiğiyle aynı
+}
+
+export async function listOpenReportsAdmin(limit = 50): Promise<AppReportRow[]> {
+  const db = getAdminFirestore();
+  let docs;
+  try {
+    const snap = await db.collection("reports").where("status", "==", "new").orderBy("timestamp", "desc").limit(limit).get();
+    docs = snap.docs;
+  } catch {
+    // admin_stats_service.dart::openReports ile aynı yedek: `status` alanı
+    // olmayan eski kayıtlar composite index gerektiren sorguyu patlatabilir —
+    // düz sorguya düşüp burada süzülür.
+    const snap = await db.collection("reports").orderBy("timestamp", "desc").limit(limit).get();
+    docs = snap.docs.filter((d) => (d.data().status ?? "new") === "new");
+  }
+
+  const now = Date.now();
+  return docs.map((doc) => {
+    const d = doc.data();
+    const ts = d.timestamp as Timestamp | undefined;
+    const date = ts ? ts.toDate() : null;
+    const hoursAgo = date ? Math.floor((now - date.getTime()) / (60 * 60 * 1000)) : null;
+    return {
+      id: doc.id,
+      reason: (d.reason as string) ?? "?",
+      source: (d.source as string) ?? "?",
+      reportedUserId: (d.reportedUserId as string) ?? "",
+      contentId: (d.contentId as string | undefined) || null,
+      contentPreview: (d.contentPreview as string | undefined) || null,
+      timestamp: date,
+      hoursAgo,
+      urgent: hoursAgo !== null && hoursAgo >= 20,
+    };
+  });
+}
+
+// ── Kimlik doğrulama (uygulama/dogrulama) ───────────────────────────────────
+// lib/screens/verification_review_screen.dart'ın web karşılığı. Onay/red
+// KARARI burada bir Cloud Function ÜZERİNDEN DEĞİL, doğrudan Firestore'a
+// yazılır — bu, eventmatch tarafındaki mevcut davranışla BİREBİR aynı
+// (verification_service.dart::review, firestore.rules üzerinden yalnız
+// isFounder() geçebiliyor). Bunun için ayrı bir Cloud Function YOK
+// (functions/src/index.ts'te doğrulandı — yalnız backfillVerificationRequests
+// ve verification-cleanup tetikleyicisi var, bir "reviewVerification" ucu
+// yok). Admin SDK zaten rules'ı atladığı için panelin bu iki alanı
+// (`users.verificationStatus`, `verificationRequests/{uid}`) doğrudan
+// güncellemesi, istemcinin kurucu oturumuyla yaptığının sunucu tarafı
+// eşdeğeridir — moderateReport'taki gibi ayrı bir sahiplik/kanıt doğrulaması
+// YOK çünkü ortada bir şikayet/ban kararı değil, kullanıcının KENDİ gönderdiği
+// bir doğrulama talebi var.
+
+export interface AppVerificationRequestRow {
+  uid: string;
+  name: string;
+  /** Profil fotoğrafı — userIdentities/{uid}.profileImagePath, base64 data: URI olarak gömülü (token'sız Storage yolu, panel dışına sızmasın diye imzalı URL yerine sunucuda indirilip gömülüyor). */
+  profileImageDataUrl: string | null;
+  /** Doğrulama selfie'si — YALNIZ inceleme BEKLEYEN kayıtlarda var olabilir: onay/red sonrası dosya
+   * verification-cleanup.ts tetikleyicisiyle siliniyor (2026-08-06 güvenlik denetimi, bkz. CLAUDE.md). */
+  selfieDataUrl: string | null;
+  requestedAt: Date | null;
+}
+
+const VERIFICATION_PHOTO_MAX_BYTES = 10 * 1024 * 1024; // verification_service.dart submit() ile aynı üst sınır
+
+async function downloadStoragePathAsDataUrl(storagePath: string): Promise<string | null> {
+  try {
+    const file = getAdminStorageBucket().file(storagePath);
+    const [meta] = await file.getMetadata();
+    const size = Number(meta.size ?? 0);
+    if (size > VERIFICATION_PHOTO_MAX_BYTES) return null; // beklenmeyen büyüklük — sayfayı şişirmeden atla
+    const [bytes] = await file.download();
+    const contentType = (meta.contentType as string | undefined) ?? "image/jpeg";
+    return `data:${contentType};base64,${bytes.toString("base64")}`;
+  } catch {
+    // Dosya yok (selfie zaten temizlenmiş) / okunamadı — fotoğrafsız devam,
+    // sayfa çökmesin.
+    return null;
+  }
+}
+
+export async function listPendingVerificationsAdmin(limit = 50): Promise<AppVerificationRequestRow[]> {
+  const db = getAdminFirestore();
+  const snap = await db.collection("verificationRequests").where("status", "==", "pending").limit(limit).get();
+  const uids = snap.docs.map((d) => d.id);
+
+  // Ad + profil fotoğrafı yolu: userIdentities kasası — identity_service.dart
+  // fetchIdentitiesForFounder ile aynı kaynak, users.name fallback'i YOK.
+  const identities = new Map<string, { name?: string; profileImagePath?: string }>();
+  for (let i = 0; i < uids.length; i += 30) {
+    const chunk = uids.slice(i, i + 30);
+    if (chunk.length === 0) continue;
+    const identitySnap = await db.collection("userIdentities").where(FieldPath.documentId(), "in", chunk).get();
+    for (const doc of identitySnap.docs) identities.set(doc.id, doc.data() as { name?: string; profileImagePath?: string });
+  }
+
+  const rows: AppVerificationRequestRow[] = [];
+  for (const doc of snap.docs) {
+    const d = doc.data();
+    const identity = identities.get(doc.id);
+    const requestedAt = d.requestedAt as Timestamp | undefined;
+    const profileImagePath = identity?.profileImagePath as string | undefined;
+    const selfieStoragePath = d.storagePath as string | undefined;
+    const [profileImageDataUrl, selfieDataUrl] = await Promise.all([
+      profileImagePath ? downloadStoragePathAsDataUrl(profileImagePath) : Promise.resolve(null),
+      selfieStoragePath ? downloadStoragePathAsDataUrl(selfieStoragePath) : Promise.resolve(null),
+    ]);
+    rows.push({
+      uid: doc.id,
+      name: identity?.name || "Kullanıcı",
+      profileImageDataUrl,
+      selfieDataUrl,
+      requestedAt: requestedAt ? requestedAt.toDate() : null,
+    });
+  }
+  return rows;
+}
+
+export async function reviewVerificationAdmin(uid: string, approve: boolean): Promise<void> {
+  const db = getAdminFirestore();
+  const batch = db.batch();
+  batch.set(
+    db.collection("users").doc(uid),
+    { verificationStatus: approve ? "verified" : "rejected", verificationReviewedAt: Timestamp.now() },
+    { merge: true }
+  );
+  batch.delete(db.collection("verificationRequests").doc(uid));
+  await batch.commit();
 }

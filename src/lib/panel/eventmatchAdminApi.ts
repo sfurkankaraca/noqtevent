@@ -105,3 +105,72 @@ export async function callAdminDeleteUser(targetUid: string): Promise<void> {
     );
   }
 }
+
+// ── moderateReport köprüsü (Uygulama — Şikayetler) ──────────────────────────
+//
+// GÜVENLİK (görev talimatı, 2026-08-06 denetimi sonrası): panel şikayet
+// kararını (ban/içerik kaldırma) DOĞRUDAN Firestore'a yazMAZ — bunu yapsaydı
+// moderate-report.ts'teki `banGate`/`reportContentTarget` sahiplik
+// doğrulamasını (functions/src/moderate-report.ts) tamamen atlardı. Bunun
+// yerine mevcut `moderateReport` HTTP fonksiyonu, `callAdminDeleteUser` ile
+// AYNI kurucu-kimliği-ödünç-alma deseniyle çağrılır (yukarıdaki
+// `mintFounderIdToken` — custom token → ID token değişimi). AYNI AÇIK RİSK
+// burada da geçerli: `FIREBASE_APP_CHECK_DEBUG_TOKEN` tanımlı değilse
+// `authenticateRequest` isteği reddedip 401 döner.
+export type ModerateReportAction = "review" | "ban" | "remove_content";
+
+/**
+ * `moderateReport`'un 409 `ban_target_unverified` yanıtı — panelde okunabilir
+ * bir uyarıya ve "yine de uygula" (force) onayına çevrilir. Alan adları
+ * eventmatch'teki `ModerationFailure` (lib/services/admin_stats_service.dart)
+ * ile BİREBİR aynı tutuldu.
+ */
+export class ModerateReportUnverifiedError extends Error {
+  readonly reason: string;
+  readonly requiresForce: boolean;
+  readonly targetExists: boolean;
+  readonly contentPath: string | null;
+
+  constructor(body: { reason?: string; requiresForce?: boolean; targetExists?: boolean; contentPath?: string }) {
+    super(`moderateReport: doğrulanamayan ban (${body.reason ?? "?"})`);
+    this.name = "ModerateReportUnverifiedError";
+    this.reason = body.reason ?? "unknown";
+    this.requiresForce = body.requiresForce === true;
+    this.targetExists = body.targetExists !== false;
+    this.contentPath = body.contentPath ?? null;
+  }
+}
+
+export async function callModerateReport(
+  reportId: string,
+  action: ModerateReportAction,
+  opts: { force?: boolean } = {}
+): Promise<{ banEvidence: string | null }> {
+  const idToken = await mintFounderIdToken();
+  const appCheckDebugToken = process.env.FIREBASE_APP_CHECK_DEBUG_TOKEN?.trim();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${idToken}`,
+  };
+  if (appCheckDebugToken) headers["X-Firebase-AppCheck"] = appCheckDebugToken;
+
+  const res = await fetch(`${EVENTMATCH_FUNCTIONS_BASE_URL}/moderateReport`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ reportId, action, ...(opts.force ? { force: true } : {}) }),
+  });
+  const body = (await res.json().catch(() => null)) as
+    | { ok?: boolean; code?: string; reason?: string; requiresForce?: boolean; targetExists?: boolean; contentPath?: string; banEvidence?: string }
+    | null;
+
+  if (res.status === 409 && body?.code === "ban_target_unverified") {
+    throw new ModerateReportUnverifiedError(body);
+  }
+  if (!res.ok || body?.ok !== true) {
+    throw new Error(
+      `moderateReport başarısız (${res.status}): ${body?.code ?? "bilinmeyen hata"}` +
+        (appCheckDebugToken ? "" : " — FIREBASE_APP_CHECK_DEBUG_TOKEN tanımlı değildi, muhtemel sebep bu.")
+    );
+  }
+  return { banEvidence: body.banEvidence ?? null };
+}

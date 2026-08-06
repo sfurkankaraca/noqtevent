@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { getPanelUser } from "@/lib/panel/supabaseServer";
 import { isPanelAdmin } from "@/lib/panel/adminAuth";
 import { listUsersAdmin } from "@/lib/panel/appAdminQueries";
+import { safeAdminCall } from "@/lib/panel/appAdminBridge";
 import { toggleUserBannedAdminAction, deleteAppUserAdminAction } from "@/lib/panel/actions/appAdmin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AdminBridgeError } from "@/components/panel/AdminBridgeError";
 
 function formatDate(d: Date | null): string {
   if (!d) return "-";
@@ -26,9 +28,22 @@ export default async function AppAdminUsersPage({
   const search = sp.q?.trim() ?? "";
   const cursorId = sp.cursor ?? null;
 
-  const { rows: users, nextCursorId } = await listUsersAdmin({ search, cursorId });
+  const result = await safeAdminCall(() => listUsersAdmin({ search, cursorId }));
 
   const redirectTo = `/panel/admin/uygulama/kullanicilar${search ? `?q=${encodeURIComponent(search)}` : cursorId ? `?cursor=${encodeURIComponent(cursorId)}` : ""}`;
+
+  if (!result.ok) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-heading text-2xl">Uygulama — Kullanıcılar</h1>
+          <p className="text-sm text-muted-foreground">eventmatch Firestore users koleksiyonu — en yeni üstte.</p>
+        </div>
+        <AdminBridgeError error={result.error} />
+      </div>
+    );
+  }
+  const { rows: users, nextCursorId } = result.data;
 
   return (
     <div className="space-y-6">

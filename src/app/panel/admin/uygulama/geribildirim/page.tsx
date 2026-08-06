@@ -3,9 +3,11 @@ import { redirect } from "next/navigation";
 import { getPanelUser } from "@/lib/panel/supabaseServer";
 import { isPanelAdmin } from "@/lib/panel/adminAuth";
 import { listFeedbackAdmin, getFeedbackStatusCounts, FEEDBACK_STATUSES } from "@/lib/panel/appAdminQueries";
+import { safeAdminCall } from "@/lib/panel/appAdminBridge";
 import { setFeedbackStatusAdminAction } from "@/lib/panel/actions/appAdmin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AdminBridgeError } from "@/components/panel/AdminBridgeError";
 
 const STATUS_LABEL: Record<(typeof FEEDBACK_STATUSES)[number], string> = {
   new: "Yeni",
@@ -31,8 +33,22 @@ export default async function AppAdminFeedbackPage({
   const status: (typeof FEEDBACK_STATUSES)[number] =
     sp.sekme === "triaged" || sp.sekme === "done" ? sp.sekme : "new";
 
-  const [counts, entries] = await Promise.all([getFeedbackStatusCounts(), listFeedbackAdmin(status)]);
   const redirectTo = `/panel/admin/uygulama/geribildirim?sekme=${status}`;
+
+  const result = await safeAdminCall(() => Promise.all([getFeedbackStatusCounts(), listFeedbackAdmin(status)]));
+
+  if (!result.ok) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-heading text-2xl">Uygulama — Geri bildirim</h1>
+          <p className="text-sm text-muted-foreground">eventmatch Firestore feedback koleksiyonu.</p>
+        </div>
+        <AdminBridgeError error={result.error} />
+      </div>
+    );
+  }
+  const [counts, entries] = result.data;
 
   return (
     <div className="space-y-6">

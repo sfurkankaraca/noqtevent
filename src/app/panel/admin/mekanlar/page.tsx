@@ -88,12 +88,19 @@ export default async function AdminVenuesPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl">Mekan yönetimi</h1>
-        <p className="text-sm text-muted-foreground">
-          Seed edilen mekanlar gizli (potansiyel) gelir — bilgileri doğrulayıp onayla, sonra bilinçli
-          olarak yayınla.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl">Mekan yönetimi</h1>
+          <p className="text-sm text-muted-foreground">
+            Seed edilen mekanlar gizli (potansiyel) gelir — bilgileri doğrulayıp onayla, sonra bilinçli
+            olarak yayınla.
+          </p>
+        </div>
+        <Link href="/panel/admin/mekanlar/yeni">
+          <Button type="button" size="sm">
+            Yeni Mekan Ekle
+          </Button>
+        </Link>
       </div>
 
       {sp.kaydedildi === "1" && (

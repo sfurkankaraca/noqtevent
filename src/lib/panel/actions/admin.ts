@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase";
 import { requirePanelAdminUser } from "@/lib/panel/adminAuth";
 import { ENTRY_POLICY_OPTIONS, PERFORMER_TYPE_OPTIONS, VENUE_TYPE_OPTIONS } from "@/lib/panel/format";
 import { parsePhotoUrlList, parseVideoUrlList } from "@/lib/panel/media";
+import { uniqueSlug } from "@/lib/panel/slug";
 
 // redirectTo alanı formlardan geliyor (mevcut sekme/filtre querystring'ini
 // korumak için) — açık yönlendirme riskine karşı yalnız beklenen path'lerle
@@ -126,6 +127,75 @@ export async function rejectEventAdminAction(formData: FormData): Promise<void> 
 // (NOT is_published OR review_status = 'approved') yalnız approved satırların
 // yayınlanmasına izin verir; arşivlerken is_published=false ile BİRLİKTE,
 // tek update çağrısında yazılır (aksi halde constraint hatası fırlar).
+
+// Kurucu, dışarıdan (Google Places/Spotify import, sahiplenme başvurusu) henüz
+// gelmemiş küçük/az bilinen bir mekanı ELLE ekleyebilsin diye (kurucu talebi).
+// Kendi elle girip doğruladığı veri olduğu için review_status DOĞRUDAN
+// 'approved' doğar (20260801160000 migration yorumu: "approved — kurucu
+// bilgileri doğruladı") — potansiyel kuyruğuna düşmez, direkt "Mekanlar"
+// sekmesinde görünür. is_published yine de varsayılan false kalır: yayınlamak
+// hâlâ ayrı, bilinçli bir karar (updateVenueAdminAction'daki not ile aynı).
+export async function createVenueAdminAction(formData: FormData): Promise<void> {
+  await requirePanelAdminUser();
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) throw new Error("Mekan adı zorunlu.");
+
+  const city = String(formData.get("city") ?? "").trim() || null;
+  if (!city) throw new Error("Şehir zorunlu.");
+
+  const address = String(formData.get("address") ?? "").trim() || null;
+  const slug = String(formData.get("slug") ?? "").trim().toLowerCase() || null;
+  const district = String(formData.get("district") ?? "").trim() || null;
+  const instagramHandle = String(formData.get("instagramHandle") ?? "").trim().replace(/^@/, "") || null;
+  const googleMapsPhone = String(formData.get("googleMapsPhone") ?? "").trim() || null;
+
+  const venueTypeRaw = String(formData.get("venueType") ?? "").trim();
+  if (venueTypeRaw && !(VENUE_TYPE_OPTIONS as readonly string[]).includes(venueTypeRaw)) {
+    throw new Error("Geçersiz mekan türü.");
+  }
+  const venueType = venueTypeRaw || null;
+
+  const entryPolicyRaw = String(formData.get("entryPolicy") ?? "").trim();
+  if (entryPolicyRaw && !(ENTRY_POLICY_OPTIONS as readonly string[]).includes(entryPolicyRaw)) {
+    throw new Error("Geçersiz giriş politikası.");
+  }
+  const entryPolicy = entryPolicyRaw || null;
+
+  const capacityRaw = String(formData.get("capacity") ?? "").trim();
+  let capacity: number | null = null;
+  if (capacityRaw) {
+    capacity = Number.parseInt(capacityRaw, 10);
+    if (!Number.isFinite(capacity) || capacity < 0) throw new Error("Geçersiz kapasite.");
+  }
+
+  const supabase = createServiceClient();
+
+  // entities/venue_details ikili yazımı — resolveCounterparty() (bkz.
+  // src/lib/panel/actions/events.ts) ile AYNI desen: önce ince kayıt
+  // tablosunda id alınır, sonra iş verisi venue_details'e yazılır.
+  const { data: entity, error: entityError } = await supabase.from("entities").insert({ kind: "venue" }).select("id").single();
+  if (entityError) throw new Error(entityError.message);
+
+  const { error } = await supabase.from("venue_details").insert({
+    entity_id: entity.id,
+    name,
+    address,
+    slug,
+    city,
+    district,
+    venue_type: venueType,
+    capacity,
+    entry_policy: entryPolicy,
+    instagram_handle: instagramHandle,
+    google_maps_phone: googleMapsPhone,
+    claim_status: "unclaimed",
+    review_status: "approved",
+  });
+  if (error) throw new Error(error.message);
+
+  redirect(`/panel/admin/mekanlar/${entity.id}?kaydedildi=1`);
+}
 
 export async function approveVenueAdminAction(formData: FormData): Promise<void> {
   await requirePanelAdminUser();
@@ -265,6 +335,66 @@ export async function updateVenueAdminAction(formData: FormData): Promise<void> 
 
 // ── Sanatçı yönetimi (/panel/admin/sanatcilar) ──────────────────────────────
 // Aynı desen — bkz. yukarıdaki mekan action'larının yorumları.
+
+// Aynı desen — bkz. createVenueAdminAction yorumu. Slug burada FORM alanı
+// değil (sanatçı düzenleme formunda da yok): artist_profiles.slug NOT NULL +
+// UNIQUE olduğu için resolveCounterparty() ile aynı şekilde uniqueSlug() ile
+// üretiliyor.
+export async function createArtistAdminAction(formData: FormData): Promise<void> {
+  await requirePanelAdminUser();
+
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  if (!displayName) throw new Error("Sanatçı adı zorunlu.");
+
+  const performerTypeRaw = String(formData.get("performerType") ?? "").trim();
+  if (!(PERFORMER_TYPE_OPTIONS as readonly string[]).includes(performerTypeRaw)) {
+    throw new Error("Geçersiz sanatçı türü.");
+  }
+
+  const bio = String(formData.get("bio") ?? "").trim() || null;
+  const city = String(formData.get("city") ?? "").trim() || null;
+
+  const genres = String(formData.get("genres") ?? "")
+    .split(",")
+    .map((g) => g.trim())
+    .filter(Boolean);
+
+  const links: Record<string, string> = {};
+  const instagram = String(formData.get("linkInstagram") ?? "").trim();
+  const spotify = String(formData.get("linkSpotify") ?? "").trim();
+  const youtube = String(formData.get("linkYoutube") ?? "").trim();
+  const soundcloud = String(formData.get("linkSoundcloud") ?? "").trim();
+  if (instagram) links.instagram = instagram;
+  if (spotify) links.spotify = spotify;
+  if (youtube) links.youtube = youtube;
+  if (soundcloud) links.soundcloud = soundcloud;
+
+  const supabase = createServiceClient();
+
+  // entities.kind burada da "person" — mevcut ghost-oluşturma akışıyla
+  // (resolveCounterparty, src/lib/panel/actions/events.ts) aynı basitleştirme:
+  // grup/canlı sanatçılar da bugün entity_kind='person' ile temsil ediliyor,
+  // 'organization' hiçbir yerde kurulmuyor.
+  const { data: entity, error: entityError } = await supabase.from("entities").insert({ kind: "person" }).select("id").single();
+  if (entityError) throw new Error(entityError.message);
+
+  const { error } = await supabase.from("artist_profiles").insert({
+    entity_id: entity.id,
+    entity_kind: "person",
+    slug: uniqueSlug(displayName),
+    display_name: displayName,
+    bio,
+    city,
+    performer_type: performerTypeRaw,
+    genres,
+    links,
+    claim_status: "unclaimed",
+    review_status: "approved",
+  });
+  if (error) throw new Error(error.message);
+
+  redirect(`/panel/admin/sanatcilar/${entity.id}?kaydedildi=1`);
+}
 
 export async function approveArtistAdminAction(formData: FormData): Promise<void> {
   await requirePanelAdminUser();

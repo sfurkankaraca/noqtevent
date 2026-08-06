@@ -63,11 +63,18 @@ export default async function AdminArtistsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl">Sanatçı yönetimi</h1>
-        <p className="text-sm text-muted-foreground">
-          Aynı kürasyon akışı: potansiyel → onayla → yayınla, ya da arşivle.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl">Sanatçı yönetimi</h1>
+          <p className="text-sm text-muted-foreground">
+            Aynı kürasyon akışı: potansiyel → onayla → yayınla, ya da arşivle.
+          </p>
+        </div>
+        <Link href="/panel/admin/sanatcilar/yeni">
+          <Button type="button" size="sm">
+            Yeni Sanatçı Ekle
+          </Button>
+        </Link>
       </div>
 
       {sp.kaydedildi === "1" && (

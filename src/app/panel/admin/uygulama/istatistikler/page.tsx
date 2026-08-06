@@ -7,7 +7,9 @@ import {
   getUserProfileStats,
   getUserBreakdowns,
 } from "@/lib/panel/appAdminQueries";
+import { safeAdminCall } from "@/lib/panel/appAdminBridge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdminBridgeError } from "@/components/panel/AdminBridgeError";
 
 function Tile({ label, value, sub, warn }: { label: string; value: number | string; sub?: string; warn?: boolean }) {
   return (
@@ -86,12 +88,24 @@ export default async function AppAdminStatsPage() {
   if (!user) redirect("/panel/giris");
   if (!(await isPanelAdmin())) redirect("/panel");
 
-  const [stats, profile, breakdowns, supply] = await Promise.all([
-    getAppStats(),
-    getUserProfileStats(),
-    getUserBreakdowns(),
-    getSupplyHealth(),
-  ]);
+  const result = await safeAdminCall(() =>
+    Promise.all([getAppStats(), getUserProfileStats(), getUserBreakdowns(), getSupplyHealth()])
+  );
+
+  if (!result.ok) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-heading text-2xl">Uygulama — İstatistikler</h1>
+          <p className="text-sm text-muted-foreground">
+            eventmatch Firestore aggregate sayaçları — eski kurucu paneli (panel/index.html) ile metrik paritesinde.
+          </p>
+        </div>
+        <AdminBridgeError error={result.error} />
+      </div>
+    );
+  }
+  const [stats, profile, breakdowns, supply] = result.data;
 
   const swipeToMatch = stats.users > 0 ? (stats.matches / stats.users).toFixed(1) : null;
   const pct = (n: number) => (stats.users > 0 ? `%${Math.round((n / stats.users) * 100)}` : undefined);

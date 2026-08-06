@@ -8,6 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 // eventmatch (Flutter/Firebase) tarafındaki kurucu admin ekranlarının web
 // karşılığı. Uygulama içi admin ekranları DONDURULUYOR (yeni özellik almaz);
 // bu bölüm asıl merkez.
+//
+// NOT: bu sayfa appAdminQueries.ts'e (Firebase Admin SDK) hiç dokunmuyor —
+// yalnız statik linkler. Bu yüzden uygulama yönetimi köprüsü (bkz.
+// src/lib/panel/appAdminBridge.ts) devre dışıyken bile zaten çökmez. İleride
+// buraya köprü üzerinden bir özet/sayaç eklenirse aynı safeAdminCall() +
+// <AdminBridgeError> deseni (bkz. kullanicilar/geribildirim/istatistikler
+// sayfaları) kullanılmalı.
 
 const SECTIONS = [
   {
@@ -24,6 +31,16 @@ const SECTIONS = [
     href: "/panel/admin/uygulama/istatistikler",
     label: "İstatistikler",
     description: "Kullanıcı/eşleşme/plan sayaçları + keşif arzı sağlığı.",
+  },
+  {
+    href: "/panel/admin/uygulama/sikayetler",
+    label: "Şikayetler",
+    description: "Bekleyen şikayetler, içerik kaldırma, askıya alma.",
+  },
+  {
+    href: "/panel/admin/uygulama/dogrulama",
+    label: "Kimlik doğrulama",
+    description: "Bekleyen doğrulama istekleri, selfie inceleme, onay/red.",
   },
 ];
 

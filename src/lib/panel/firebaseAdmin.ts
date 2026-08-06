@@ -2,6 +2,7 @@ import "server-only";
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 // Uygulama yönetimi köprüsü (ETKINLIK_KESIF_V1_TASARIM.md §4.3, Dalga 1) —
 // eventmatch Firestore projesine (eventmatch-bd8ad) Firebase Admin SDK ile
@@ -67,4 +68,14 @@ export function getAdminFirestore() {
 
 export function getAdminAuth() {
   return getAuth(getFirebaseAdminApp());
+}
+
+// eventmatch'in varsayılan Storage bucket'ı — lib/firebase_options.dart'ta
+// (istemci app'inin kendi yapılandırması) açıkça yazılı, GİZLİ DEĞİL. Admin
+// SDK `storageBucket` initializeApp'e verilmediği için bucket() çağrısında
+// adı açıkça geçmek gerekiyor (aksi halde "Bucket name not specified" hatası).
+const EVENTMATCH_STORAGE_BUCKET = "eventmatch-bd8ad.firebasestorage.app";
+
+export function getAdminStorageBucket() {
+  return getStorage(getFirebaseAdminApp()).bucket(EVENTMATCH_STORAGE_BUCKET);
 }
