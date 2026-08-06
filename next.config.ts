@@ -2,8 +2,15 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  // iyzipay dosyaları dinamik require ile yüklüyor — bundle edilemez, runtime'da node_modules'ten çalışır
-  serverExternalPackages: ["iyzipay"],
+  // iyzipay dosyaları dinamik require ile yüklüyor — bundle edilemez, runtime'da node_modules'ten çalışır.
+  // firebase-admin: "auth" alt modülü jwks-rsa → jose zincirinden geçiyor, jose artık salt ESM.
+  // Bundler bunu statik olarak analiz edip require() ile yüklemeye çalışınca
+  // "ERR_REQUIRE_ESM" ile 500 veriyordu — getAdminAuth() HİÇ ÇAĞRILMASA BİLE,
+  // firebaseAdmin.ts'in tepesindeki `import { getAuth } from "firebase-admin/auth"`
+  // modül yüklenirken çalışıyor (panel.noqt.social/panel/admin/uygulama/kullanicilar
+  // 500 hatası, 2026-08-06). Bu paketi bundle dışı bırakmak Node'un kendi
+  // require/import çözümlemesine bırakıyor, o CJS/ESM sınırını doğru yönetiyor.
+  serverExternalPackages: ["iyzipay", "firebase-admin"],
   images: {
     remotePatterns: [
       {
