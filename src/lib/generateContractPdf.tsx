@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
   finTotal: { flexDirection: "row", justifyContent: "space-between", marginTop: 4 },
   finTotalLabel: { fontSize: 10, fontFamily: "Roboto", fontWeight: 700, color: palette.black },
   finTotalValue: { fontSize: 10, fontFamily: "Roboto", fontWeight: 700, color: palette.black },
+  vatNote: { fontSize: 7, fontFamily: "Roboto", fontWeight: 400, color: palette.gray },
 
   // Terms
   termsText: { fontSize: 8.5, color: palette.gray, lineHeight: 1.6, marginBottom: 6 },
@@ -130,9 +131,6 @@ export type ContractData = {
 
 function fmt(n: number): string {
   return n.toLocaleString("tr-TR") + " ₺";
-}
-function fmtVat(n: number): string {
-  return fmt(n) + " + KDV";
 }
 
 function ContractDocument({ data }: { data: ContractData }) {
@@ -276,7 +274,7 @@ function ContractDocument({ data }: { data: ContractData }) {
               <View style={styles.finDivider} />
               <View style={styles.finTotal}>
                 <Text style={styles.finTotalLabel}>Kalemler Toplamı</Text>
-                <Text style={styles.finTotalValue}>{fmtVat(fee)}</Text>
+                <Text style={styles.finTotalValue}>{fmt(fee)}<Text style={styles.vatNote}> + KDV</Text></Text>
               </View>
             </View>
           </View>
@@ -296,7 +294,7 @@ function ContractDocument({ data }: { data: ContractData }) {
             )}
             <View style={styles.finRow}>
               <Text style={styles.finLabel}>Toplam Hizmet Bedeli</Text>
-              <Text style={styles.finValue}>{fmtVat(fee)}</Text>
+              <Text style={styles.finValue}>{fmt(fee)}<Text style={styles.vatNote}> + KDV</Text></Text>
             </View>
             <View style={styles.finDivider} />
             <View style={styles.finRow}>
