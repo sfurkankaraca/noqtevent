@@ -111,6 +111,9 @@ export type OfferPdfData = {
 function fmt(n: number): string {
   return n.toLocaleString("tr-TR") + " ₺";
 }
+function fmtVat(n: number): string {
+  return fmt(n) + " + KDV";
+}
 
 function OfferDocument({ data }: { data: OfferPdfData }) {
   const eventDateStr = data.event.date
@@ -198,7 +201,7 @@ function OfferDocument({ data }: { data: OfferPdfData }) {
             <View style={styles.divider} />
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Toplam (peşin fiyat)</Text>
-              <Text style={styles.totalValue}>{fmt(data.cashPrice)}</Text>
+              <Text style={styles.totalValue}>{fmtVat(data.cashPrice)}</Text>
             </View>
           </View>
         </View>
@@ -209,15 +212,15 @@ function OfferDocument({ data }: { data: OfferPdfData }) {
           <View style={styles.priceGrid}>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>Peşin Fiyat</Text>
-              <Text style={styles.priceValue}>{fmt(data.cashPrice)}</Text>
+              <Text style={styles.priceValue}>{fmtVat(data.cashPrice)}</Text>
               <Text style={styles.priceNote}>Tam ödeme, tek seferde.</Text>
             </View>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>Ön Ödemeli Fiyat</Text>
-              <Text style={styles.priceValue}>{fmt(data.prepayPrice)}</Text>
+              <Text style={styles.priceValue}>{fmtVat(data.prepayPrice)}</Text>
               <Text style={styles.priceNote}>
                 {data.prepayAvailable
-                  ? `Kapora (%${data.depositRate}): ${fmt(deposit)} — kalan ödeme etkinlikten sonra en geç ${FINAL_PAYMENT_GRACE_DAYS} gün içinde.`
+                  ? `Kapora (%${data.depositRate}): ${fmtVat(deposit)} — kalan ödeme etkinlikten sonra en geç ${FINAL_PAYMENT_GRACE_DAYS} gün içinde.`
                   : "Etkinlik tarihi yaklaştığı için bu seçenek kapanmıştır."}
               </Text>
             </View>

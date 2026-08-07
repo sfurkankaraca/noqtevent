@@ -102,7 +102,7 @@ export default function OfferManager({
       <div>
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Teklif & Ödeme Linki</p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Peşin {calcCashPrice(fee).toLocaleString("tr-TR")} ₺ · Ön ödemeli (%{prepayMarkupRate}) {calcPrepayPrice(fee, prepayMarkupRate).toLocaleString("tr-TR")} ₺
+          Peşin {calcCashPrice(fee).toLocaleString("tr-TR")} ₺ + KDV · Ön ödemeli (%{prepayMarkupRate}) {calcPrepayPrice(fee, prepayMarkupRate).toLocaleString("tr-TR")} ₺ + KDV
           {paymentPlan && ` · Müşteri "${paymentPlan === "cash" ? "Peşin" : "Ön Ödemeli"}" planı onayladı`}
         </p>
       </div>

@@ -33,6 +33,7 @@ export type OfferConcept = {
 };
 
 const fmt = (n: number) => n.toLocaleString("tr-TR") + " ₺";
+const fmtVat = (n: number) => fmt(n) + " + KDV";
 
 type BankInfo = { iban: string; accountName: string; bankName: string | null } | null;
 
@@ -265,7 +266,7 @@ export default function OfferView({
             </div>
             <div className="flex justify-between pt-3 mt-1 border-t border-border">
               <span className="text-sm text-muted-foreground">Toplam (peşin fiyat)</span>
-              <span className="text-sm font-semibold text-foreground tabular-nums">{fmt(cashPrice)}</span>
+              <span className="text-sm font-semibold text-foreground tabular-nums">{fmtVat(cashPrice)}</span>
             </div>
             <a
               href={`/api/teklif/${slug}/pdf`}
@@ -500,7 +501,7 @@ export default function OfferView({
                       <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{pkg.subtitle}</p>
                     )}
                     <p className="text-2xl font-semibold text-foreground tabular-nums mt-3">
-                      {fmt(calcCashPrice(pkg.fee))}
+                      {fmtVat(calcCashPrice(pkg.fee))}
                     </p>
                     <p className="text-[10px] text-muted-foreground">peşin fiyat</p>
 
@@ -557,7 +558,7 @@ export default function OfferView({
             } ${accepted ? "opacity-70 cursor-default" : ""}`}
           >
             <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-2">Peşin Fiyat</p>
-            <p className="text-2xl font-semibold text-foreground tabular-nums">{fmt(cashPrice)}</p>
+            <p className="text-2xl font-semibold text-foreground tabular-nums">{fmtVat(cashPrice)}</p>
             <p className="text-xs text-muted-foreground mt-2">Tam ödeme, tek seferde</p>
           </button>
 
@@ -570,10 +571,10 @@ export default function OfferView({
             } ${accepted || !prepayAvailable ? "opacity-70 cursor-default" : ""}`}
           >
             <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-2">Ön Ödemeli Fiyat</p>
-            <p className="text-2xl font-semibold text-foreground tabular-nums">{fmt(prepayPrice)}</p>
+            <p className="text-2xl font-semibold text-foreground tabular-nums">{fmtVat(prepayPrice)}</p>
             <p className="text-xs text-muted-foreground mt-2">
               {prepayAvailable
-                ? `Kapora (%${depositRate}): ${fmt(prepayDeposit)} — kalan ödeme etkinlikten sonra en geç ${FINAL_PAYMENT_GRACE_DAYS} gün içinde`
+                ? `Kapora (%${depositRate}): ${fmtVat(prepayDeposit)} — kalan ödeme etkinlikten sonra en geç ${FINAL_PAYMENT_GRACE_DAYS} gün içinde`
                 : `Etkinliğe ${daysLeft ?? 0} gün kaldığı için bu seçenek kapandı`}
             </p>
           </button>
@@ -622,7 +623,7 @@ export default function OfferView({
                 className="mt-0.5 rounded border-border" />
               <span className="text-xs text-muted-foreground leading-relaxed">
                 Yukarıdaki fiyatı ve rezervasyon koşullarını okudum, {selectedPlan === "cash" ? "peşin" : "ön ödemeli"} plan ile
-                <strong className="text-foreground"> {fmt(agreedPrice)}</strong> bedeli kabul ediyorum. Bu onay, taraflar arasında bağlayıcı bir sözleşme oluşturur
+                <strong className="text-foreground"> {fmtVat(agreedPrice)}</strong> bedeli kabul ediyorum. Bu onay, taraflar arasında bağlayıcı bir sözleşme oluşturur
                 {" "}(
                 <a
                   href={`/api/teklif/${slug}/sozlesme`}
@@ -683,7 +684,7 @@ export default function OfferView({
               <p className="text-sm font-semibold">Sözleşme onaylandı</p>
             </div>
             <p className="text-xs text-muted-foreground">
-              {selectedPlan === "cash" ? "Peşin" : "Ön ödemeli"} plan ile <strong className="text-foreground">{fmt(agreedPrice)}</strong> tutarını kabul ettiniz.
+              {selectedPlan === "cash" ? "Peşin" : "Ön ödemeli"} plan ile <strong className="text-foreground">{fmtVat(agreedPrice)}</strong> tutarını kabul ettiniz.
               Sözleşmeniz PDF olarak e-posta adresinize gönderildi — dilerseniz{" "}
               <a
                 href={`/api/teklif/${slug}/sozlesme`}

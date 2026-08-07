@@ -131,6 +131,9 @@ export type ContractData = {
 function fmt(n: number): string {
   return n.toLocaleString("tr-TR") + " ₺";
 }
+function fmtVat(n: number): string {
+  return fmt(n) + " + KDV";
+}
 
 function ContractDocument({ data }: { data: ContractData }) {
   const agreement = data.agreement ?? null;
@@ -273,7 +276,7 @@ function ContractDocument({ data }: { data: ContractData }) {
               <View style={styles.finDivider} />
               <View style={styles.finTotal}>
                 <Text style={styles.finTotalLabel}>Kalemler Toplamı</Text>
-                <Text style={styles.finTotalValue}>{fmt(fee)}</Text>
+                <Text style={styles.finTotalValue}>{fmtVat(fee)}</Text>
               </View>
             </View>
           </View>
@@ -293,7 +296,7 @@ function ContractDocument({ data }: { data: ContractData }) {
             )}
             <View style={styles.finRow}>
               <Text style={styles.finLabel}>Toplam Hizmet Bedeli</Text>
-              <Text style={styles.finValue}>{fmt(fee)}</Text>
+              <Text style={styles.finValue}>{fmtVat(fee)}</Text>
             </View>
             <View style={styles.finDivider} />
             <View style={styles.finRow}>
