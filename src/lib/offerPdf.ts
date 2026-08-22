@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase";
 import { generateOfferPdf } from "@/lib/generateOfferPdf";
 import { artistProfileUrl, fetchBookingItems } from "@/lib/bookingItems";
 import { calcCashPrice, calcPrepayPrice, isPrepayAvailable } from "@/lib/bookingTerms";
+import { calcDiscount, resolveOfferMusicConcepts } from "@/lib/offerMusicConcepts";
 
 // Teklif sayfasındaki müşteri (veya admin) için teklif PDF'i üretir.
 // offer_slug ile arar — public route'tan çağrılır, booking id'sine güvenilmez.
@@ -38,6 +39,7 @@ export async function generateOfferPdfBySlug(offerSlug: string): Promise<Buffer 
 
   const BASE = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
   const fee = Number(booking.fee ?? 0);
+  const discount = calcDiscount(booking.list_price, fee);
 
   return generateOfferPdf({
     bookingId: booking.id,
@@ -60,6 +62,13 @@ export async function generateOfferPdfBySlug(offerSlug: string): Promise<Buffer 
     },
     items: pdfItems,
     cashPrice: calcCashPrice(fee),
+    discount: discount ? { ...discount, note: booking.discount_note ?? null } : null,
+    musicConcepts: resolveOfferMusicConcepts(booking.offer_music_concept_ids).map((c) => ({
+      name: `${c.emoji} ${c.name}`,
+      categoryLabel: c.categoryLabel,
+      description: c.description,
+      musicalDirection: c.musicalDirection.join(", "),
+    })),
     prepayPrice: calcPrepayPrice(fee, booking.prepay_markup_rate),
     prepayAvailable: isPrepayAvailable(booking.event_date),
     depositRate: Number(booking.deposit_rate ?? 30),

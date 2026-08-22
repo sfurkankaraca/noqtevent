@@ -62,6 +62,9 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 4 },
   totalLabel: { fontSize: 10, fontFamily: "Roboto", fontWeight: 700, color: palette.black },
   totalValue: { fontSize: 10, fontFamily: "Roboto", fontWeight: 700, color: palette.black },
+  discountLabel: { fontSize: 9, color: palette.gray },
+  discountStrike: { fontSize: 9, color: palette.gray, textDecoration: "line-through" },
+  discountGreen: { fontSize: 9, color: "#15803d", fontFamily: "Roboto", fontWeight: 700 },
 
   priceGrid: { flexDirection: "row", gap: 12 },
   priceCard: { flex: 1, border: `1 solid ${palette.border}`, borderRadius: 6, padding: 14 },
@@ -102,6 +105,10 @@ export type OfferPdfData = {
     amount: number;
   }[];
   cashPrice: number;
+  // Liste fiyatı > ücret ise müşteriye özel iskonto satırları basılır
+  discount?: { listPrice: number; amount: number; rate: number; note: string | null } | null;
+  // Önerilen müzik konseptleri (bilgilendirme)
+  musicConcepts?: { name: string; categoryLabel: string; description: string; musicalDirection: string }[];
   prepayPrice: number;
   prepayAvailable: boolean;
   depositRate: number;
@@ -197,6 +204,20 @@ function OfferDocument({ data }: { data: OfferPdfData }) {
               </View>
             ))}
             <View style={styles.divider} />
+            {data.discount && (
+              <>
+                <View style={styles.totalRow}>
+                  <Text style={styles.discountLabel}>Liste fiyatı</Text>
+                  <Text style={styles.discountStrike}>{fmt(data.discount.listPrice)}</Text>
+                </View>
+                <View style={styles.totalRow}>
+                  <Text style={styles.discountGreen}>
+                    Size özel indirim (%{data.discount.rate}){data.discount.note ? ` · ${data.discount.note}` : ""}
+                  </Text>
+                  <Text style={styles.discountGreen}>−{fmt(data.discount.amount)}</Text>
+                </View>
+              </>
+            )}
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Toplam (peşin fiyat)</Text>
               <Text style={styles.totalValue}>{fmt(data.cashPrice)}<Text style={styles.vatNote}> + KDV</Text></Text>
@@ -224,6 +245,20 @@ function OfferDocument({ data }: { data: OfferPdfData }) {
             </View>
           </View>
         </View>
+
+        {/* Önerilen müzik konseptleri */}
+        {data.musicConcepts && data.musicConcepts.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Önerdiğimiz Müzik Konseptleri</Text>
+            {data.musicConcepts.map((c, i) => (
+              <View key={i} style={{ marginBottom: i < data.musicConcepts!.length - 1 ? 8 : 0 }}>
+                <Text style={styles.itemTitle}>{c.name} <Text style={styles.itemDesc}>· {c.categoryLabel}</Text></Text>
+                <Text style={styles.itemDesc}>{c.description}</Text>
+                <Text style={styles.itemDesc}>Müzikal yön: {c.musicalDirection}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Online onay */}
         <View style={styles.ctaBox}>

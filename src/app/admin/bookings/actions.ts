@@ -344,21 +344,41 @@ export async function sendOfferEmail(bookingId: string) {
 // Teklif sayfasında müşteriye sunulacak sanatçı adayları ve konsept kategorisi
 export async function updateOfferOptions(
   bookingId: string,
-  options: { artistIds: string[]; conceptCategory: string | null }
+  options: {
+    artistIds: string[];
+    conceptCategory: string | null;
+    musicConceptIds?: string[];
+    listPrice?: number | null;
+    discountNote?: string | null;
+  }
 ) {
   await requireAdmin();
   const supabase = createServiceClient();
-  const { data: booking } = await supabase.from("bookings").select("offer_slug").eq("id", bookingId).single();
-  const { error } = await supabase
-    .from("bookings")
-    .update({
-      offer_artist_ids: options.artistIds,
-      offer_concept_category: options.conceptCategory || null,
-    })
-    .eq("id", bookingId);
+  const { data: booking } = await supabase.from("bookings").select("offer_slug, fee").eq("id", bookingId).single();
+
+  const listPrice = options.listPrice == null || Number.isNaN(Number(options.listPrice)) || Number(options.listPrice) <= 0
+    ? null
+    : Math.round(Number(options.listPrice));
+  if (listPrice !== null && booking && listPrice < Number(booking.fee ?? 0)) {
+    throw new Error("Liste fiyatı, indirimli fiyattan (ücret) küçük olamaz.");
+  }
+
+  const update: Record<string, unknown> = {
+    offer_artist_ids: options.artistIds,
+    offer_concept_category: options.conceptCategory || null,
+  };
+  if (options.musicConceptIds !== undefined) update.offer_music_concept_ids = options.musicConceptIds;
+  if (options.listPrice !== undefined) {
+    update.list_price = listPrice;
+    update.discount_note = options.discountNote?.trim() || null;
+  }
+
+  const { error } = await supabase.from("bookings").update(update).eq("id", bookingId);
   if (error) {
     if (error.message.includes("column")) {
-      throw new Error("Teklif seçenekleri migration'ı henüz Supabase'de çalıştırılmadı (20260723040000_add_offer_options.sql).");
+      throw new Error(
+        "Teklif seçenekleri migration'ı henüz Supabase'de çalıştırılmadı (20260723040000_add_offer_options.sql / 20260822120000_add_offer_discount_music_concepts.sql)."
+      );
     }
     throw new Error(error.message);
   }

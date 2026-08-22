@@ -10,6 +10,7 @@ import {
 import { acceptOffer, notifyPaymentClaim, selectOfferPackage, sendOfferOtp, startOnlinePayment, submitOfferSelections } from "./actions";
 import type { BookingItem } from "@/lib/bookingItems";
 import type { OfferPackage } from "@/lib/offerPackages";
+import { calcDiscount, type OfferMusicConcept } from "@/lib/offerMusicConcepts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Booking = Record<string, any>;
@@ -39,7 +40,7 @@ type BankInfo = { iban: string; accountName: string; bankName: string | null } |
 
 export default function OfferView({
   booking, slug, items = [], packages = [], agreement, bankInfo = null, expired = false, paymentResult = null, paymentMessage = null,
-  offerArtists = [], offerConcepts = [],
+  offerArtists = [], offerConcepts = [], offerMusicConcepts = [],
 }: {
   booking: Booking;
   slug: string;
@@ -52,6 +53,7 @@ export default function OfferView({
   paymentMessage?: string | null;
   offerArtists?: OfferArtist[];
   offerConcepts?: OfferConcept[];
+  offerMusicConcepts?: OfferMusicConcept[];
 }) {
   const router = useRouter();
 
@@ -131,6 +133,8 @@ export default function OfferView({
 
   const prepayMarkupRate = booking.prepay_markup_rate ?? 25;
   const cashPrice = calcCashPrice(booking.fee ?? 0);
+  // Liste fiyatı > ücret ise müşteriye özel iskonto gösterilir (fee indirimli fiyattır)
+  const discount = calcDiscount(booking.list_price, booking.fee ?? 0);
   const prepayPrice = calcPrepayPrice(booking.fee ?? 0, prepayMarkupRate);
   const prepayAvailable = isPrepayAvailable(booking.event_date);
   const daysLeft = daysUntil(booking.event_date);
@@ -264,6 +268,20 @@ export default function OfferView({
                 </div>
               ))}
             </div>
+            {discount && (
+              <>
+                <div className="flex justify-between pt-3 mt-1 border-t border-border">
+                  <span className="text-sm text-muted-foreground">Liste fiyatı</span>
+                  <span className="text-sm text-muted-foreground tabular-nums line-through">{fmt(discount.listPrice)}</span>
+                </div>
+                <div className="flex justify-between pt-2">
+                  <span className="text-sm text-green-700">
+                    Size özel indirim (%{discount.rate}){booking.discount_note ? ` · ${booking.discount_note}` : ""}
+                  </span>
+                  <span className="text-sm font-medium text-green-700 tabular-nums">−{fmt(discount.amount)}</span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between pt-3 mt-1 border-t border-border">
               <span className="text-sm text-muted-foreground">Toplam (peşin fiyat)</span>
               <span className="text-sm font-semibold text-foreground tabular-nums">{fmt(cashPrice)}<Vat /></span>
@@ -375,6 +393,38 @@ export default function OfferView({
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* Önerilen müzik konseptleri — bilgilendirme amaçlı, seçim gerektirmez */}
+        {offerMusicConcepts.length > 0 && (
+          <div className="bg-white rounded-2xl border border-border p-6 mb-8">
+            <p className="text-sm font-semibold text-foreground mb-1">Önerdiğimiz Müzik Konseptleri</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Etkinliğinizin akışı için düşündüğümüz müzikal yön — sanatçımız geceyi bu konseptler üzerine kurgular.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {offerMusicConcepts.map((c) => (
+                <div key={c.id} className="rounded-xl border border-border p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">{c.emoji} {c.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{c.categoryLabel}</p>
+                    </div>
+                    <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">Enerji {c.energyLevel}/10</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-2">{c.description}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {c.musicalDirection.map((m) => (
+                      <span key={m} className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-foreground">{m}</span>
+                    ))}
+                  </div>
+                  {c.atmosphere.length > 0 && (
+                    <p className="text-[11px] text-muted-foreground mt-2">{c.atmosphere.join(" · ")}</p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -558,7 +608,15 @@ export default function OfferView({
             } ${accepted ? "opacity-70 cursor-default" : ""}`}
           >
             <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-2">Peşin Fiyat</p>
+            {discount && (
+              <p className="text-sm text-muted-foreground tabular-nums line-through">{fmt(discount.listPrice)}</p>
+            )}
             <p className="text-2xl font-semibold text-foreground tabular-nums">{fmt(cashPrice)}<Vat /></p>
+            {discount && (
+              <p className="inline-block mt-1.5 text-[11px] font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                Size özel %{discount.rate} indirim · −{fmt(discount.amount)}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground mt-2">Tam ödeme, tek seferde</p>
           </button>
 

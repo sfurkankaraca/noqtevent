@@ -5,6 +5,7 @@ import { sendOfferViewedNotification } from "@/lib/email";
 import { fetchBookingItems, itemsArtistNames } from "@/lib/bookingItems";
 import { fetchOfferPackages } from "@/lib/offerPackages";
 import OfferView, { type OfferArtist, type OfferConcept } from "./OfferView";
+import { resolveOfferMusicConcepts } from "@/lib/offerMusicConcepts";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -124,6 +125,7 @@ export default async function OfferPage({ params, searchParams }: Props) {
       paymentMessage={mesaj ?? null}
       offerArtists={offerArtists}
       offerConcepts={offerConcepts}
+      offerMusicConcepts={resolveOfferMusicConcepts(booking.offer_music_concept_ids)}
     />
   );
 }

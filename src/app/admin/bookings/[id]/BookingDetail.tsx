@@ -479,6 +479,9 @@ export default function BookingDetail({
           artists={artists}
           initialArtistIds={Array.isArray(booking.offer_artist_ids) ? booking.offer_artist_ids : []}
           initialConceptCategory={booking.offer_concept_category ?? null}
+          initialMusicConceptIds={Array.isArray(booking.offer_music_concept_ids) ? booking.offer_music_concept_ids : []}
+          initialListPrice={booking.list_price != null ? Number(booking.list_price) : null}
+          initialDiscountNote={booking.discount_note ?? null}
           selection={
             booking.offer_selection_at
               ? {
