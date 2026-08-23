@@ -423,6 +423,12 @@ export default function OfferView({
                   {c.atmosphere.length > 0 && (
                     <p className="text-[11px] text-muted-foreground mt-2">{c.atmosphere.join(" · ")}</p>
                   )}
+                  {c.url && (
+                    <a href={c.url} target="_blank" rel="noopener noreferrer"
+                      className="inline-block mt-3 text-xs text-foreground underline underline-offset-2 hover:text-foreground/80">
+                      Konsept sayfasını incele ↗
+                    </a>
+                  )}
                 </div>
               ))}
             </div>

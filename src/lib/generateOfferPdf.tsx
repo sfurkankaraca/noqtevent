@@ -108,7 +108,7 @@ export type OfferPdfData = {
   // Liste fiyatı > ücret ise müşteriye özel iskonto satırları basılır
   discount?: { listPrice: number; amount: number; rate: number; note: string | null } | null;
   // Önerilen müzik konseptleri (bilgilendirme)
-  musicConcepts?: { name: string; categoryLabel: string; description: string; musicalDirection: string }[];
+  musicConcepts?: { name: string; categoryLabel: string; description: string; musicalDirection: string; url?: string | null }[];
   prepayPrice: number;
   prepayAvailable: boolean;
   depositRate: number;
@@ -255,6 +255,7 @@ function OfferDocument({ data }: { data: OfferPdfData }) {
                 <Text style={styles.itemTitle}>{c.name} <Text style={styles.itemDesc}>· {c.categoryLabel}</Text></Text>
                 <Text style={styles.itemDesc}>{c.description}</Text>
                 <Text style={styles.itemDesc}>Müzikal yön: {c.musicalDirection}</Text>
+                {c.url ? <Link src={c.url} style={styles.itemLink}>Konsept sayfası: {c.url}</Link> : null}
               </View>
             ))}
           </View>
