@@ -26,7 +26,19 @@ export async function submitInquiry(
     event_type: data.eventType,
     event_date: data.eventDate || null,
     guest_type: data.guestType,
-    event_sections: data.eventSections ?? {},
+    event_sections: {
+      ...(data.eventSections ?? {}),
+      // PDF'in sonradan admin panelinden yeniden üretilebilmesi için ek planlayıcı alanları
+      plannerExtras: {
+        hasChildren: data.hasChildren ?? false,
+        hasVenue: data.hasVenue ?? null,
+        venueType: data.venueType ?? "",
+        venueName: data.venueName ?? "",
+        guestCount: data.guestCount ?? "",
+        selectedDjIds: data.selectedDjIds ?? [],
+        customMoments: data.customMoments ?? [],
+      },
+    },
     moment_selections: data.momentSelections ?? {},
     services: data.services,
     contact: {

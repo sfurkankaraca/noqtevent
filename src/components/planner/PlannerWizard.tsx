@@ -106,7 +106,7 @@ export default function PlannerWizard({ conceptCovers = {}, activeSlugs, djs = [
 
   const openPdf = () => {
     const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-    window.open(`/planla/ozet?d=${encoded}`, "_blank");
+    window.open(`/planla/ozet?d=${encodeURIComponent(encoded)}`, "_blank");
   };
 
   if (submitted) {

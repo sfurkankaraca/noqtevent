@@ -59,7 +59,10 @@ export default function Step9Recommendations({ data, onNext, activeSlugs, djs = 
     ...(data.eventSections?.afterParti?.conceptIds ?? []),
   ];
 
-  const flow = getEventFlow(data.eventType, allConceptIds);
+  const flow = getEventFlow(data.eventType, allConceptIds, {
+    karsilama: data.eventSections?.karsilama?.startTime,
+    anaKutlama: data.eventSections?.anaKutlama?.startTime,
+  });
 
   const selectedConcepts = Array.from(new Set(allConceptIds))
     .map((id) => MUSIC_CONCEPTS.find((c) => c.id === id))

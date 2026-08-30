@@ -70,6 +70,35 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
 
   // Sanatçı rezervasyon formundan gelen talepler tüm detayı event_sections.artistBooking altında taşır
   const ab = inq.event_sections?.artistBooking as Record<string, string | boolean> | undefined;
+
+  // Planlayıcı taleplerinde PDF özetini kayıtlı veriden yeniden üret (/planla/ozet aynı encode'u bekler)
+  const extras = (inq.event_sections?.plannerExtras ?? {}) as Record<string, unknown>;
+  const plannerData = {
+    eventType: inq.event_type ?? "",
+    guestType: GUEST_LABELS[inq.guest_type] ?? inq.guest_type ?? "",
+    hasChildren: extras.hasChildren ?? false,
+    eventSections: {
+      karsilama: { startTime: "", performanceMode: "", conceptIds: [], ...(inq.event_sections?.karsilama ?? {}) },
+      anaKutlama: { style: "", startTime: "", performanceMode: "", conceptIds: [], ...(inq.event_sections?.anaKutlama ?? {}) },
+      afterParti: { musicPref: "", conceptIds: [], ...(inq.event_sections?.afterParti ?? {}) },
+    },
+    momentSelections: inq.moment_selections ?? {},
+    customMoments: extras.customMoments ?? [],
+    hasVenue: extras.hasVenue ?? null,
+    venueType: extras.venueType ?? "",
+    venueName: extras.venueName ?? "",
+    guestCount: extras.guestCount ?? "",
+    selectedDjIds: extras.selectedDjIds ?? [],
+    services: inq.services ?? [],
+    name: inq.contact?.name ?? "",
+    surname: inq.contact?.surname ?? "",
+    email: inq.contact?.email ?? "",
+    phone: inq.contact?.phone ?? "",
+    eventDate: inq.event_date ?? "",
+  };
+  const pdfHref = `/planla/ozet?d=${encodeURIComponent(
+    Buffer.from(JSON.stringify(plannerData), "utf-8").toString("base64")
+  )}`;
   const abRow = (label: string, value: string | boolean | undefined | null) => {
     if (value === undefined || value === null || value === "" ) return null;
     const display = value === true ? "Evet" : value === false ? "Hayır" : String(value);
@@ -93,6 +122,19 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
           {inq.contact?.name} {inq.contact?.surname}
         </h1>
         <StatusBadge status={inq.status ?? "new"} />
+        {!ab && (
+          <a
+            href={pdfHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto inline-flex items-center gap-2 border border-border bg-white text-foreground px-4 py-2 rounded-full text-xs font-medium hover:bg-secondary transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            PDF İndir
+          </a>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
