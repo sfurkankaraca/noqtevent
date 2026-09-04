@@ -102,6 +102,16 @@ const nextConfig: NextConfig = {
     // olur (next.config.ts build-time'da değerlendirilir).
     const panelHost = process.env.PANEL_CANONICAL_HOST?.trim();
     if (panelHost) {
+      // Panel host'unun KÖKÜ pazarlama sitesini gösteriyordu (kurucu bulgusu,
+      // 4 Eyl 2026: "panel.noqt.social neden bu sayfayı açıyor") — aynı build
+      // iki host'a cevap verdiği için "/" panel host'unda da ana sayfaydı.
+      // Kök artık panele gider; /api/* ve diğer yollar dokunulmadan kalır.
+      redirectRules.push({
+        source: "/",
+        has: [{ type: "host" as const, value: panelHost }],
+        destination: "/panel",
+        permanent: false,
+      });
       for (const sourceHost of ["noqt.events", "www.noqt.events"]) {
         for (const prefix of ["/panel", "/onay"]) {
           redirectRules.push(
