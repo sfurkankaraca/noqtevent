@@ -6,11 +6,17 @@ import { revalidatePath } from "next/cache";
 import type { FocalPoint } from "@/components/admin/FocalPointPicker";
 import { sendArtistApprovalNotification } from "@/lib/email";
 import { RIDER_TEMPLATES } from "@/lib/riderTypes";
+import { bulkPromoteApprovedDjProfiles, promoteDjProfile, type BulkPromoteSummary } from "@/lib/artists/promoteDjProfile";
 
-export async function upsertDj(formData: FormData) {
+// Kaydetme sonucu: taşıma (promoteDjProfile) hata verirse ONAY YİNE KAYDEDİLİR,
+// hata burada uyarı olarak forma taşınır (bkz. DjForm.tsx) ve loglanır.
+export type UpsertDjResult = { promotionWarning?: string };
+
+export async function upsertDj(formData: FormData): Promise<UpsertDjResult> {
   await requireAdmin();
   const supabase = createServiceClient();
   const id = formData.get("id") as string | null;
+  let promotionWarning: string | undefined;
 
   const photos: string[] = JSON.parse((formData.get("photos_json") as string) || "[]");
   const focal_points: Record<string, FocalPoint> = JSON.parse(
@@ -97,7 +103,20 @@ export async function upsertDj(formData: FormData) {
     ) {
       await sendArtistApprovalNotification({ name: prev.name, email: prev.email });
     }
+
+    // Kurucu kararı (2026-09-04): "başvuru onaylanınca uygulamaya otomatik
+    // taşınsın". Onay geçişinde dj_profiles satırı artist_profiles'a taşınır
+    // (onaylı + yayında) — noqt Social yalnız o tabloyu görüyor.
+    // application_status'u YAZAN TEK YOL bu action (web başvurusu route'u hep
+    // 'pending' yazar), bu yüzden tetik burada.
+    if (prev && prev.application_status !== "approved" && payload.application_status === "approved") {
+      promotionWarning = await promoteSafely(id, payload.name);
+    }
   } else {
+    // Yeni kayıtta taşıma tetiklenmiyor: burası web başvurusu değil, kurucunun
+    // elle eklediği iç kadro kaydı (form varsayılanı zaten 'approved'). Bunları
+    // uygulamaya almak bilinçli bir karar — "Onaylı başvuruları uygulamaya taşı"
+    // düğmesi (promoteApprovedDjProfiles) hepsini kapsıyor.
     const { error } = await supabase.from("dj_profiles").insert({
       ...payload,
       clerk_id: `admin-${Date.now()}`,
@@ -117,6 +136,35 @@ export async function upsertDj(formData: FormData) {
   }
 
   revalidatePath("/admin/djler");
+  return promotionWarning ? { promotionWarning } : {};
+}
+
+// Taşıma HİÇBİR ZAMAN onayı bloklamaz: hata yalnız loglanır ve panelde uyarı
+// olarak gösterilir (toplu taşıma düğmesiyle sonradan tekrar denenebilir).
+async function promoteSafely(djProfileId: string, name: string): Promise<string | undefined> {
+  try {
+    await promoteDjProfile(djProfileId);
+    return undefined;
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Bilinmeyen hata";
+    console.error(`[upsertDj] uygulamaya taşıma başarısız (dj_profiles.id=${djProfileId}, ${name}):`, message);
+    return `Onay kaydedildi, ancak sanatçı uygulamaya taşınamadı: ${message} — "Onaylı başvuruları uygulamaya taşı" düğmesiyle tekrar deneyebilirsin.`;
+  }
+}
+
+// Toplu taşıma (yalnız SAYAR). Kurucu önce kaç kayıt taşınacağını görsün.
+export async function countPromotableDjProfiles(): Promise<BulkPromoteSummary> {
+  await requireAdmin();
+  return bulkPromoteApprovedDjProfiles(false);
+}
+
+// Toplu taşıma (uygular). 50'şerlik sayfalarla ilerler, tek satırın hatası
+// döngüyü kesmez — özet döner.
+export async function promoteApprovedDjProfiles(): Promise<BulkPromoteSummary> {
+  await requireAdmin();
+  const summary = await bulkPromoteApprovedDjProfiles(true);
+  revalidatePath("/admin/djler");
+  return summary;
 }
 
 // Sanatçıyı görünen listede bir yukarı/aşağı taşır. scopeTypes verilirse

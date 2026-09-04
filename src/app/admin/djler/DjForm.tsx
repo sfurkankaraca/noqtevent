@@ -170,6 +170,8 @@ export default function DjForm({ dj }: { dj?: Dj }) {
   const [copied, setCopied] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Onay kaydedildi ama uygulamaya taşıma başarısız — engelleyici değil, uyarı.
+  const [warning, setWarning] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toSlug = (name: string) =>
@@ -286,8 +288,16 @@ export default function DjForm({ dj }: { dj?: Dj }) {
 
     setPending(true);
     setError(null);
+    setWarning(null);
     try {
-      await upsertDj(fd);
+      const res = await upsertDj(fd);
+      // Onay kaydedildi ama uygulamaya taşıma başarısız olduysa listeye
+      // DÖNMÜYORUZ — kurucu uyarıyı görmeden kaybolmasın (bkz. promoteSafely).
+      if (res?.promotionWarning) {
+        setWarning(res.promotionWarning);
+        setPending(false);
+        return;
+      }
       router.push("/admin/djler");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
@@ -301,6 +311,15 @@ export default function DjForm({ dj }: { dj?: Dj }) {
 
       {error && (
         <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
+      )}
+
+      {warning && (
+        <div className="text-xs text-yellow-800 bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 space-y-2">
+          <p>⚠️ {warning}</p>
+          <Link href="/admin/djler" className="underline">
+            Listeye dön
+          </Link>
+        </div>
       )}
 
       {/* Basic info */}

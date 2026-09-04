@@ -3,6 +3,7 @@ import Image from "next/image";
 import { createServiceClient } from "@/lib/supabase";
 import DeleteDjButton from "./DeleteDjButton";
 import ApplyRiderTemplateButton from "./ApplyRiderTemplateButton";
+import PromoteToAppButton from "./PromoteToAppButton";
 import ReorderButtons from "./ReorderButtons";
 import { PERFORMER_TYPE_LABELS as PERFORMER_TYPES, PERFORMER_TABS, resolveTabId, tabTypes } from "@/lib/performerTypes";
 
@@ -52,6 +53,7 @@ export default async function DjlerPage({ searchParams }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <PromoteToAppButton />
           <ApplyRiderTemplateButton />
           <Link
             href="/admin/djler/new"
