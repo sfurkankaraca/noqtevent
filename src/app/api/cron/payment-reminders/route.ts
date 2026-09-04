@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/cronAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { calcDuePayment } from "@/lib/paymentPlan";
 import { daysUntil } from "@/lib/bookingTerms";
@@ -8,16 +9,12 @@ export const maxDuration = 60;
 
 // Vercel Cron her gün tetikler (vercel.json). Kalan bakiyesi olan booking'lere
 // etkinliğe 7 ve 3 gün kala tek seferlik hatırlatma e-postası gönderir.
-function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // secret tanımlı değilse (henüz kurulmadıysa) engelleme
-  return req.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 const ACTIVE_STATUSES = ["confirmed", "contracted", "deposit_paid"];
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  // Bulgu 3: secret yoksa fail-closed (401)
+  if (!isCronAuthorized(req, "payment-reminders")) {
     return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
   }
 

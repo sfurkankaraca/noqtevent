@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase";
 import { mediaProxyUrl } from "@/lib/media";
+import { canViewMemoryGallery } from "@/lib/memoryGallery";
 import GalleryClient from "./GalleryClient";
 
 type Props = {
@@ -14,7 +15,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = createServiceClient();
   const { data } = await supabase.from("memory_events").select("title").eq("slug", slug).single();
   if (!data) return { title: "Galeri" };
-  return { title: `${data.title} — Galeri` };
+  // Bulgu 5: düğün galerileri arama motorlarına düşmemeli.
+  return { title: `${data.title} — Galeri`, robots: { index: false, follow: false } };
 }
 
 export default async function GalleryPage({ params, searchParams }: Props) {
@@ -22,19 +24,20 @@ export default async function GalleryPage({ params, searchParams }: Props) {
   const { k } = await searchParams;
   const supabase = createServiceClient();
 
-  // select("*") — gallery_visibility/gallery_token migration'ı çalışmamış olabilir;
-  // eksik sütun seçmek sorguyu hataya düşürür. * ile var olan sütunlar döner.
+  // Bulgu 2: select("*") gallery_token ve password'ü de getiriyordu; bunlar client
+  // component prop'una serialize edilince sayfa kaynağından okunabiliyordu.
+  // Yalnızca gerekli sütunlar çekilir, gizli alanlar sunucuda kalır.
   const { data: event } = await supabase
     .from("memory_events")
-    .select("*")
+    .select("id, slug, title, description, gallery_visibility, gallery_token")
     .eq("slug", slug)
     .eq("is_active", true)
     .single();
 
   if (!event) notFound();
 
-  // Özel galeri: yalnızca gelin & damat'a verilen ?k=<gallery_token> linkiyle açılır
-  if (event.gallery_visibility === "couple" && (!k || k !== event.gallery_token)) {
+  // Özel galeri: yalnızca gelin & damat'a verilen ?k=<gallery_token> linkiyle açılır (Bulgu 1 & 2)
+  if (!canViewMemoryGallery(event, k)) {
     return (
       <div className="min-h-screen bg-[#0d0d0d] text-white flex items-center justify-center px-6">
         <div className="text-center max-w-sm">
@@ -64,5 +67,13 @@ export default async function GalleryPage({ params, searchParams }: Props) {
     display_url: u.file_path ? mediaProxyUrl(u.file_path) : u.file_url,
   }));
 
-  return <GalleryClient event={event} uploads={withProxy} />;
+  // Bulgu 2: client'a yalnızca görünür alanlar geçer; gallery_token asla prop olmaz.
+  // Zip ucu da aynı kapıdan geçtiği için anahtar sadece link parametresi olarak taşınır.
+  return (
+    <GalleryClient
+      event={{ slug: event.slug, title: event.title }}
+      uploads={withProxy}
+      galleryKey={event.gallery_visibility === "couple" ? (k ?? null) : null}
+    />
+  );
 }

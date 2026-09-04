@@ -5,6 +5,7 @@ import HomeBelowFold from "@/components/home/HomeBelowFold";
 import { EventLinks, HomeFaq, JournalTeaser } from "@/components/home/HomeSeoSections";
 import { HOME_FAQ } from "@/lib/homeFaq";
 import { createServiceClient } from "@/lib/supabase";
+import { safeJsonLd } from "@/lib/jsonLd"; // Bulgu 9: </script> kaçışı
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL ?? "https://www.noqt.events";
 
@@ -119,9 +120,9 @@ export default async function Home() {
           zaten aynı `sizes` mantığıyla doğru eşleşen bir preload üretir. Elle
           sabit genişlikli (w=828) bir preload eklemek gerçek srcset'le
           eşleşmediği için tarayıcının LCP isteğini erken keşfetmesini engelliyordu. */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqSchema) }} />
       {ratingSchema && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ratingSchema) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(ratingSchema) }} />
       )}
       <Navigation />
       <main>

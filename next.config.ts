@@ -156,15 +156,28 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Public sayfalarda Clerk dev-mode noindex'ini ez
-        source: "/((?!admin|sign-in|api).*)",
+        // Public sayfalarda Clerk dev-mode noindex'ini ez.
+        // Bulgu 5: aşağıdaki noindex listesindeki yollar bu kuralın dışında bırakıldı.
+        // "memory-drive" gibi tanıtım sayfaları indekslenmeye devam eder — bu yüzden
+        // slug'lı yollar "memory/" biçiminde (sondaki eğik çizgiyle) dışlanır.
+        source: "/((?!admin|sign-in|panel|onay|memory/|davetiye/|teslimat/|teklif/|degerlendirme/|api/|t/|s/|p/).*)",
         headers: [
           { key: "X-Robots-Tag", value: "index, follow" },
         ],
       },
       {
-        // Admin ve sign-in sayfalarını indexleme
-        source: "/(admin|sign-in)(.*)",
+        // Bulgu 5: özel/müşteriye özgü yollar arama motorlarına düşmemeli —
+        // düğün galerileri, davetiyeler, teslimat raporları, teklifler, kısa linkler.
+        // Yol parçası olarak eşleşir: /memory/<slug> noindex olur, /memory-drive tanıtım
+        // sayfası etkilenmez.
+        source: "/(admin|sign-in|panel|onay|memory|davetiye|teslimat|teklif|degerlendirme|t|s|p)/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
+        // Aynı yolların eğik çizgisiz kök hâlleri
+        source: "/(admin|sign-in|panel|onay|degerlendirme)",
         headers: [
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],

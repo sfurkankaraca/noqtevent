@@ -16,10 +16,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function MemoryUploadPage({ params }: Props) {
   const { slug } = await params;
   const supabase = createServiceClient();
-  // select("*") — gallery_visibility migration'ı çalışmamışsa eksik sütun sorguyu bozar
+  // Bulgu 2: select("*") gallery_token ve password'ü de client prop'una taşıyordu.
+  // Misafir yükleme sayfası yalnızca bu alanlara ihtiyaç duyar.
   const { data: event } = await supabase
     .from("memory_events")
-    .select("*")
+    .select("id, slug, title, description, gallery_visibility")
     .eq("slug", slug)
     .eq("is_active", true)
     .single();

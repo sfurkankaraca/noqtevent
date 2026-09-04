@@ -37,6 +37,11 @@ const ALLOWED_MIME_TYPES = [
 // Public folders don't require auth (used in artist/partner signup forms)
 const PUBLIC_FOLDERS = ["partners/logos", "partners/photos", "artists/photos", "artists/videos"];
 
+// Bulgu 10: startsWith geniş eşleşiyordu — yalnızca klasörün kendisi veya alt klasörü.
+function folderMatches(folder: string, allowed: readonly string[]): boolean {
+  return allowed.some((f) => folder === f || folder.startsWith(f + "/"));
+}
+
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15 MB
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500 MB
 
@@ -62,7 +67,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Folder allowlist
-  if (!ALLOWED_FOLDERS.some((f) => folder.startsWith(f))) {
+  if (!folderMatches(folder, ALLOWED_FOLDERS)) {
     return NextResponse.json({ error: "Geçersiz klasör." }, { status: 400 });
   }
 
@@ -77,7 +82,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Auth check for non-public folders — yalnızca admin
-  const isPublic = PUBLIC_FOLDERS.some((f) => folder.startsWith(f));
+  const isPublic = folderMatches(folder, PUBLIC_FOLDERS);
   if (!isPublic && !(await isAdmin())) {
     return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
   }
@@ -91,6 +96,8 @@ export async function POST(req: NextRequest) {
       Bucket: process.env.R2_BUCKET_NAME ?? "noqt-memory",
       Key: path,
       ContentType: contentType,
+      // Bulgu 10: imzalı PUT boyutu da bağlar — aksi hâlde limit istemcide kalıyordu
+      ...(typeof size === "number" ? { ContentLength: size } : {}),
     });
     const signedUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
     return NextResponse.json({

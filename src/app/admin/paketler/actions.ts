@@ -1,6 +1,7 @@
 "use server";
 
 import { createServiceClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/adminAuth";
 import { revalidatePath } from "next/cache";
 
 export type PackageRow = {
@@ -23,6 +24,8 @@ export type PackageRow = {
 };
 
 export async function getPackages(): Promise<PackageRow[]> {
+  // Bulgu 7: layout kontrolü server action çağrılarını korumaz — her export kendi kapısını açar.
+  await requireAdmin();
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("packages")
@@ -33,6 +36,8 @@ export async function getPackages(): Promise<PackageRow[]> {
 }
 
 export async function upsertPackage(pkg: Partial<PackageRow> & { slug: string }) {
+  // Bulgu 7: layout kontrolü server action çağrılarını korumaz — her export kendi kapısını açar.
+  await requireAdmin();
   const supabase = createServiceClient();
   const { error } = await supabase
     .from("packages")
@@ -42,6 +47,8 @@ export async function upsertPackage(pkg: Partial<PackageRow> & { slug: string })
 }
 
 export async function deletePackage(id: string) {
+  // Bulgu 7: layout kontrolü server action çağrılarını korumaz — her export kendi kapısını açar.
+  await requireAdmin();
   const supabase = createServiceClient();
   const { error } = await supabase.from("packages").delete().eq("id", id);
   if (error) throw new Error(error.message);

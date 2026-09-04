@@ -45,7 +45,8 @@ async function toUploadable(file: File): Promise<File> {
 export default function MemoryUploadClient({
   event,
 }: {
-  event: { id: string; slug: string; title: string; description?: string | null; gallery_visibility?: string | null };
+  // Bulgu 2: prop tipi daraltıldı — gallery_token/password client'a hiç geçmez.
+  event: { id: string; slug: string; title: string; description: string | null; gallery_visibility: string | null };
 }) {
   const [name, setName] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);

@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/cronAuth";
 import { createServiceClient } from "@/lib/supabase";
 import { sendReviewRequestEmail } from "@/lib/email";
 
 export const maxDuration = 60;
 
 // Teslimat raporu gönderildikten 2+ gün sonra, tek seferlik değerlendirme isteği e-postası.
-function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60_000;
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  // Bulgu 3: secret yoksa fail-closed (401)
+  if (!isCronAuthorized(req, "review-requests")) {
     return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
   }
 

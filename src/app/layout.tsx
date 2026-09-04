@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import "./globals.css";
+import { safeJsonLd } from "@/lib/jsonLd"; // Bulgu 9: </script> kaçışı
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -147,7 +148,7 @@ export default function RootLayout({
         <body className="min-h-full flex flex-col antialiased">
           <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+            dangerouslySetInnerHTML={{ __html: safeJsonLd(localBusinessSchema) }}
           />
           {children}
           <WhatsAppButton />

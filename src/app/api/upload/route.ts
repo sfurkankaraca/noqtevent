@@ -6,7 +6,15 @@ import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export const maxDuration = 60;
 
-const PUBLIC_FOLDERS = ["partners/logos", "partners/photos", "artists/photos", "artists/videos", "invitations/covers", "invitations/seating", "memory"];
+// Bulgu 10: çıplak "memory" prefix'i kaldırıldı — misafir yüklemesi ayrı uçtan
+// (/api/memory/upload-url) yapılır ve orada etkinlik slug'ı doğrulanır.
+const PUBLIC_FOLDERS = ["partners/logos", "partners/photos", "artists/photos", "artists/videos", "invitations/covers", "invitations/seating"];
+
+// Bulgu 10: startsWith geniş eşleşiyordu ("memory" → "memory-drive-gizli" de geçerdi).
+// Yalnızca klasörün kendisi ya da alt klasörleri kabul edilir.
+function folderMatches(folder: string, allowed: readonly string[]): boolean {
+  return allowed.some((f) => folder === f || folder.startsWith(f + "/"));
+}
 
 const ALLOWED_FOLDERS = [
   ...PUBLIC_FOLDERS,
@@ -67,7 +75,7 @@ export async function POST(req: NextRequest) {
   const folder = (formData.get("folder") as string) || "uploads";
 
   // Klasör allowlist kontrolü
-  const isAllowedFolder = ALLOWED_FOLDERS.some((f) => folder.startsWith(f));
+  const isAllowedFolder = folderMatches(folder, ALLOWED_FOLDERS);
   if (!isAllowedFolder) {
     return NextResponse.json({ error: "Geçersiz klasör." }, { status: 400 });
   }
@@ -77,7 +85,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Geçersiz klasör yolu." }, { status: 400 });
   }
 
-  const isPublicFolder = PUBLIC_FOLDERS.some((f) => folder.startsWith(f));
+  const isPublicFolder = folderMatches(folder, PUBLIC_FOLDERS);
   const admin = await isAdmin();
   if (!isPublicFolder && !admin) {
     return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });

@@ -1,9 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "karaca3888@gmail.com")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
+import { ADMIN_EMAILS } from "@/lib/adminEmails";
 
 export async function isAdmin(): Promise<boolean> {
   const { userId } = await auth();

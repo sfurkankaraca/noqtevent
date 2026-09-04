@@ -137,6 +137,14 @@ export async function selectOfferPackage(slug: string, packageId: string) {
   revalidatePath(`/admin/bookings/${booking.id}`);
 }
 
+// Bulgu 6: teklif e-postası karşılaştırması — küçük harf + trim ile birebir eşleşme.
+// Booking'de client_email yoksa hiçbir adres eşleşmiş sayılmaz (fail-closed).
+function offerEmailMatches(clientEmail: string | null | undefined, entered: string): boolean {
+  const stored = clientEmail?.trim().toLowerCase();
+  if (!stored) return false;
+  return stored === entered.trim().toLowerCase();
+}
+
 // Onay öncesi e-posta doğrulama kodu gönderir — onaylayanın e-posta
 // sahibi olduğunu kanıtlamak sözleşmenin ispat gücünü artırır.
 export async function sendOfferOtp(slug: string, email: string) {
@@ -150,10 +158,17 @@ export async function sendOfferOtp(slug: string, email: string) {
   const supabase = createServiceClient();
   const { data: booking, error } = await supabase
     .from("bookings")
-    .select("id, dj_profiles(name)")
+    .select("id, client_email, dj_profiles(name)")
     .eq("offer_slug", slug)
     .single();
   if (error || !booking) throw new Error("Teklif bulunamadı.");
+
+  // Bulgu 6: kod yalnızca teklifin kayıtlı müşteri e-postasına gider. Uyuşmazlıkta
+  // e-posta GÖNDERİLMEZ ama yanıt aynı kalır — aksi hâlde adres numaralandırılabilirdi.
+  if (!offerEmailMatches(booking.client_email, cleanEmail)) {
+    console.warn("[offer-otp] client_email eşleşmedi, kod gönderilmedi:", slug);
+    return;
+  }
 
   const code = generateOfferOtp(slug, cleanEmail);
   await sendOfferOtpEmail({
@@ -202,6 +217,12 @@ export async function acceptOffer(data: {
   }
   const { data: booking, error: lookupError } = bookingQuery;
   if (lookupError || !booking) throw new Error("Teklif bulunamadı.");
+
+  // Bulgu 6: onaylayan e-posta, teklifin kayıtlı müşteri e-postasıyla aynı olmalı —
+  // OTP tek başına kimlik kanıtı değil (saldırgan kendi adresine kod alabilirdi).
+  if (!offerEmailMatches(booking.client_email, email)) {
+    throw new Error("Bu e-posta adresi bu teklife tanımlı değil. Teklifi aldığınız adresi kullanın.");
+  }
 
   if (booking.offer_expires_at && new Date(booking.offer_expires_at) < new Date()) {
     throw new Error("Bu teklifin süresi doldu. Güncel bir teklif için bizimle iletişime geçin.");

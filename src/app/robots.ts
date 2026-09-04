@@ -8,7 +8,21 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin/", "/sign-in/"],
+        // Bulgu 5: next.config.ts'deki X-Robots-Tag noindex listesiyle hizalı
+        disallow: [
+          "/admin/",
+          "/sign-in/",
+          "/panel/",
+          "/onay/",
+          "/memory/",
+          "/davetiye/",
+          "/teslimat/",
+          "/teklif/",
+          "/degerlendirme/",
+          "/t/",
+          "/s/",
+          "/p/",
+        ],
       },
     ],
     sitemap: `${BASE}/sitemap.xml`,

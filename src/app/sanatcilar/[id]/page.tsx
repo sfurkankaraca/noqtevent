@@ -6,6 +6,7 @@ import Footer from "@/components/layout/Footer";
 import { createServiceClient } from "@/lib/supabase";
 import DjGallery from "./DjGallery";
 import ArtistBookingButton from "./ArtistBookingButton";
+import { safeJsonLd } from "@/lib/jsonLd"; // Bulgu 9: </script> kaçışı
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -85,7 +86,7 @@ export default async function DjDetailPage({ params }: Props) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(personSchema) }}
       />
       <Navigation />
       <main className="pt-20">

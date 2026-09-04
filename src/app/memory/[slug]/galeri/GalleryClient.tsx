@@ -70,9 +70,13 @@ function GalleryImage({ src, alt, className, forceIconOnly }: { src: string; alt
 export default function GalleryClient({
   event,
   uploads,
+  galleryKey = null,
 }: {
+  // Bulgu 2: prop tipi daraltıldı — gallery_token/password buraya asla gelmez.
   event: { slug: string; title: string };
   uploads: Upload[];
+  // Özel galeride zip ucuna iletilecek ?k anahtarı (sunucuda zaten doğrulandı)
+  galleryKey?: string | null;
 }) {
   const [lightbox, setLightbox] = useState<Upload | null>(null);
 
@@ -91,7 +95,7 @@ export default function GalleryClient({
         <div className="flex items-center gap-2 shrink-0">
           {images.length > 0 && (
             <a
-              href={`/api/memory/download-all?slug=${encodeURIComponent(event.slug)}`}
+              href={`/api/memory/download-all?slug=${encodeURIComponent(event.slug)}${galleryKey ? `&k=${encodeURIComponent(galleryKey)}` : ""}`}
               className="text-xs border border-white/20 px-4 py-2 rounded-full text-white/50 hover:border-white/40 hover:text-white/70 transition-all whitespace-nowrap"
             >
               ⬇ Tüm Fotoğraflar (.zip)

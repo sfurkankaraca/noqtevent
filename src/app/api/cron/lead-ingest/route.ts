@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/cronAuth";
 import { google } from "googleapis";
 import { createServiceClient } from "@/lib/supabase";
 import { ingestLead } from "@/lib/leadPipeline";
@@ -11,11 +12,6 @@ export const maxDuration = 300;
 // Idempotent: source_ref = gmail mesaj id'si → aynı e-posta ikinci kez lead olmaz.
 // Kayıp yok: parse edilemeyen lead-benzeri e-posta ham metniyle düşer.
 
-function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 const GMAIL_QUERY = 'from:(armut.com) -in:spam';
 const MAX_MESSAGES_PER_RUN = 10; // AI maliyet tavanı: koşu başına en fazla 10 yeni lead
@@ -29,7 +25,8 @@ function headerValue(payload: any, name: string): string {
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  // Bulgu 3: secret yoksa fail-closed (401)
+  if (!isCronAuthorized(req, "lead-ingest")) {
     return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
   }
 

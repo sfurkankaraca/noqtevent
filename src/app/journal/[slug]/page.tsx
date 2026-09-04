@@ -5,6 +5,7 @@ import Link from "next/link";
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import { createServiceClient } from "@/lib/supabase";
+import { safeJsonLd } from "@/lib/jsonLd"; // Bulgu 9: </script> kaçışı
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -83,8 +84,8 @@ export default async function JournalPostPage({ params }: Props) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(articleSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbSchema) }} />
       <Navigation />
       <main className="pt-20">
         {/* Hero */}

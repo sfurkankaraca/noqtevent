@@ -3,6 +3,7 @@ import { ZipArchive } from "archiver";
 import { PassThrough, Readable } from "node:stream";
 import { createServiceClient } from "@/lib/supabase";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { canViewMemoryGallery } from "@/lib/memoryGallery";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -17,15 +18,21 @@ export async function GET(req: NextRequest) {
 
   const slug = req.nextUrl.searchParams.get("slug");
   if (!slug) return NextResponse.json({ error: "slug parametresi gerekli" }, { status: 400 });
+  const k = req.nextUrl.searchParams.get("k");
 
   const supabase = createServiceClient();
   const { data: event } = await supabase
     .from("memory_events")
-    .select("id, title, is_active")
+    .select("id, title, is_active, gallery_visibility, gallery_token")
     .eq("slug", slug)
     .eq("is_active", true)
     .single();
   if (!event) return NextResponse.json({ error: "Etkinlik bulunamadı." }, { status: 404 });
+
+  // Bulgu 1: özel galeride zip ucu da galeri sayfasıyla aynı ?k=<gallery_token> kapısından geçer.
+  if (!canViewMemoryGallery(event, k)) {
+    return NextResponse.json({ error: "Bu galeri özeldir." }, { status: 403 });
+  }
 
   const { data: uploads } = await supabase
     .from("memory_uploads")
