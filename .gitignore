@@ -46,3 +46,8 @@ next-env.d.ts
 # clerk configuration (can include secrets)
 /.clerk/
 .env.vercel
+
+# Kişisel / kod dışı dosyalar (4 Eyl 2026)
+Emre_Zehra_Evlilik_Yeterlilik_Sinavi.pdf
+"noqt.events konseptler/"
+noqt.events konseptler/
