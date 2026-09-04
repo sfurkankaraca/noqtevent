@@ -1,0 +1,122 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- GERİ AL — 20260904150000_restrict_anon_rls.sql
+--
+-- BU DOSYA BİR MIGRATION DEĞİLDİR. Adı "_" ile başlar ve uzantısı ".sql.disabled"
+-- olduğu için `supabase db push` / `supabase migration list` bunu görmez.
+-- Kullanımı: içeriği elle Supabase Dashboard > SQL Editor'a yapıştır.
+--
+-- UYARI: bu dosya baseline'daki YÜZEYİ AYNEN geri getirir; yani anon key ile
+-- düğün fotoğrafları, davetiye PII'si ve sanatçı iletişim/ücret bilgisi yeniden
+-- okunabilir hâle gelir (Bulgu 8). Yalnız acil geri dönüş için kullan; sonra
+-- kırılan kod yolunu düzeltip migration'ı yeniden uygula.
+--
+-- Geri getirilmeyen tek şey: 2. adımda RLS'i açılan tablolar. Hangi tabloların
+-- etkilendiğini migration çalışırken düşen `RLS acildi: public.X` NOTICE'larından
+-- al ve gerekiyorsa elle `ALTER TABLE public.X DISABLE ROW LEVEL SECURITY` yaz.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+-- ── 1. GRANT ALL'ın geri verilmesi (baseline 1247-1417, 1442-1443) ───────────
+DO $rollback$
+DECLARE r record;
+BEGIN
+  FOR r IN
+    SELECT c.relname
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+  LOOP
+    EXECUTE format('GRANT ALL ON TABLE public.%I TO anon', r.relname);
+    EXECUTE format('GRANT ALL ON TABLE public.%I TO authenticated', r.relname);
+  END LOOP;
+
+  FOR r IN
+    SELECT c.relname
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'S'
+  LOOP
+    EXECUTE format('GRANT ALL ON SEQUENCE public.%I TO anon', r.relname);
+    EXECUTE format('GRANT ALL ON SEQUENCE public.%I TO authenticated', r.relname);
+  END LOOP;
+END
+$rollback$;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES    TO anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES    TO authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticated;
+
+-- ── 2. Eski PUBLIC policy'lerin geri kurulması (baseline) ────────────────────
+DROP POLICY IF EXISTS "public read active memory events" ON public.memory_events;
+CREATE POLICY "public read active memory events" ON public.memory_events
+  FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "public read memory uploads" ON public.memory_uploads;
+CREATE POLICY "public read memory uploads" ON public.memory_uploads
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "public insert memory uploads" ON public.memory_uploads;
+CREATE POLICY "public insert memory uploads" ON public.memory_uploads
+  FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "public read active invitations" ON public.invitations;
+CREATE POLICY "public read active invitations" ON public.invitations
+  FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "public insert rsvp" ON public.rsvp_responses;
+CREATE POLICY "public insert rsvp" ON public.rsvp_responses
+  FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Performers public read" ON public.dj_profiles;
+CREATE POLICY "Performers public read" ON public.dj_profiles
+  FOR SELECT USING (is_active = true AND application_status = 'approved'::text);
+
+DROP POLICY IF EXISTS "Performer application insert" ON public.dj_profiles;
+CREATE POLICY "Performer application insert" ON public.dj_profiles
+  FOR INSERT WITH CHECK (application_status = 'pending'::text);
+
+DROP POLICY IF EXISTS "Public read" ON public.concepts;
+CREATE POLICY "Public read" ON public.concepts
+  FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Public read published" ON public.journal_posts;
+CREATE POLICY "Public read published" ON public.journal_posts
+  FOR SELECT USING (is_published = true);
+
+DROP POLICY IF EXISTS "Site assets public read" ON public.site_assets;
+CREATE POLICY "Site assets public read" ON public.site_assets
+  FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Songs public read" ON public.songs;
+CREATE POLICY "Songs public read" ON public.songs
+  FOR SELECT USING (is_active = true);
+
+-- ── 3. Supply tablolarında TO authenticated → PUBLIC geri dönüşü ─────────────
+DROP POLICY IF EXISTS "Authenticated read artist_profiles" ON public.artist_profiles;
+DROP POLICY IF EXISTS "Public read artist_profiles"        ON public.artist_profiles;
+CREATE POLICY "Public read artist_profiles" ON public.artist_profiles
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Authenticated read venue_details" ON public.venue_details;
+DROP POLICY IF EXISTS "Public read venue_details"        ON public.venue_details;
+CREATE POLICY "Public read venue_details" ON public.venue_details
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Authenticated read entities" ON public.entities;
+DROP POLICY IF EXISTS "Public read entities"        ON public.entities;
+CREATE POLICY "Public read entities" ON public.entities
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Authenticated read active recurring templates" ON public.event_recurring_templates;
+DROP POLICY IF EXISTS "Public read active recurring templates"        ON public.event_recurring_templates;
+CREATE POLICY "Public read active recurring templates" ON public.event_recurring_templates
+  FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Authenticated read confirmed supply_events" ON public.supply_events;
+DROP POLICY IF EXISTS "Public read confirmed supply_events"        ON public.supply_events;
+CREATE POLICY "Public read confirmed supply_events" ON public.supply_events
+  FOR SELECT USING (status = 'confirmed');
+
+COMMIT;
