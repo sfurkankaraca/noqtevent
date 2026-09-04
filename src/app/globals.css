@@ -143,3 +143,119 @@
     color: oklch(0.985 0.004 60);
   }
 }
+
+/* ── NOQT UI v2 — modern animasyon ve yüzey yardımcıları ─────────────────────
+   Hero metin girişleri framer-motion yerine saf CSS ile yapılır: hidrasyon
+   beklemeden çalışır (LCP/FCP'yi JS'e bağlamaz) ve prefers-reduced-motion'a
+   otomatik saygı gösterir. */
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ken-burns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    /* İçerik iki kez render edilir; yarısı kadar kaydırınca dikişsiz döner */
+    transform: translateX(-50%);
+  }
+}
+
+.anim-rise {
+  opacity: 0;
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--rise-delay, 0s);
+}
+
+.anim-kenburns {
+  animation: ken-burns 7s ease-out forwards;
+}
+
+.anim-marquee {
+  animation: marquee-x var(--marquee-duration, 30s) linear infinite;
+}
+
+/* @utility: Tailwind v4'te lg:glass-panel gibi variant'larla kullanılabilir */
+@utility glass-panel {
+  background: color-mix(in oklab, var(--background) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+}
+
+@utility glass-panel-dark {
+  background: oklch(0.12 0.008 45 / 0.45);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+
+
+/* Nav bağlantıları için soldan sağa çizgi animasyonu */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.link-underline:hover::after,
+.link-underline:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* Kart kaldırma — gölge + hafif yükselme, GPU dostu */
+.card-lift {
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.card-lift:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 18px 40px -18px oklch(0.12 0.008 45 / 0.25),
+    0 8px 16px -12px oklch(0.12 0.008 45 / 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise {
+    opacity: 1;
+    animation: none;
+  }
+  .anim-kenburns,
+  .anim-marquee {
+    animation: none;
+  }
+  .card-lift,
+  .card-lift:hover {
+    transform: none;
+    transition: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}

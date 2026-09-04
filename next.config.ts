@@ -83,6 +83,9 @@ const nextConfig: NextConfig = {
       { source: "/deneyimler/kurumsal", destination: "/etkinlikler/kurumsal-etkinlik", permanent: true },
       { source: "/deneyimler/acilis", destination: "/etkinlikler/acilis-lansman", permanent: true },
       { source: "/deneyimler/ozel-parti", destination: "/etkinlikler/ozel-parti", permanent: true },
+      // /paketler kaldırıldı (Furkan, 4 Eyl 2026: "sadece paketler sayfasını
+      // kaldıralım"); sitemap'te 0.85 öncelikle indekslenmişti, fiyatlara yönlendir.
+      { source: "/paketler", destination: "/fiyatlar", permanent: true },
     ];
 
     // Panel domain yönlendirmesi (ETKINLIK_KESIF_V1_TASARIM.md §2.6): panel

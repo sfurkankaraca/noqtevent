@@ -42,7 +42,7 @@ export function HeroProof({ testimonial }: { testimonial: Testimonial | null }) 
 // Etkinlik türü sayfalarına iç link ağı
 export function EventLinks() {
   return (
-    <section className="py-20 lg:py-24 bg-[oklch(0.975_0.006_80)]">
+    <section className="py-20 lg:py-24 bg-background">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <p className="text-xs tracking-[0.25em] uppercase text-muted-foreground font-medium mb-3">
           Hizmetlerimiz
@@ -58,7 +58,7 @@ export function EventLinks() {
             <Link
               key={p.slug}
               href={`/etkinlikler/${p.slug}`}
-              className="group flex items-center gap-3 p-4 rounded-2xl bg-white border border-border hover:border-foreground/40 transition-colors"
+              className="group flex items-center gap-3 p-4 rounded-2xl bg-card border border-border hover:border-foreground/40 transition-colors"
             >
               <span className="text-2xl">{p.emoji}</span>
               <span className="text-sm font-medium text-foreground group-hover:underline underline-offset-2">
@@ -83,7 +83,7 @@ export function EventLinks() {
 // Görünür SSS — FAQPage schema ile aynı kaynaktan (lib/homeFaq)
 export function HomeFaq() {
   return (
-    <section className="py-20 lg:py-24 bg-white border-t border-border">
+    <section className="py-20 lg:py-24 bg-background border-t border-border">
       <div className="max-w-3xl mx-auto px-6 lg:px-8">
         <p className="text-xs tracking-[0.25em] uppercase text-muted-foreground font-medium mb-3">
           Sıkça Sorulan Sorular
@@ -116,7 +116,7 @@ export function HomeFaq() {
 export function JournalTeaser({ posts }: { posts: Post[] }) {
   if (!posts.length) return null;
   return (
-    <section className="py-20 lg:py-24 bg-[oklch(0.975_0.006_80)] border-t border-border">
+    <section className="py-20 lg:py-24 bg-background border-t border-border">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <div className="flex items-end justify-between mb-10">
           <div>
@@ -139,7 +139,7 @@ export function JournalTeaser({ posts }: { posts: Post[] }) {
             <Link
               key={post.slug}
               href={`/journal/${post.slug}`}
-              className="group p-6 rounded-2xl bg-white border border-border hover:border-foreground/40 transition-colors flex flex-col gap-3"
+              className="group p-6 rounded-2xl bg-card border border-border hover:border-foreground/40 transition-colors flex flex-col gap-3"
             >
               {post.category && (
                 <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-medium">

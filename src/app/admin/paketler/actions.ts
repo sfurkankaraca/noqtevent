@@ -39,7 +39,6 @@ export async function upsertPackage(pkg: Partial<PackageRow> & { slug: string })
     .upsert(pkg, { onConflict: "slug" });
   if (error) throw new Error(error.message);
   revalidatePath("/admin/paketler");
-  revalidatePath("/paketler");
 }
 
 export async function deletePackage(id: string) {
@@ -47,5 +46,4 @@ export async function deletePackage(id: string) {
   const { error } = await supabase.from("packages").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/paketler");
-  revalidatePath("/paketler");
 }
