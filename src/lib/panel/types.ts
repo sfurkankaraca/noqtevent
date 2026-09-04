@@ -22,6 +22,19 @@ export type ClaimMethod = "ig_dm_code" | "phone_code" | "manual" | "youtube_oaut
 export type ClaimRowStatus = "pending" | "approved" | "rejected";
 export type RoleSide = "venue" | "artist" | "manager";
 
+// 20260807190000_add_native_video_assets.sql — Mux native video yaşam
+// döngüsü (bkz. lib/panel/mux.ts). "ready" olan girdiler AYRICA video_urls'e
+// (stream.mux.com adresiyle) yazılır — bu tip yalnız yükleme/işleme
+// DURUMUNU takip eder, oynatma kaynağı DEĞİLDİR.
+export interface VideoAssetRow {
+  uploadId: string;
+  assetId: string | null;
+  playbackId: string | null;
+  status: "uploading" | "processing" | "ready" | "errored" | "rejected_duration";
+  durationSeconds: number | null;
+  createdAt: string;
+}
+
 export interface EntityRow {
   id: string;
   kind: EntityKind;
@@ -47,6 +60,8 @@ export interface VenueDetailsRow {
   photo_urls: string[];
   // 20260802090000_add_supply_media_gallery.sql — mekan video galerisi.
   video_urls: string[];
+  // 20260807190000_add_native_video_assets.sql
+  video_assets: VideoAssetRow[];
   // 20260802150000_add_venue_google_enrichment.sql — panel "Google'dan doldur".
   google_place_id: string | null;
   google_rating: number | null;
@@ -74,6 +89,8 @@ export interface ArtistProfileRow {
   // sanatçı medya galerisi.
   photo_urls: string[];
   video_urls: string[];
+  // 20260807190000_add_native_video_assets.sql
+  video_assets: VideoAssetRow[];
   city: string | null;
   genres: string[];
   performer_type: string;

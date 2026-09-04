@@ -4,9 +4,39 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { isAllowedVideoUrl } from "@/lib/panel/media";
+import { isAllowedVideoUrl, extractMuxPlaybackId } from "@/lib/panel/media";
 
 type PhotoEntry = { url: string; uploading?: boolean; error?: string };
+
+type VideoAssetStatus = "uploading" | "processing" | "ready" | "errored" | "rejected_duration";
+type VideoAsset = {
+  uploadId: string;
+  assetId: string | null;
+  playbackId: string | null;
+  status: VideoAssetStatus;
+  durationSeconds: number | null;
+};
+
+const VIDEO_ASSET_STATUS_LABEL: Record<VideoAssetStatus, string> = {
+  uploading: "Yükleniyor…",
+  processing: "İşleniyor…",
+  ready: "Hazır",
+  errored: "Hata — video işlenemedi",
+  rejected_duration: "Reddedildi — 60 saniyeyi aşıyor",
+};
+
+async function initMuxUpload(entityId: string, kind: "venue" | "artist"): Promise<{ uploadUrl: string; uploadId: string }> {
+  const res = await fetch("/api/panel/media/mux-upload-init", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ entityId, kind }),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j.error ?? "Video yükleme başlatılamadı.");
+  }
+  return res.json();
+}
 
 async function uploadPhoto(file: File, entityId: string): Promise<string> {
   const fd = new FormData();
@@ -39,6 +69,7 @@ export default function MediaManager({
   initialCoverUrl = "",
   initialGalleryUrls,
   initialVideoUrls,
+  initialVideoAssets = [],
   coverFieldName = "photoUrl",
   galleryFieldName = "photoUrls",
   videoFieldName = "videoUrls",
@@ -48,6 +79,10 @@ export default function MediaManager({
   initialCoverUrl?: string;
   initialGalleryUrls: string[];
   initialVideoUrls: string[];
+  /// Henüz `video_urls`e girmemiş (yükleniyor/işleniyor/reddedildi) native
+  /// video durumları — yalnız BİLGİLENDİRME amaçlı, sayfa yeniden
+  /// yüklenince güncellenir (canlı polling YOK, kapsam dışı bırakıldı).
+  initialVideoAssets?: VideoAsset[];
   coverFieldName?: string;
   galleryFieldName?: string;
   videoFieldName?: string;
@@ -59,6 +94,39 @@ export default function MediaManager({
   const [videos, setVideos] = useState<string[]>(initialVideoUrls);
   const [videoInput, setVideoInput] = useState("");
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [nativeUploading, setNativeUploading] = useState(false);
+  const [nativeError, setNativeError] = useState<string | null>(null);
+  // Bu oturumda başlatılan yüklemeler — sayfa yeniden yüklenmeden de
+  // kullanıcıya "yükleniyor" geri bildirimi versin diye ayrı tutulur;
+  // initialVideoAssets (sunucudan gelen, bir önceki sayfa yüklemesindeki
+  // durum) ile BİRLİKTE gösterilir.
+  const [pendingNativeUploads, setPendingNativeUploads] = useState<VideoAsset[]>([]);
+  const nativeVideoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleNativeVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (nativeVideoInputRef.current) nativeVideoInputRef.current.value = "";
+    setNativeUploading(true);
+    setNativeError(null);
+    try {
+      const { uploadUrl, uploadId } = await initMuxUpload(entityId, kind);
+      const putRes = await fetch(uploadUrl, { method: "PUT", body: file });
+      if (!putRes.ok) throw new Error("Video yüklenemedi (bağlantı kesildi olabilir).");
+      setPendingNativeUploads((prev) => [
+        ...prev,
+        { uploadId, assetId: null, playbackId: null, status: "uploading", durationSeconds: null },
+      ]);
+    } catch (err) {
+      setNativeError(err instanceof Error ? err.message : "Video yükleme hatası.");
+    } finally {
+      setNativeUploading(false);
+    }
+  };
+
+  const nativeStatusList = [...initialVideoAssets, ...pendingNativeUploads].filter(
+    (a) => a.status !== "ready", // hazır olanlar zaten alttaki Videolar listesinde (video_urls üzerinden) görünüyor
+  );
 
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -348,23 +416,30 @@ export default function MediaManager({
 
         {videos.length > 0 && (
           <ul className="space-y-1.5">
-            {videos.map((url) => (
-              <li
-                key={url}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-1.5"
-              >
-                <a href={url} target="_blank" rel="noopener noreferrer" className="truncate text-xs text-foreground hover:underline">
-                  {url}
-                </a>
-                <button
-                  type="button"
-                  onClick={() => removeVideo(url)}
-                  className="flex-shrink-0 text-xs text-red-500 hover:text-red-700"
+            {videos.map((url) => {
+              const muxId = extractMuxPlaybackId(url);
+              return (
+                <li
+                  key={url}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-1.5"
                 >
-                  Kaldır
-                </button>
-              </li>
-            ))}
+                  {muxId ? (
+                    <span className="truncate text-xs text-foreground">🎬 Yüklenen video ({muxId.slice(0, 8)}…)</span>
+                  ) : (
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="truncate text-xs text-foreground hover:underline">
+                      {url}
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeVideo(url)}
+                    className="flex-shrink-0 text-xs text-red-500 hover:text-red-700"
+                  >
+                    Kaldır
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
 
@@ -390,6 +465,55 @@ export default function MediaManager({
             Ekle
           </Button>
         </div>
+      </div>
+
+      {/* Native video (Mux) — YouTube/Vimeo linki olmadan uygulama içinde
+          akıcı (HLS) oynatılan video. Hazır olan videolar bir işleme
+          gecikmesinin ardından yukarıdaki Videolar listesinde görünür
+          (bkz. mux-webhook route) — bu bölüm yalnız YÜKLEME ve ARA
+          DURUMLARI (yükleniyor/işleniyor/reddedildi) için. */}
+      <div className="space-y-3 rounded-lg border border-border p-3">
+        <div>
+          <p className="text-sm font-medium">Video yükle</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Bilgisayarından doğrudan video yükle — YouTube/Vimeo hesabı gerekmez. En fazla 60 saniye;
+            uzun videolar otomatik reddedilir. Video sayısında sınır yok.
+          </p>
+        </div>
+
+        {nativeStatusList.length > 0 && (
+          <ul className="space-y-1.5">
+            {nativeStatusList.map((a) => (
+              <li
+                key={a.uploadId}
+                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-1.5"
+              >
+                <span className="truncate text-xs text-muted-foreground">{VIDEO_ASSET_STATUS_LABEL[a.status]}</span>
+                {a.status === "rejected_duration" && a.durationSeconds && (
+                  <span className="text-[11px] text-red-600">{Math.round(a.durationSeconds)}sn</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {nativeError && <p className="text-xs text-red-600">{nativeError}</p>}
+
+        <label
+          className={`flex items-center gap-3 cursor-pointer border border-dashed border-border rounded-lg px-4 py-3 hover:border-foreground/40 transition-colors ${
+            nativeUploading ? "opacity-50 pointer-events-none" : ""
+          }`}
+        >
+          <span className="text-sm text-muted-foreground">{nativeUploading ? "Yükleniyor…" : "+ Video yükle"}</span>
+          <input
+            ref={nativeVideoInputRef}
+            type="file"
+            accept="video/mp4,video/quicktime,video/webm,video/x-m4v"
+            className="sr-only"
+            disabled={nativeUploading}
+            onChange={handleNativeVideoFile}
+          />
+        </label>
       </div>
     </div>
   );
