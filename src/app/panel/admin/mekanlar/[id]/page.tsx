@@ -207,12 +207,13 @@ export default async function AdminVenueEditPage({
               kind="venue"
               initialGalleryUrls={venue.photo_urls}
               initialVideoUrls={venue.video_urls}
+              initialVideoAssets={venue.video_assets}
             />
 
             {isPublishEditable && (
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="isPublished" defaultChecked={venue.is_published} className="h-4 w-4" />
-                Yayında (herkese açık keşif akışında görünsün)
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" name="isPublished" defaultChecked={venue.is_published} className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>Yayında (herkese açık keşif akışında görünsün)</span>
               </label>
             )}
 
