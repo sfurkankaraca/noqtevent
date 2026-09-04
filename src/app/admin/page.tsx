@@ -85,9 +85,21 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">NOQT Admin Paneli</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">NOQT Admin Paneli</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/bookings/new"
+            className="inline-flex items-center gap-2 bg-foreground text-background px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity">
+            📝 Teklif Oluştur
+          </Link>
+          <Link href="/admin/bookings"
+            className="inline-flex items-center gap-2 border border-border bg-white text-foreground px-5 py-2.5 rounded-full text-sm font-medium hover:bg-secondary transition-colors">
+            📄 Sözleşme Oluştur
+          </Link>
+        </div>
       </div>
 
       {/* Hedef kokpiti özeti */}
@@ -149,6 +161,8 @@ export default async function AdminDashboard() {
           <h2 className="font-semibold text-foreground mb-4">Hızlı Erişim</h2>
           <div className="space-y-2">
             {[
+              { href: "/admin/bookings/new", label: "+ Teklif Oluştur" },
+              { href: "/admin/bookings", label: "Sözleşme Oluştur (booking seç)" },
               { href: "/admin/djler/new", label: "+ Yeni DJ" },
               { href: "/admin/ortaklar/new", label: "+ Yeni Ortak" },
               { href: "/admin/journal/new", label: "+ Yeni Yazı" },

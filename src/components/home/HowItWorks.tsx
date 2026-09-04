@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, useScroll, useSpring } from "framer-motion";
 import { useRef } from "react";
 import Link from "next/link";
 
@@ -45,7 +45,14 @@ const steps = [
 
 export default function HowItWorks() {
   const ref = useRef(null);
+  const timelineRef = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
+  // Dikey timeline çizgisi scroll ile dolar — statik çizgi yerine ilerleme hissi
+  const { scrollYProgress } = useScroll({
+    target: timelineRef,
+    offset: ["start 75%", "end 55%"],
+  });
+  const lineProgress = useSpring(scrollYProgress, { stiffness: 90, damping: 25 });
 
   return (
     <section id="nasil-calisir" ref={ref} className="py-24 lg:py-36 bg-background overflow-hidden scroll-mt-20">
@@ -74,17 +81,22 @@ export default function HowItWorks() {
         </motion.div>
 
         {/* Steps */}
-        <div className="relative">
-          {/* Vertical timeline line — desktop */}
+        <div className="relative" ref={timelineRef}>
+          {/* Vertical timeline line — desktop; scroll ile dolan ön çizgi */}
           <div className="hidden lg:block absolute left-[52px] top-0 bottom-0 w-px bg-border" />
+          <motion.div
+            className="hidden lg:block absolute left-[52px] top-0 bottom-0 w-px bg-foreground origin-top"
+            style={{ scaleY: lineProgress }}
+          />
 
           <div className="space-y-0">
             {steps.map((step, i) => (
               <motion.div
                 key={step.number}
                 initial={{ opacity: 0, x: -24 }}
-                animate={inView ? { opacity: 1, x: 0 } : {}}
-                transition={{ duration: 0.6, delay: i * 0.12 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.6, delay: (i % 2) * 0.08, ease: [0.22, 1, 0.36, 1] }}
                 className="relative grid grid-cols-1 lg:grid-cols-[120px_1fr] gap-6 lg:gap-16 py-10 border-b border-border last:border-0"
               >
                 {/* Step number + dot */}
@@ -109,7 +121,7 @@ export default function HowItWorks() {
 
                 {/* Content */}
                 <div className="pb-2">
-                  <span className="inline-block text-[10px] font-semibold tracking-[0.18em] uppercase text-muted-foreground border border-border rounded-full px-3 py-1 mb-4">
+                  <span className="inline-block text-[11px] font-medium tracking-[0.22em] uppercase text-muted-foreground mb-4">
                     {step.tag}
                   </span>
                   <h3
@@ -121,17 +133,8 @@ export default function HowItWorks() {
                   <p className="text-muted-foreground leading-relaxed max-w-xl mb-4">
                     {step.description}
                   </p>
-                  {/* Deliverables */}
-                  <div className="flex flex-wrap gap-2">
-                    {step.detail.split(" · ").map((d) => (
-                      <span
-                        key={d}
-                        className="text-xs text-foreground/60 bg-accent/60 px-3 py-1 rounded-full"
-                      >
-                        {d}
-                      </span>
-                    ))}
-                  </div>
+                  {/* Deliverables — sade tek satır */}
+                  <p className="text-xs tracking-wide text-muted-foreground/80">{step.detail}</p>
                 </div>
               </motion.div>
             ))}
