@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getPanelUser } from "@/lib/panel/supabaseServer";
-import { getArtistByEntityId, getLatestClaimForUserEntity, getVenueByEntityId } from "@/lib/panel/queries";
+import {
+  getArtistByEntityId,
+  getLatestClaimForUserEntity,
+  getVenueByEntityId,
+  isEntityMember,
+} from "@/lib/panel/queries";
 import { startClaimAction } from "@/lib/panel/actions/claims";
 import { CLAIM_ROW_STATUS_LABEL, CLAIM_STATUS_LABEL } from "@/lib/panel/format";
 import { Button } from "@/components/ui/button";
@@ -47,14 +52,28 @@ export default async function ClaimDetailPage({
       )}
 
       {claimStatus === "claimed" || claimStatus === "verified" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Bu profil zaten sahiplenilmiş</CardTitle>
-            <CardDescription>
-              Siz bu profilin sahibiyseniz ve erişiminiz yoksa bizimle iletişime geçin.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        (await isEntityMember(user.id, id, ["owner", "manager"])) ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Bu profil senin</CardTitle>
+              <CardDescription>Fotoğraf ve video ekleyip düzenleyebilirsin.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href={`/panel/sahiplen/${kind}/${id}/duzenle`}>
+                <Button>Fotoğraf ve videoyu düzenle</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Bu profil zaten sahiplenilmiş</CardTitle>
+              <CardDescription>
+                Siz bu profilin sahibiyseniz ve erişiminiz yoksa bizimle iletişime geçin.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )
       ) : myClaim && myClaim.status === "pending" ? (
         <Card>
           <CardHeader>
@@ -99,7 +118,7 @@ export default async function ClaimDetailPage({
             <CardTitle>Bu profil sen misin?</CardTitle>
             <CardDescription>
               Başvuru sonrası size bir kod göstereceğiz; bu kodu profilin resmi Instagram hesabından
-              @noqt hesabına DM olarak göndermeniz gerekiyor. Ekibimiz DM'i görüp başvurunuzu onaylar.
+              @noqt hesabına DM olarak göndermeniz gerekiyor. Ekibimiz DM&apos;i görüp başvurunuzu onaylar.
             </CardDescription>
           </CardHeader>
           <CardContent>
