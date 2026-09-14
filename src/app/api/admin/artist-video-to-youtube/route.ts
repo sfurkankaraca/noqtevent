@@ -110,7 +110,9 @@ export async function POST(req: NextRequest) {
     const msg = e instanceof Error ? e.message : "YouTube yükleme hatası";
     const friendly = msg.includes("quota")
       ? "YouTube günlük yükleme kotası doldu. Yarın tekrar deneyin."
-      : msg;
+      : msg.includes("invalid_grant")
+        ? "YouTube bağlantısının süresi dolmuş ya da iptal edilmiş. /api/admin/youtube-auth ile yeniden yetkilendirip GOOGLE_YOUTUBE_REFRESH_TOKEN'ı Vercel'de güncelleyin."
+        : msg;
     // Hata detayını genişlet — Google API errors.errors[] içinde reason/domain taşır
     const detail = (e as { errors?: unknown; response?: { data?: unknown } })?.errors
       ?? (e as { response?: { data?: unknown } })?.response?.data

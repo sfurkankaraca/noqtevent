@@ -37,7 +37,11 @@ export async function GET(req: NextRequest) {
     if (val) resHeaders.set(key, val);
   }
   if (!resHeaders.has("accept-ranges")) resHeaders.set("accept-ranges", "bytes");
-  resHeaders.set("cache-control", "public, max-age=31536000, immutable");
+  // CDN'de ÖNBELLEKLENMEMELİ: Vercel önbelleği Range başlığını anahtara katmıyor.
+  // Safari'nin ilk "bytes=0-1" yoklaması public olarak cache'lenince sonraki tüm
+  // aralık istekleri o 2 baytlık 206'yı alıyor ve video hiç oynamıyordu.
+  // (Dosyalar zaten R2 CDN'inde; buradaki önbellek kazanç değil, risk.)
+  resHeaders.set("cache-control", "private, no-store");
 
   return new NextResponse(upstream.body, {
     status: upstream.status,
