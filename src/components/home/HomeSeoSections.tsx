@@ -68,9 +68,6 @@ export function EventLinks() {
           ))}
         </div>
         <div className="mt-6 flex flex-wrap gap-4 text-sm">
-          <Link href="/fiyatlar" className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors">
-            Fiyatlar ve paketleri incele →
-          </Link>
           <Link href="/konseptler" className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors">
             Müzik konseptlerini keşfet →
           </Link>

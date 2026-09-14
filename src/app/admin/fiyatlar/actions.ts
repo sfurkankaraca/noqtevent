@@ -37,7 +37,6 @@ export type PricingFaqItem = {
 
 const revalidate = () => {
   revalidatePath("/admin/fiyatlar");
-  revalidatePath("/fiyatlar");
 };
 
 // ── Tiers ────────────────────────────────────────────────────────────────────

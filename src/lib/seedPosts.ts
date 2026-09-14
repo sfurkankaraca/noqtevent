@@ -134,7 +134,7 @@ En etkili yöntem, ihtiyaçlarınızı (süre, ekipman kapsamı, sanatçı sayı
 
 ---
 
-Kayseri ve Nevşehir'de DJ hizmetlerimiz **7.500 ₺'den başlar**. Etkinliğinizin detaylarına göre size özel teklif almak için [planlayıcımızı](/planla) kullanabilir ya da [fiyat sayfamızı](/fiyatlar) inceleyebilirsiniz.`,
+Kayseri ve Nevşehir'de DJ hizmetlerimiz **7.500 ₺'den başlar**. Etkinliğinizin detaylarına göre size özel teklif almak için [planlayıcımızı](/planla) kullanabilirsiniz.`,
   },
   // ── Yeni SEO yazıları ────────────────────────────────────────────────────────
   {

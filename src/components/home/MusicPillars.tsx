@@ -26,7 +26,7 @@ const PILLARS = [
     tag: "Ses & Işık",
     headline: "Müzik nasıl planlandıysa öyle duyulur",
     desc: "Mekana uygun ses sistemi, kalibrasyon ve sahne ışığı. Teknik keşif etkinlikten önce yapılır.",
-    href: "/fiyatlar",
+    href: "/planla",
   },
   {
     index: "04",
