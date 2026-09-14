@@ -83,7 +83,7 @@ export default function FeaturedExperiences({ concepts }: { concepts?: Concept[]
               className="text-4xl lg:text-5xl mt-4 text-foreground leading-tight"
               style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
             >
-              Deneyimler
+              Gecenin <em className="italic">sesi</em>
             </h2>
           </div>
           <Link

@@ -9,7 +9,7 @@ import { Menu, X } from "lucide-react";
 const navLinks = [
   { href: "/sanatcilar", label: "Sanatçılar" },
   { href: "/konseptler", label: "Konseptler" },
-  { href: "/ortaklar", label: "Partnerler" },
+  { href: "/fiyatlar", label: "Fiyatlar" },
   { href: "/journal", label: "Journal" },
   { href: "/hakkimizda", label: "Hakkımızda" },
 ];
@@ -71,7 +71,7 @@ export default function Navigation() {
                 href="/planla"
                 className="hidden lg:inline-flex items-center gap-2 bg-foreground text-background text-sm px-5 py-2.5 rounded-full font-medium tracking-wide transition-all duration-300 hover:shadow-[0_10px_24px_-10px_rgba(0,0,0,0.4)] hover:-translate-y-0.5"
               >
-                Etkinliğimi Planla
+                Müziğimi Planla
               </Link>
               <button
                 onClick={() => setMenuOpen(true)}
@@ -143,7 +143,7 @@ export default function Navigation() {
                 onClick={() => setMenuOpen(false)}
                 className="flex items-center justify-center bg-foreground text-background text-sm px-6 py-4 rounded-full font-medium tracking-wide w-full"
               >
-                Etkinliğimi Planla
+                Müziğimi Planla
               </Link>
             </div>
           </motion.div>

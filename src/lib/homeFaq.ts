@@ -2,6 +2,10 @@
 // Schema ile sayfa içeriği birebir aynı olmalı; Google tutarsızlıkta rich result vermez.
 export const HOME_FAQ = [
   {
+    q: "NOQT etkinliğin tamamını mı organize ediyor?",
+    a: "Odağımız etkinliğin müzik deneyimi: DJ ve canlı müzisyen seçimi, müzik akış planı, ses ve ışık sistemi ile etkinlik günü sahne yönetimi. Mekan, dekor veya fotoğraf gibi ihtiyaçlarınız için partner ağımızdan yönlendirme yapabiliyoruz.",
+  },
+  {
     q: "Kayseri'de düğün DJ'i nasıl bulabilirim?",
     a: "NOQT deneyim planlayıcısını kullanarak etkinlik türünüzü, konseptinizi ve tarihini belirleyin. Size uygun DJ ve sanatçı önerilerini anında alın, teklif isteyin. Planlama yaklaşık 2 dakika sürer ve aynı gün size özel teklif hazırlarız.",
   },

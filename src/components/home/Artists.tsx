@@ -39,13 +39,13 @@ export default function Artists({ djs }: { djs: Dj[] }) {
         >
           <div>
             <span className="text-xs tracking-[0.25em] uppercase text-muted-foreground font-medium">
-              Kadromuz
+              DJ &amp; Canlı Müzik Kadromuz
             </span>
             <h2
               className="text-4xl lg:text-5xl mt-4 text-foreground leading-tight"
               style={{ fontFamily: "var(--font-instrument-serif, Georgia, serif)", fontWeight: 400 }}
             >
-              Sanatçılar
+              Sahnedekiler
             </h2>
           </div>
           <Link

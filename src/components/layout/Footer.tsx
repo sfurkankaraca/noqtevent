@@ -2,9 +2,9 @@ import Link from "next/link";
 import Image from "next/image";
 
 const footerLinks = {
-  "Hizmetler": [
+  "Müzik Hizmetleri": [
     { label: "Deneyim Planlayıcı", href: "/planla" },
-    { label: "Düğün", href: "/etkinlikler/dugun-dj" },
+    { label: "Düğün Müziği", href: "/etkinlikler/dugun-dj" },
     { label: "Kurumsal Etkinlik", href: "/etkinlikler/kurumsal-etkinlik" },
     { label: "Açılış & Lansman", href: "/etkinlikler/acilis-lansman" },
     { label: "Özel Parti", href: "/etkinlikler/ozel-parti" },
@@ -46,8 +46,8 @@ export default function Footer() {
               />
             </Link>
             <p className="mt-6 text-background/60 text-sm leading-relaxed max-w-xs">
-              İnsanları aynı anda, aynı hislerde buluşturan deneyimler.
-              Müzik, atmosfer ve insan enerjisini bir araya getiriyoruz.
+              Etkinliklerin müzik deneyiminden sorumluyuz: DJ, canlı müzik,
+              ses &amp; ışık ve gecenin akışı.
             </p>
             <div className="flex items-center gap-4 mt-8">
               <a

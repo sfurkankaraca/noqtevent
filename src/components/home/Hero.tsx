@@ -7,16 +7,16 @@ import { trackEvent } from "@/lib/analytics";
 
 const SLIDE_INTERVAL = 6000;
 
-// Alt marquee şeridi — hizmet dili, iki kez render edilip CSS ile döndürülür
+// Alt marquee şeridi — müzik hizmet dili, iki kez render edilip CSS ile döndürülür
 const MARQUEE_ITEMS = [
-  "Düğün & Nişan",
-  "Kurumsal Etkinlik",
-  "Marka Lansmanı",
-  "DJ & Canlı Performans",
-  "Teknik Prodüksiyon",
-  "Konsept Tasarımı",
-  "Mekan Kürasyonu",
-  "Özel Davet",
+  "DJ Performansı",
+  "Canlı Müzik",
+  "Ses & Işık",
+  "Müzik Akışı",
+  "Düğün & Kına",
+  "Kulüp & Festival",
+  "Kurumsal Gece",
+  "After Party",
 ];
 
 export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
@@ -53,7 +53,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             >
               <Image
                 src={src}
-                alt="NOQT — Kayseri ve Nevşehir&apos;de premium etkinlik organizasyonu, misafir deneyimi"
+                alt="NOQT — Kayseri ve Nevşehir&apos;de etkinlikler için DJ, canlı müzik ve ses & ışık"
                 fill
                 className={`object-cover ${i === current ? "anim-kenburns" : ""}`}
                 priority={i === 0}
@@ -76,7 +76,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               >
                 <Image
                   src={src}
-                  alt="NOQT — Kayseri ve Nevşehir&apos;de premium etkinlik organizasyonu, misafir deneyimi"
+                  alt="NOQT — Kayseri ve Nevşehir&apos;de etkinlikler için DJ, canlı müzik ve ses & ışık"
                   fill
                   className={`object-cover ${i === current ? "anim-kenburns" : ""}`}
                   priority={i === 0}
@@ -120,7 +120,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             <div className="anim-rise flex items-center gap-3 mb-8" style={{ "--rise-delay": "0.05s" } as React.CSSProperties}>
               <div className="h-px w-12 bg-white/40 lg:bg-foreground/30" />
               <span className="text-xs tracking-[0.25em] uppercase text-white/60 lg:text-muted-foreground font-medium">
-                Uçtan Uca Etkinlik Tasarımı ve Yönetimi
+                Etkinlikler için Müzik Deneyimi
               </span>
             </div>
 
@@ -131,23 +131,23 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
             >
               <span className="block overflow-hidden">
                 <span className="anim-rise block" style={{ "--rise-delay": "0.12s" } as React.CSSProperties}>
-                  Uçtan uca
+                  Gecenin
                 </span>
               </span>
               <span className="block overflow-hidden">
                 <span className="anim-rise block" style={{ "--rise-delay": "0.22s" } as React.CSSProperties}>
-                  etkinlik tasarımı
+                  müziği
                 </span>
               </span>
               <span className="block overflow-hidden">
                 <span className="anim-rise block italic" style={{ "--rise-delay": "0.32s" } as React.CSSProperties}>
-                  ve yönetimi.
+                  bizden.
                 </span>
               </span>
               <span className="sr-only">
-                {" "}— Kayseri ve Nevşehir&apos;de uçtan uca etkinlik tasarımı ve yönetimi: konsept geliştirme, mekan
-                ve sanatçı kürasyonu, teknik prodüksiyon, koordinasyon; düğün, kurumsal etkinlik, marka lansmanı ve
-                özel davet organizasyonu
+                {" "}— Kayseri ve Nevşehir&apos;de etkinlikler için müzik deneyimi: DJ ve sanatçı booking, canlı
+                müzisyen, müzik akışı planlama, ses ve ışık sistemi, sahne yönetimi; düğün, kına, kulüp gecesi,
+                festival ve kurumsal etkinlik müziği
               </span>
             </h1>
 
@@ -156,7 +156,8 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               className="anim-rise mt-8 text-lg text-white/80 lg:text-muted-foreground leading-relaxed max-w-lg"
               style={{ "--rise-delay": "0.45s" } as React.CSSProperties}
             >
-              Mekan, sanatçı, teknik ekip ve koordinasyon. Etkinliğiniz için gereken her şey tek noktada.
+              DJ, canlı müzisyen, ses &amp; ışık ve müzik akışı. İlk şarkıdan son dansa kadar etkinliğinizin
+              müzik deneyiminden biz sorumluyuz.
             </p>
 
             {/* CTAs — minimal: tek birincil buton + iki sade metin linki */}
@@ -169,7 +170,7 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
                 onClick={() => trackEvent("cta_click", { location: "hero", target: "planla" })}
                 className="inline-flex items-center gap-3 bg-white lg:bg-foreground text-foreground lg:text-background px-8 py-4 rounded-full text-sm font-medium tracking-wide transition-all duration-300 group hover:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.45)] hover:-translate-y-0.5"
               >
-                Etkinliğimi Planla
+                Müziğimi Planla
                 <svg
                   width="16"
                   height="16"
@@ -188,19 +189,19 @@ export default function Hero({ heroImages = [] }: { heroImages?: string[] }) {
               </Link>
 
               <Link
-                href="/planla/ai"
-                onClick={() => trackEvent("cta_click", { location: "hero", target: "planla-ai" })}
+                href="/sanatcilar"
+                onClick={() => trackEvent("cta_click", { location: "hero", target: "sanatcilar" })}
                 className="link-underline text-sm tracking-wide text-white/80 lg:text-foreground/70 hover:text-white lg:hover:text-foreground transition-colors"
               >
-                AI ile Planla
+                Sanatçıları Keşfet
               </Link>
 
               <a
-                href="#nasil-calisir"
-                onClick={() => trackEvent("cta_click", { location: "hero", target: "nasil-calisir" })}
+                href="#ne-yapiyoruz"
+                onClick={() => trackEvent("cta_click", { location: "hero", target: "ne-yapiyoruz" })}
                 className="link-underline hidden sm:inline text-sm tracking-wide text-white/80 lg:text-foreground/70 hover:text-white lg:hover:text-foreground transition-colors"
               >
-                Nasıl Çalışıyoruz
+                Ne Yapıyoruz
               </a>
             </div>
 

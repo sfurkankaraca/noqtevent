@@ -17,11 +17,11 @@ const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://www.noqt.events";
 
 export const metadata: Metadata = {
   title: {
-    default: "NOQT — DJ & Sanatçı Booking, Etkinlik Yönetimi | Kayseri & Nevşehir",
+    default: "NOQT — Etkinlik Müziği: DJ, Canlı Müzik, Ses & Işık | Kayseri & Nevşehir",
     template: "%s | NOQT",
   },
   description:
-    "Kayseri ve Nevşehir'de DJ ve sanatçı booking: düğün, kına, festival, kulüp gecesi, açılış, mezuniyet ve kurumsal etkinlikler. Mekanlara sanatçı temini ve baştan sona etkinlik yönetimi. Aynı gün teklif.",
+    "Kayseri ve Nevşehir'de etkinliklerin müzik deneyimi: DJ ve sanatçı booking, canlı müzisyen, müzik akış planı, ses & ışık sistemi. Düğün, kına, festival, kulüp gecesi, mezuniyet ve kurumsal etkinlikler. Aynı gün teklif.",
   keywords: [
     "kayseri dj",
     "kayseri dj booking",
@@ -29,7 +29,10 @@ export const metadata: Metadata = {
     "nevşehir dj",
     "nevşehir sanatçı booking",
     "kapadokya etkinlik organizasyonu",
-    "kayseri etkinlik yönetimi",
+    "kayseri etkinlik müziği",
+    "düğün müziği",
+    "canlı müzik kayseri",
+    "ses ışık sistemi kiralama kayseri",
     "nevşehir etkinlik organizasyonu",
     "kayseri düğün dj",
     "nevşehir düğün dj",
@@ -51,23 +54,23 @@ export const metadata: Metadata = {
     locale: "tr_TR",
     url: BASE_URL,
     siteName: "NOQT",
-    title: "NOQT — DJ & Sanatçı Booking, Etkinlik Yönetimi | Kayseri & Nevşehir",
+    title: "NOQT — Etkinlik Müziği: DJ, Canlı Müzik, Ses & Işık | Kayseri & Nevşehir",
     description:
-      "Kayseri ve Nevşehir'de DJ ve sanatçı booking: düğün, festival, kulüp gecesi, açılış ve kurumsal etkinlikler. Mekanlara sanatçı temini, baştan sona etkinlik yönetimi.",
+      "Kayseri ve Nevşehir'de etkinliklerin müzik deneyimi: DJ ve sanatçı booking, canlı müzisyen, ses & ışık. Düğün, festival, kulüp gecesi, açılış ve kurumsal etkinlikler.",
     images: [
       {
         url: `${BASE_URL}/noqt-og.jpg`,
         width: 1200,
         height: 630,
-        alt: "NOQT — DJ & Sanatçı Booking ve Etkinlik Yönetimi",
+        alt: "NOQT — Etkinlikler için Müzik Deneyimi",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "NOQT — DJ & Sanatçı Booking, Etkinlik Yönetimi | Kayseri & Nevşehir",
+    title: "NOQT — Etkinlik Müziği: DJ, Canlı Müzik, Ses & Işık | Kayseri & Nevşehir",
     description:
-      "Kayseri ve Nevşehir'de DJ ve sanatçı booking; düğün, festival, kulüp gecesi ve kurumsal etkinlik yönetimi.",
+      "Kayseri ve Nevşehir'de etkinliklerin müzik deneyimi: DJ, canlı müzik, ses & ışık; düğün, festival, kulüp gecesi ve kurumsal etkinlikler.",
     images: [`${BASE_URL}/noqt-og.jpg`],
   },
   alternates: {
@@ -94,7 +97,7 @@ const localBusinessSchema = {
   "@id": `${BASE_URL}#localbusiness`,
   name: "NOQT Deneyim Stüdyosu",
   description:
-    "Kayseri ve Nevşehir merkezli DJ ve sanatçı booking ajansı: düğün, kına, festival, kulüp gecesi, açılış, mezuniyet ve kurumsal etkinlikler için sanatçı temini ve baştan sona etkinlik yönetimi.",
+    "Kayseri ve Nevşehir merkezli etkinlik müziği stüdyosu: düğün, kına, festival, kulüp gecesi, açılış, mezuniyet ve kurumsal etkinliklerde DJ ve canlı müzik, müzik akışı, ses & ışık ve sahne yönetimi.",
   url: BASE_URL,
   logo: `${BASE_URL}/noqt-logo-transparent.png`,
   email: "booking@noqt.events",
@@ -116,7 +119,9 @@ const localBusinessSchema = {
   serviceType: [
     "DJ Booking",
     "Sanatçı Booking",
-    "Etkinlik Yönetimi",
+    "Etkinlik Müziği",
+    "Canlı Müzik",
+    "Ses ve Işık Sistemi",
     "Mekanlara Sanatçı Temini",
     "Düğün DJ",
     "Kına Gecesi Müziği",

@@ -10,7 +10,7 @@ const steps = [
     tag: "İlk Temas",
     title: "Bize anlat",
     description:
-      "Etkinliğini, tarihini ve hayalindeki atmosferi anlat. Düğün mü, kurumsal mı, özel parti mi — ne olursa olsun seni dinlemek için buradayız.",
+      "Etkinliğini, tarihini, mekanını ve sevdiğin müziği anlat. Düğün mü, kulüp gecesi mi, kurumsal mı — gecenin nasıl bir ses istediğini birlikte netleştiriyoruz.",
     detail: "Ücretsiz keşif görüşmesi · Taahhüt yok",
     cta: null,
   },
@@ -28,16 +28,16 @@ const steps = [
     tag: "Koordinasyon",
     title: "Her detay bizde",
     description:
-      "Ekipman, set listesi, mekan teknik kontrolü ve gün planlaması — etkinliğe kadar tüm koordinasyonu biz üstleniyoruz. Gece yarısı mesajlarına dönüyoruz.",
-    detail: "Haftalık durum güncellemesi · Anlık iletişim",
+      "Müzik akış planı, setlist, istek ve yasak listeleri, ses & ışık ekipmanı ve mekan teknik keşfi — etkinliğe kadar müzikle ilgili her şeyi biz üstleniyoruz.",
+    detail: "Müzik akış planı · Mekan teknik keşfi · Anlık iletişim",
     cta: null,
   },
   {
     number: "04",
     tag: "Etkinlik Günü",
-    title: "Sen misafirlerinle ilgilen",
+    title: "Sen dansa kalk",
     description:
-      "Kurulum, ses kontrolü ve sahnede her şey planlandığı gibi. Biz sahneyi hazırlarız, sen anını yaşarsın.",
+      "Kurulum, ses kontrolü ve sahnede her geçiş planlandığı gibi. Müziği biz yönetiriz, sen anını yaşarsın.",
     detail: "Erken kurulum · Canlı destek · Etkinlik sonrası özet",
     cta: null,
   },
@@ -75,8 +75,8 @@ export default function HowItWorks() {
             Nasıl <em className="italic">çalışır?</em>
           </h2>
           <p className="text-muted-foreground mt-4 leading-relaxed max-w-lg">
-            Etkinlik planlamak yorucu olabilir. Biz bunu en başından kolaylaştırıyoruz —
-            sen bize anlat, gerisini biz halledelim.
+            Müziği şansa bırakmıyoruz. Sen bize anlat, sanatçıdan ses sistemine kadar
+            gecenin sesini biz kuralım.
           </p>
         </motion.div>
 
@@ -152,7 +152,7 @@ export default function HowItWorks() {
             href="/planla"
             className="inline-flex items-center gap-2 bg-foreground text-background px-8 py-4 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            Ücretsiz Keşif Görüşmesi Başlat →
+            Müziğimi Planlamaya Başla →
           </Link>
           <p className="text-sm text-muted-foreground">
             Ortalama yanıt süresi: <strong className="text-foreground">2 saat</strong>

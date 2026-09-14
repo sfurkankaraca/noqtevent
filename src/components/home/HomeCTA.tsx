@@ -29,7 +29,7 @@ export default function HomeCTA() {
             <em className="italic">ayırtın.</em>
           </h2>
           <p className="text-background/60 mt-8 text-lg leading-relaxed max-w-xl mx-auto">
-            Popüler tarihler için erken rezervasyon şart. Birkaç sorumuz var — cevapların seni doğru deneyime götürür.
+            Sevilen DJ&apos;ler ve popüler tarihler erken doluyor. Birkaç sorumuz var — cevapların seni doğru sese götürür.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mt-14">
@@ -37,7 +37,7 @@ export default function HomeCTA() {
               href="/planla"
               className="inline-flex items-center gap-3 bg-background text-foreground px-9 py-4 rounded-full text-sm font-medium tracking-wide transition-all duration-300 group hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-16px_rgba(255,255,255,0.4)]"
             >
-              Etkinliğimi Planla
+              Müziğimi Planla
               <svg
                 width="16"
                 height="16"
